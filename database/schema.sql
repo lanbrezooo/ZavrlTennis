@@ -1,6 +1,6 @@
 -- Ustvari bazo (prilagodite ime, če želite)
 CREATE DATABASE IF NOT EXISTS zavrl_tennis CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE zavrl_tennis;
+USE zavrl_tennis; 
 
 -- Tabela uporabnikov
 CREATE TABLE IF NOT EXISTS uporabniki (

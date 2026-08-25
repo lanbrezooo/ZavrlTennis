@@ -16,12 +16,12 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);
 
-// Statične datoteke (frontend) – če želite, da backend servira tudi spletno stran
-app.use(express.static(path.join(__dirname, '../frontend')));
+// Statične datoteke (frontend) – velika začetnica Frontend
+app.use(express.static(path.join(__dirname, '../Frontend')));
 
 // Za vse ostale GET zahteve vrni index.html (za SPA)
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+    res.sendFile(path.join(__dirname, '../Frontend/index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
