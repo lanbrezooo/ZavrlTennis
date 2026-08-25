@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 require('dotenv').config();
 
+const pool = require('./db'); // MySQL povezava
 const authRoutes = require('./routes/auth');
 const reservationRoutes = require('./routes/reservations');
 
@@ -11,34 +11,36 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Inicializacija db.json
-const DB_FILE = path.join(__dirname, 'db.json');
-if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: [], reservations: [] }));
-}
-
 // API poti
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);
 
-// Admin poti (dodane)
-app.get('/api/admin/users', (req, res) => {
-    const db = JSON.parse(fs.readFileSync(DB_FILE));
-    res.json({ users: db.users });
+// Admin poti (z MySQL)
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const [users] = await pool.query('SELECT * FROM uporabniki');
+        res.json({ users });
+    } catch (err) {
+        res.status(500).json({ message: 'Napaka pri pridobivanju uporabnikov' });
+    }
 });
 
-app.delete('/api/admin/users/:id', (req, res) => {
-    const db = JSON.parse(fs.readFileSync(DB_FILE));
-    db.users = db.users.filter(u => u.id !== parseInt(req.params.id));
-    fs.writeFileSync(DB_FILE, JSON.stringify(db));
-    res.json({ message: 'Uporabnik izbrisan' });
+app.delete('/api/admin/users/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM uporabniki WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Uporabnik izbrisan' });
+    } catch (err) {
+        res.status(500).json({ message: 'Napaka pri brisanju uporabnika' });
+    }
 });
 
-app.delete('/api/admin/reservations', (req, res) => {
-    const db = JSON.parse(fs.readFileSync(DB_FILE));
-    db.reservations = [];
-    fs.writeFileSync(DB_FILE, JSON.stringify(db));
-    res.json({ message: 'Vse rezervacije izbrisane' });
+app.delete('/api/admin/reservations', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM rezervacije');
+        res.json({ message: 'Vse rezervacije izbrisane' });
+    } catch (err) {
+        res.status(500).json({ message: 'Napaka pri brisanju rezervacij' });
+    }
 });
 
 // Statične datoteke iz mape Frontend
@@ -55,7 +57,7 @@ app.get('/app', (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
-// Neznane API poti – vrnemo JSON napako (ne HTML)
+// Neznane API poti – vrnemo JSON napako
 app.use('/api', (req, res) => {
     res.status(404).json({ message: 'API pot ne obstaja' });
 });
@@ -68,5 +70,5 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Strežnik teče na portu: ${PORT}`);
-    console.log(`Nastavljena pot do frontenda: ${frontendPath}`);
+    console.log(`Povezan na MySQL bazo`);
 });
