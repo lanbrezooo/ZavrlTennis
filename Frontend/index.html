@@ -113,20 +113,23 @@
 
         .calendar-wrapper { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; }
         .calendar-scroll {
-    max-height: 55vh;  /* zmanjšajte višino */
-    overflow-y: auto;
-}
+            max-height: 55vh;
+            overflow-y: auto;
+            overflow-x: auto;   /* DODANO: omogoči vodoravno drsenje za manjše zaslone */
+        }
 
-.calendar-cell {
-    min-height: 40px;  /* prej 48px */
-    padding: 0.3rem;   /* prej 0.5rem */
-    font-size: 0.75rem;
-}
-
-.calendar-grid {
-    grid-template-columns: 70px repeat(8, minmax(90px, 1fr));  /* ožji stolpci */
-    min-width: 800px;
-}
+        .calendar-grid {
+            display: grid;      /* DODANO: omogoči grid layout */
+            grid-template-columns: 70px repeat(8, minmax(90px, 1fr));
+            min-width: 800px;
+        }
+        
+        .calendar-cell {
+            min-height: 40px;
+            padding: 0.3rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--border);   /* DODANO: vidne meje celic */
+        }
         .calendar-cell.header-cell {
             background: var(--primary); color: white; font-weight: 700; font-size: 0.85rem;
             letter-spacing: 0.5px; position: sticky; top: 0; z-index: 10; text-transform: uppercase;
@@ -284,77 +287,124 @@
 
         <!-- Admin panel (skrito) -->
         <div class="admin-panel" id="adminPanel">
-    <h3>🛠 Administracija</h3>
-    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem;">
-        <button class="btn btn-danger" onclick="deleteAllReservations()">Izbriši vse rezervacije</button>
-        <button class="btn btn-outline" style="color:black; border-color:var(--primary);" onclick="loadAdminUsers()">Osveži seznam</button>
-    </div>
-    <div style="margin-bottom:1rem;">
-        <input type="text" id="adminSearchInput" oninput="filterAdminUsers()" style="width:100%; padding:0.6rem 1rem; border:2px solid var(--border); border-radius:var(--radius-sm); font-family:var(--font); font-size:0.9rem;">
-    </div>
-    <div id="adminUsersList"></div>
-</div>
+            <h3>🛠 Administracija</h3>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem;">
+                <button class="btn btn-danger" onclick="deleteAllReservations()">Izbriši vse rezervacije</button>
+                <button class="btn btn-outline" style="color:black; border-color:var(--primary);" onclick="loadAdminUsers()">Osveži seznam</button>
+            </div>
+            <div style="margin-bottom:1rem;">
+                <input type="text" id="adminSearchInput" oninput="filterAdminUsers()" style="width:100%; padding:0.6rem 1rem; border:2px solid var(--border); border-radius:var(--radius-sm); font-family:var(--font); font-size:0.9rem;">
+            </div>
+            <div id="adminUsersList"></div>
+        </div>
     </main>
 
     <div class="toast-container" id="toastContainer"></div>
     <div id="modalRoot"></div>
 
     <script>
-
-        async function loadAdminUsers() {
-    try {
-        const data = await apiCall('/admin/users');
-        window._allAdminUsers = data.users;
-        document.getElementById('adminSearchInput').value = '';
-        renderAdminUsersTable(window._allAdminUsers);
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
-}
         // ============================================================
         // ZAVRL TENNIS TEAM - Full Frontend Application
         // ============================================================
 
-window.filterAdminUsers = function() {
-    const input = document.getElementById('adminSearchInput');
-    const filter = input.value.toLowerCase();
-    const allUsers = window._allAdminUsers || [];
-    const filtered = allUsers.filter(u => 
-        (u.ime && u.ime.toLowerCase().includes(filter)) || 
-        (u.priimek && u.priimek.toLowerCase().includes(filter))
-    );
-    renderAdminUsersTable(filtered);
-};
+        // Admin funkcije
+        async function loadAdminUsers() {
+            try {
+                const data = await apiCall('/admin/users');
+                window._allAdminUsers = data.users;
+                document.getElementById('adminSearchInput').value = '';
+                renderAdminUsersTable(window._allAdminUsers);
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
 
-function renderAdminUsersTable(users) {
-    const container = document.getElementById('adminUsersList');
-    if (!container) return;
-    if (users.length === 0) {
-        container.innerHTML = '<p>Ni najdenih uporabnikov.</p>';
-        return;
-    }
-    let html = `<table class="admin-table">
-        <thead><tr><th>ID</th><th>Ime</th><th>Priimek</th><th>Email</th><th>Telefon</th><th>Letna karta</th><th>Krediti</th><th>Admin</th><th>Dejanja</th></tr></thead><tbody>`;
-    users.forEach(u => {
-        html += `<tr>
-            <td>${u.id}</td>
-            <td>${u.ime}</td>
-            <td>${u.priimek}</td>
-            <td>${u.email}</td>
-            <td>${u.telefon || ''}</td>
-            <td>${u.letna_karta ? 'Da' : 'Ne'}</td>
-            <td>${u.krediti}</td>
-            <td>${u.admin ? 'Da' : 'Ne'}</td>
-            <td>
-                <button class="btn btn-sm btn-outline" style="color:black;" onclick="editUser(${u.id})">Uredi</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Izbriši</button>
-            </td>
-        </tr>`;
-    });
-    html += '</tbody></table>';
-    container.innerHTML = html;
-}
+        window.filterAdminUsers = function() {
+            const input = document.getElementById('adminSearchInput');
+            const filter = input.value.toLowerCase();
+            const allUsers = window._allAdminUsers || [];
+            const filtered = allUsers.filter(u => 
+                (u.ime && u.ime.toLowerCase().includes(filter)) || 
+                (u.priimek && u.priimek.toLowerCase().includes(filter))
+            );
+            renderAdminUsersTable(filtered);
+        };
 
+        function renderAdminUsersTable(users) {
+            const container = document.getElementById('adminUsersList');
+            if (!container) return;
+            if (users.length === 0) {
+                container.innerHTML = '<p>Ni najdenih uporabnikov.</p>';
+                return;
+            }
+            let html = `<table class="admin-table">
+                <thead><tr><th>ID</th><th>Ime</th><th>Priimek</th><th>Email</th><th>Telefon</th><th>Letna karta</th><th>Krediti</th><th>Admin</th><th>Dejanja</th></tr></thead><tbody>`;
+            users.forEach(u => {
+                html += `<tr>
+                    <td>${u.id}</td>
+                    <td>${u.ime}</td>
+                    <td>${u.priimek}</td>
+                    <td>${u.email}</td>
+                    <td>${u.telefon || ''}</td>
+                    <td>${u.letna_karta ? 'Da' : 'Ne'}</td>
+                    <td>${u.krediti}</td>
+                    <td>${u.admin ? 'Da' : 'Ne'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" style="color:black;" onclick="editUser(${u.id})">Uredi</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Izbriši</button>
+                    </td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Dodatne admin funkcije (če obstajajo)
+        window.toggleAdminPanel = function() {
+            const panel = document.getElementById('adminPanel');
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                panel.style.display = 'block';
+                loadAdminUsers();
+            } else {
+                panel.style.display = 'none';
+            }
+        };
+
+        window.deleteAllReservations = async function() {
+            if (!confirm('Ali res želite izbrisati VSE rezervacije? To dejanje ni povratno!')) return;
+            try {
+                const data = await apiCall('/admin/reservations', 'DELETE');
+                showToast(data.message || 'Vse rezervacije izbrisane.', 'success');
+                await refreshView();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        };
+
+        window.editUser = function(id) {
+            const user = (window._allAdminUsers || []).find(u => u.id === id);
+            if (!user) {
+                showToast('Uporabnik ni najden.', 'error');
+                return;
+            }
+            showToast(`Urejanje uporabnika ${user.ime} ${user.priimek} (ID: ${id})`, 'info');
+            // Tukaj bi lahko odprli modal za urejanje
+        };
+
+        window.deleteUser = async function(id) {
+            if (!confirm('Ali res želite izbrisati tega uporabnika?')) return;
+            try {
+                await apiCall(`/admin/users/${id}`, 'DELETE');
+                showToast('Uporabnik izbrisan.', 'success');
+                loadAdminUsers();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        };
+
+        // ============================================================
+        // Konstante in stanje
+        // ============================================================
         const API_URL = '';
         const MAX_DAYS_AHEAD = 14;
         const COURTS = 8;
@@ -912,6 +962,18 @@ function renderAdminUsersTable(users) {
             }
         };
 
-</script>
+        function closeModal() {
+            modalRoot.innerHTML = '';
+        }
+
+        // ============================================================
+        // INICIALIZACIJA OB ZAGONU
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchCurrentUser();
+            renderHeader();
+            await refreshView();
+        });
+    </script>
 </body>
 </html>
