@@ -16,38 +16,37 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);
 
-// Dinamična določitev prave poti do mape frontend
-let frontendPath = path.join(__dirname, '../frontend');
-if (!fs.existsSync(frontendPath)) {
-    frontendPath = path.join(__dirname, 'frontend');
-}
-if (!fs.existsSync(frontendPath)) {
-    frontendPath = path.join(process.cwd(), 'frontend');
-}
+// Poišči korensko mapo projekta (ZAVRLTENNIS) ne glede na to, kje teče Node process
+const rootDir = __dirname.endsWith('Backend') || __dirname.endsWith('backend')
+    ? path.join(__dirname, '..')
+    : __dirname;
 
-// Statične datoteke
+const frontendPath = path.join(rootDir, 'frontend');
+
+// Statične datoteke iz mape frontend
 app.use(express.static(frontendPath));
 
-// Ob obisku domene prikaži landing.html
+// Ob obisku domene / prikaži landing.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(frontendPath, 'landing.html'));
 });
 
-// Povezavi do koledarja
+// Povezavi do koledarja (index.html)
 app.get('/index.html', (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
+
 app.get('/app', (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
-// Vse ostale neznane GET zahteve preusmeri na landing.html
+// Vse ostale zahtevke preusmeri na landing.html
 app.get('*', (req, res) => {
     res.sendFile(path.join(frontendPath, 'landing.html'));
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Strežnik teče na http://localhost:${PORT}`);
-    console.log(`Uporabljena pot do frontenda: ${frontendPath}`);
+    console.log(`Strežnik teče na portu ${PORT}`);
+    console.log(`Pravilna pot do frontenda: ${frontendPath}`);
 });
