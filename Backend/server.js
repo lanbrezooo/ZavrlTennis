@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -15,28 +16,38 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);
 
-// Statične datoteke iz mape frontend
-app.use(express.static(path.join(__dirname, '../frontend')));
+// Dinamična določitev prave poti do mape frontend
+let frontendPath = path.join(__dirname, '../frontend');
+if (!fs.existsSync(frontendPath)) {
+    frontendPath = path.join(__dirname, 'frontend');
+}
+if (!fs.existsSync(frontendPath)) {
+    frontendPath = path.join(process.cwd(), 'frontend');
+}
 
-// Ob obisku domene / se odpre landing.html
+// Statične datoteke
+app.use(express.static(frontendPath));
+
+// Ob obisku domene prikaži landing.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/landing.html'));
+    res.sendFile(path.join(frontendPath, 'landing.html'));
 });
 
-// Povezava za sistem rezervacij
+// Povezavi do koledarja
 app.get('/index.html', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+    res.sendFile(path.join(frontendPath, 'index.html'));
 });
 app.get('/app', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+    res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
-// Vse ostale poti preusmeri na landing.html
+// Vse ostale neznane GET zahteve preusmeri na landing.html
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/landing.html'));
+    res.sendFile(path.join(frontendPath, 'landing.html'));
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Strežnik teče na http://localhost:${PORT}`);
+    console.log(`Uporabljena pot do frontenda: ${frontendPath}`);
 });
