@@ -115,11 +115,11 @@
         .calendar-scroll {
             max-height: 55vh;
             overflow-y: auto;
-            overflow-x: auto;   /* DODANO: omogoči vodoravno drsenje za manjše zaslone */
+            overflow-x: auto;
         }
 
         .calendar-grid {
-            display: grid;      /* DODANO: omogoči grid layout */
+            display: grid;
             grid-template-columns: 70px repeat(8, minmax(90px, 1fr));
             min-width: 800px;
         }
@@ -128,7 +128,7 @@
             min-height: 40px;
             padding: 0.3rem;
             font-size: 0.75rem;
-            border: 1px solid var(--border);   /* DODANO: vidne meje celic */
+            border: 1px solid var(--border);
         }
         .calendar-cell.header-cell {
             background: var(--primary); color: white; font-weight: 700; font-size: 0.85rem;
@@ -359,7 +359,6 @@
             container.innerHTML = html;
         }
 
-        // Dodatne admin funkcije (če obstajajo)
         window.toggleAdminPanel = function() {
             const panel = document.getElementById('adminPanel');
             if (panel.style.display === 'none' || panel.style.display === '') {
@@ -388,7 +387,6 @@
                 return;
             }
             showToast(`Urejanje uporabnika ${user.ime} ${user.priimek} (ID: ${id})`, 'info');
-            // Tukaj bi lahko odprli modal za urejanje
         };
 
         window.deleteUser = async function(id) {
@@ -501,7 +499,13 @@
             const options = { method, headers };
             if (body) options.body = JSON.stringify(body);
             const res = await fetch(`${API_URL}/api${endpoint}`, options);
-            const data = await res.json();
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                throw new Error('Odgovor strežnika ni veljaven JSON.');
+            }
             if (!res.ok) throw new Error(data.message || 'Napaka pri zahtevi');
             return data;
         }

@@ -1,94 +1,80 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const pool = require('../db');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 
-// Middleware za preverjanje JWT
-function authenticate(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Ni avtorizacije' });
-    }
-    const token = authHeader.split(' ')[1];
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.userId = decoded.userId;
-        req.userAdmin = decoded.admin; // shranimo admin status
-        next();
-    } catch (error) {
-        res.status(401).json({ message: 'Neveljaven token' });
-    }
+const DB_FILE = path.join(__dirname, '..', 'db.json');
+
+function getDB() {
+    return JSON.parse(fs.readFileSync(DB_FILE));
 }
 
-// Middleware za admina
-function requireAdmin(req, res, next) {
-    if (!req.userAdmin) {
-        return res.status(403).json({ message: 'Potrebna so administratorska dovoljenja' });
-    }
-    next();
+function saveDB(db) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(db));
 }
 
-// ... ostale poti (GET /, POST /, DELETE /:id) ...
-
-// ================= ADMIN POTI =================
-
-// Pridobi vse uporabnike
-router.get('/admin/users', authenticate, requireAdmin, async (req, res) => {
-    try {
-        const [rows] = await pool.query(
-            `SELECT id, ime, priimek, email, leto_rojstva, opis, nivo, letna_karta, krediti, telefon, admin 
-             FROM uporabniki ORDER BY priimek, ime`
-        );
-        res.json({ users: rows });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Napaka pri pridobivanju uporabnikov' });
-    }
+// Pridobi rezervacije po datumu
+router.get('/', (req, res) => {
+    const date = req.query.date;
+    const db = getDB();
+    const reservations = db.reservations.filter(r => r.datum === date);
+    // Dodamo ime in priimek uporabnika
+    const enriched = reservations.map(r => {
+        const user = db.users.find(u => u.id === r.user_id);
+        return { ...r, ime: user?.ime, priimek: user?.priimek };
+    });
+    res.json({ reservations: enriched });
 });
 
-// Izbriši uporabnika
-router.delete('/admin/users/:id', authenticate, requireAdmin, async (req, res) => {
-    const id = Number(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ message: 'Neveljaven ID' });
-    try {
-        await pool.query(`DELETE FROM uporabniki WHERE id = ?`, [id]);
-        res.json({ message: 'Uporabnik izbrisan' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Napaka pri brisanju uporabnika' });
+// Ustvari novo rezervacijo
+router.post('/', (req, res) => {
+    const { igrisce, datum, ura_zacetka, trajanje } = req.body;
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Niste prijavljeni' });
+    const userId = parseInt(Buffer.from(token, 'base64').toString());
+    const db = getDB();
+
+    // Preveri ali je termin prost
+    const conflict = db.reservations.some(r =>
+        r.igrisce === igrisce &&
+        r.datum === datum &&
+        r.ura_zacetka < ura_zacetka + trajanje &&
+        r.ura_zacetka + r.trajanje > ura_zacetka
+    );
+    if (conflict) {
+        return res.status(400).json({ message: 'Termin je že zaseden' });
     }
+
+    const newReservation = {
+        id: Date.now(),
+        igrisce,
+        datum,
+        ura_zacetka,
+        trajanje,
+        user_id: userId
+    };
+    db.reservations.push(newReservation);
+    saveDB(db);
+    res.json({ reservation: newReservation });
 });
 
-// Posodobi letno karto, kredite in admin status
-router.put('/admin/users/:id', authenticate, requireAdmin, async (req, res) => {
-    const id = Number(req.params.id);
-    const { letna_karta, krediti, admin } = req.body;
-    if (isNaN(id)) return res.status(400).json({ message: 'Neveljaven ID' });
-    try {
-        await pool.query(
-            `UPDATE uporabniki SET letna_karta=?, krediti=?, admin=? WHERE id=?`,
-            [letna_karta ? 1 : 0, krediti || 0, admin ? 1 : 0, id]
-        );
-        const [rows] = await pool.query(
-            `SELECT id, ime, priimek, email, leto_rojstva, opis, nivo, letna_karta, krediti, telefon, admin FROM uporabniki WHERE id=?`,
-            [id]
-        );
-        res.json({ user: rows[0] });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Napaka pri posodabljanju uporabnika' });
-    }
-});
+// Izbriši rezervacijo
+router.delete('/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Niste prijavljeni' });
+    const userId = parseInt(Buffer.from(token, 'base64').toString());
+    const db = getDB();
+    const reservation = db.reservations.find(r => r.id === id);
 
-// Izbriši vse rezervacije
-router.delete('/admin/reservations/all', authenticate, requireAdmin, async (req, res) => {
-    try {
-        await pool.query(`DELETE FROM rezervacije`);
-        res.json({ message: 'Vse rezervacije izbrisane' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Napaka pri brisanju rezervacij' });
+    if (!reservation) return res.status(404).json({ message: 'Rezervacija ne obstaja' });
+    if (reservation.user_id !== userId && !db.users.find(u => u.id === userId)?.admin) {
+        return res.status(403).json({ message: 'Nimate dovoljenja' });
     }
+
+    db.reservations = db.reservations.filter(r => r.id !== id);
+    saveDB(db);
+    res.json({ message: 'Rezervacija izbrisana' });
 });
 
 module.exports = router;

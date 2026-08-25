@@ -1,121 +1,83 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const pool = require('../db');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
+
+const DB_FILE = path.join(__dirname, '..', 'db.json');
+
+function getDB() {
+    return JSON.parse(fs.readFileSync(DB_FILE));
+}
+
+function saveDB(db) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(db));
+}
 
 // Registracija
-router.post('/register', async (req, res) => {
-    const { ime, priimek, email, geslo, leto_rojstva, opis, nivo, letna_karta, krediti, telefon } = req.body;
-    if (!ime || !priimek || !email || !geslo) {
-        return res.status(400).json({ message: 'Manjkajo obvezna polja' });
+router.post('/register', (req, res) => {
+    const { ime, priimek, email, geslo, telefon, leto_rojstva, opis, nivo, letna_karta, krediti } = req.body;
+    const db = getDB();
+    if (db.users.find(u => u.email === email)) {
+        return res.status(400).json({ message: 'Email že obstaja' });
     }
-    try {
-        const hashedPassword = await bcrypt.hash(geslo, 10);
-        const [result] = await pool.query(
-            `INSERT INTO uporabniki 
-            (ime, priimek, email, geslo_hash, leto_rojstva, opis, nivo, letna_karta, krediti, telefon)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [ime, priimek, email, hashedPassword, leto_rojstva || null, opis || null, nivo || 'Rekreativec', letna_karta ? 1 : 0, krediti || 0, telefon || null]
-        );
-        const user = {
-            id: result.insertId,
-            ime,
-            priimek,
-            email,
-            leto_rojstva: leto_rojstva || null,
-            opis: opis || null,
-            nivo: nivo || 'Rekreativec',
-            letna_karta: letna_karta ? 1 : 0,
-            krediti: krediti || 0,
-            telefon: telefon || null,
-            admin: false
-        };
-        const token = jwt.sign({ userId: user.id, admin: user.admin }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ message: 'Email že obstaja' });
-        }
-        console.error(error);
-        res.status(500).json({ message: 'Napaka na strežniku' });
-    }
+    const newUser = {
+        id: Date.now(),
+        ime, priimek, email, geslo,
+        telefon: telefon || null,
+        leto_rojstva: leto_rojstva || null,
+        opis: opis || '',
+        nivo: nivo || 'Rekreativec',
+        letna_karta: letna_karta ? 1 : 0,
+        krediti: krediti || 0,
+        admin: false
+    };
+    db.users.push(newUser);
+    saveDB(db);
+    res.json({ token: Buffer.from(String(newUser.id)).toString('base64'), user: newUser });
 });
 
 // Prijava
-router.post('/login', async (req, res) => {
+router.post('/login', (req, res) => {
     const { email, geslo } = req.body;
-    if (!email || !geslo) {
-        return res.status(400).json({ message: 'Manjkata email ali geslo' });
+    const db = getDB();
+    const user = db.users.find(u => u.email === email && u.geslo === geslo);
+    if (!user) {
+        return res.status(401).json({ message: 'Napačen email ali geslo' });
     }
-    try {
-        const [rows] = await pool.query(`SELECT * FROM uporabniki WHERE email = ?`, [email]);
-        if (rows.length === 0) return res.status(401).json({ message: 'Napačen email ali geslo' });
-        const user = rows[0];
-        const match = await bcrypt.compare(geslo, user.geslo_hash);
-        if (!match) return res.status(401).json({ message: 'Napačen email ali geslo' });
-
-        const token = jwt.sign({ userId: user.id, admin: user.admin }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        const userSafe = {
-            id: user.id,
-            ime: user.ime,
-            priimek: user.priimek,
-            email: user.email,
-            leto_rojstva: user.leto_rojstva,
-            opis: user.opis,
-            nivo: user.nivo,
-            letna_karta: user.letna_karta,
-            krediti: user.krediti,
-            telefon: user.telefon,
-            admin: user.admin
-        };
-        res.json({ token, user: userSafe });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Napaka na strežniku' });
-    }
+    res.json({ token: Buffer.from(String(user.id)).toString('base64'), user });
 });
 
 // Trenutni uporabnik
-router.get('/me', async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Ni avtorizacije' });
-    }
-    const token = authHeader.split(' ')[1];
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const [rows] = await pool.query(
-            `SELECT id, ime, priimek, email, leto_rojstva, opis, nivo, letna_karta, krediti, telefon, admin 
-             FROM uporabniki WHERE id = ?`,
-            [decoded.userId]
-        );
-        if (rows.length === 0) return res.status(404).json({ message: 'Uporabnik ne obstaja' });
-        res.json({ user: rows[0] });
-    } catch (error) {
-        res.status(401).json({ message: 'Neveljaven ali potekel token' });
-    }
+router.get('/me', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Niste prijavljeni' });
+    const userId = parseInt(Buffer.from(token, 'base64').toString());
+    const db = getDB();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(404).json({ message: 'Uporabnik ne obstaja' });
+    res.json({ user });
 });
 
-// Posodobitev lastnega profila (brez letne karte in kreditov)
-router.put('/profile', async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Ni avtorizacije' });
-    }
-    const token = authHeader.split(' ')[1];
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const { ime, priimek, email, leto_rojstva, opis, nivo, telefon } = req.body;
-        await pool.query(
-            `UPDATE uporabniki SET ime=?, priimek=?, email=?, leto_rojstva=?, opis=?, nivo=?, telefon=? WHERE id=?`,
-            [ime, priimek, email, leto_rojstva || null, opis || null, nivo || 'Rekreativec', telefon || null, decoded.userId]
-        );
-        const [rows] = await pool.query(`SELECT id, ime, priimek, email, leto_rojstva, opis, nivo, letna_karta, krediti, telefon, admin FROM uporabniki WHERE id=?`, [decoded.userId]);
-        res.json({ user: rows[0] });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Napaka pri posodabljanju profila' });
-    }
+// Posodobi profil
+router.put('/profile', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Niste prijavljeni' });
+    const userId = parseInt(Buffer.from(token, 'base64').toString());
+    const db = getDB();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(404).json({ message: 'Uporabnik ne obstaja' });
+
+    const { ime, priimek, email, telefon, leto_rojstva, nivo, opis } = req.body;
+    user.ime = ime || user.ime;
+    user.priimek = priimek || user.priimek;
+    user.email = email || user.email;
+    user.telefon = telefon || user.telefon;
+    user.leto_rojstva = leto_rojstva || user.leto_rojstva;
+    user.nivo = nivo || user.nivo;
+    user.opis = opis || user.opis;
+
+    saveDB(db);
+    res.json({ user });
 });
 
 module.exports = router;
