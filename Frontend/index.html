@@ -112,16 +112,21 @@
         .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
 
         .calendar-wrapper { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; }
-        .calendar-scroll { overflow-x: auto; overflow-y: auto; max-height: 70vh; }
-        .calendar-grid {
-            display: grid; grid-template-columns: 80px repeat(8, minmax(120px, 1fr));
-            min-width: 1000px; border-collapse: collapse;
-        }
-        .calendar-cell {
-            padding: 0.5rem; border: 1px solid var(--border); text-align: center; font-size: 0.85rem;
-            transition: var(--transition); min-height: 48px; display: flex; align-items: center;
-            justify-content: center; flex-direction: column; gap: 2px; cursor: default; position: relative; user-select: none;
-        }
+        .calendar-scroll {
+    max-height: 55vh;  /* zmanjšajte višino */
+    overflow-y: auto;
+}
+
+.calendar-cell {
+    min-height: 40px;  /* prej 48px */
+    padding: 0.3rem;   /* prej 0.5rem */
+    font-size: 0.75rem;
+}
+
+.calendar-grid {
+    grid-template-columns: 70px repeat(8, minmax(90px, 1fr));  /* ožji stolpci */
+    min-width: 800px;
+}
         .calendar-cell.header-cell {
             background: var(--primary); color: white; font-weight: 700; font-size: 0.85rem;
             letter-spacing: 0.5px; position: sticky; top: 0; z-index: 10; text-transform: uppercase;
@@ -279,20 +284,76 @@
 
         <!-- Admin panel (skrito) -->
         <div class="admin-panel" id="adminPanel">
-            <h3>🛠 Administracija</h3>
-            <button class="btn btn-danger" onclick="deleteAllReservations()">Izbriši vse rezervacije</button>
-            <h4 style="margin-top:1rem;">Uporabniki</h4>
-            <div id="adminUsersList"></div>
-        </div>
+    <h3>🛠 Administracija</h3>
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem;">
+        <button class="btn btn-danger" onclick="deleteAllReservations()">Izbriši vse rezervacije</button>
+        <button class="btn btn-outline" style="color:black; border-color:var(--primary);" onclick="loadAdminUsers()">Osveži seznam</button>
+    </div>
+    <div style="margin-bottom:1rem;">
+        <input type="text" id="adminSearchInput" placeholder="Išči po imenu ali priimku..." oninput="filterAdminUsers()" style="width:100%; padding:0.6rem 1rem; border:2px solid var(--border); border-radius:var(--radius-sm); font-family:var(--font); font-size:0.9rem;">
+    </div>
+    <div id="adminUsersList"></div>
+</div>
     </main>
 
     <div class="toast-container" id="toastContainer"></div>
     <div id="modalRoot"></div>
 
     <script>
+
+        async function loadAdminUsers() {
+    try {
+        const data = await apiCall('/admin/users');
+        window._allAdminUsers = data.users;
+        document.getElementById('adminSearchInput').value = '';
+        renderAdminUsersTable(window._allAdminUsers);
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
         // ============================================================
         // ZAVRL TENNIS TEAM - Full Frontend Application
         // ============================================================
+
+window.filterAdminUsers = function() {
+    const input = document.getElementById('adminSearchInput');
+    const filter = input.value.toLowerCase();
+    const allUsers = window._allAdminUsers || [];
+    const filtered = allUsers.filter(u => 
+        (u.ime && u.ime.toLowerCase().includes(filter)) || 
+        (u.priimek && u.priimek.toLowerCase().includes(filter))
+    );
+    renderAdminUsersTable(filtered);
+};
+
+function renderAdminUsersTable(users) {
+    const container = document.getElementById('adminUsersList');
+    if (!container) return;
+    if (users.length === 0) {
+        container.innerHTML = '<p>Ni najdenih uporabnikov.</p>';
+        return;
+    }
+    let html = `<table class="admin-table">
+        <thead><tr><th>ID</th><th>Ime</th><th>Priimek</th><th>Email</th><th>Telefon</th><th>Letna karta</th><th>Krediti</th><th>Admin</th><th>Dejanja</th></tr></thead><tbody>`;
+    users.forEach(u => {
+        html += `<tr>
+            <td>${u.id}</td>
+            <td>${u.ime}</td>
+            <td>${u.priimek}</td>
+            <td>${u.email}</td>
+            <td>${u.telefon || ''}</td>
+            <td>${u.letna_karta ? 'Da' : 'Ne'}</td>
+            <td>${u.krediti}</td>
+            <td>${u.admin ? 'Da' : 'Ne'}</td>
+            <td>
+                <button class="btn btn-sm btn-outline" style="color:black;" onclick="editUser(${u.id})">Uredi</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Izbriši</button>
+            </td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
 
         const API_URL = '';
         const MAX_DAYS_AHEAD = 14;
@@ -855,14 +916,14 @@
         // ADMIN FUNCTIONS
         // ============================================================
         window.toggleAdminPanel = function() {
-            const panel = document.getElementById('adminPanel');
-            if (panel.style.display === 'block') {
-                panel.style.display = 'none';
-            } else {
-                panel.style.display = 'block';
-                loadAdminUsers();
-            }
-        };
+    const panel = document.getElementById('adminPanel');
+    if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+    } else {
+        panel.style.display = 'block';
+        loadAdminUsers();
+    }
+};
 
         async function loadAdminUsers() {
             try {

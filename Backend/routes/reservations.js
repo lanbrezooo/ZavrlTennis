@@ -102,29 +102,34 @@ router.delete('/:id', authenticate, async (req, res) => {
 });
 
 // Admin: pridobi vse uporabnike
-router.get('/admin/users', authenticate, requireAdmin, async (req, res) => {
+router.get('/', async (req, res) => {
+    const date = req.query.date;
+    if (!date) return res.status(400).json({ message: 'Manjka parameter date' });
     try {
         const [rows] = await pool.query(
-            `SELECT id, ime, priimek, email, leto_rojstva, opis, nivo, letna_karta, krediti, telefon, admin 
-             FROM uporabniki ORDER BY priimek, ime`
+            `SELECT r.id, r.igrisce, r.datum, r.ura_zacetka, r.trajanje, r.user_id,
+                    u.ime, u.priimek
+             FROM rezervacije r
+             JOIN uporabniki u ON r.user_id = u.id
+             WHERE r.datum = ?
+             ORDER BY r.igrisce, r.ura_zacetka`,
+            [date]
         );
-        res.json({ users: rows });
+        res.json({ reservations: rows });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Napaka pri pridobivanju uporabnikov' });
+        res.status(500).json({ message: 'Napaka pri pridobivanju rezervacij' });
     }
 });
 
 // Admin: izbriši uporabnika
-router.delete('/admin/users/:id', authenticate, requireAdmin, async (req, res) => {
-    const id = Number(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ message: 'Neveljaven ID' });
+router.delete('/admin/reservations/all', requireAdmin, async (req, res) => {
     try {
-        await pool.query(`DELETE FROM uporabniki WHERE id = ?`, [id]);
-        res.json({ message: 'Uporabnik izbrisan' });
+        await pool.query(`DELETE FROM rezervacije`);
+        res.json({ message: 'Vse rezervacije izbrisane' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Napaka pri brisanju uporabnika' });
+        res.status(500).json({ message: 'Napaka pri brisanju rezervacij' });
     }
 });
 
@@ -158,5 +163,19 @@ router.delete('/admin/reservations/all', authenticate, requireAdmin, async (req,
         res.status(500).json({ message: 'Napaka pri brisanju rezervacij' });
     }
 });
+
+function requireAdmin(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ message: 'Ni avtorizacije' });
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (!decoded.admin) return res.status(403).json({ message: 'Potrebna so administratorska dovoljenja' });
+        req.userId = decoded.userId;
+        next();
+    } catch (error) {
+        res.status(401).json({ message: 'Neveljaven token' });
+    }
+}
 
 module.exports = router;

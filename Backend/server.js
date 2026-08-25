@@ -24,12 +24,12 @@ app.use(express.static(frontendPath));
 
 // Začetna stran prikaže Frontend/landing.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'landing.html'));
+    res.sendFile(path.join(__dirname, '../Frontend/landing.html'));
 });
 
 // Povezavi do sistema rezervacij (Frontend/index.html)
-app.get('/index.html', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'index.html'));
+app.get('/app', (req, res) => {
+    res.sendFile(path.join(__dirname, '../Frontend/index.html'));
 });
 
 app.get('/app', (req, res) => {
