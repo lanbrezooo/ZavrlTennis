@@ -13,11 +13,10 @@
             --accent-dark: #f9a825;
             --bg: #f0f4f0;
             --text: #1a1a1a;
-            --text-light: #666;
-            --border: #e0e0e0;
-            --radius: 14px;
-            --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --text-light: #555;
+            --shadow-btn: 0 10px 25px rgba(253, 216, 53, 0.45);
+            --shadow-btn-hover: 0 14px 30px rgba(253, 216, 53, 0.65);
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,12 +32,11 @@
         .header {
             background: linear-gradient(135deg, var(--primary-dark), var(--primary), var(--primary-light));
             color: white;
-            padding: 1rem 2rem;
+            padding: 1.2rem 2.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
         .logo {
             display: flex;
@@ -46,6 +44,7 @@
             gap: 1rem;
             font-size: 1.5rem;
             font-weight: 700;
+            letter-spacing: -0.5px;
         }
         .logo-icon {
             width: 48px;
@@ -57,48 +56,33 @@
             justify-content: center;
             font-weight: 800;
             color: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(253,216,53,0.4);
         }
-        .nav-buttons {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-        .btn {
-            padding: 0.6rem 1.5rem;
+        
+        /* Gumb v glavi */
+        .btn-header {
+            padding: 0.75rem 1.8rem;
             border-radius: 50px;
             border: none;
             cursor: pointer;
             font-family: var(--font);
-            font-weight: 600;
-            font-size: 0.9rem;
+            font-weight: 700;
+            font-size: 0.95rem;
             transition: var(--transition);
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            letter-spacing: 0.3px;
-        }
-        .btn-primary {
-            background: var(--accent);
+            gap: 0.6rem;
+            background: linear-gradient(135deg, #ffe047 0%, #fdd835 100%);
             color: var(--primary-dark);
-            box-shadow: 0 4px 14px rgba(253,216,53,0.35);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
-        .btn-primary:hover {
-            background: var(--accent-dark);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(253,216,53,0.5);
+        .btn-header:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(253, 216, 53, 0.5);
+            background: linear-gradient(135deg, #fff066 0%, #f9a825 100%);
         }
-        .btn-outline {
-            background: transparent;
-            color: white;
-            border: 2px solid rgba(255,255,255,0.5);
-        }
-        .btn-outline:hover {
-            background: rgba(255,255,255,0.15);
-            border-color: white;
-            transform: translateY(-1px);
-        }
+
         .hero {
             flex: 1;
             display: flex;
@@ -106,44 +90,96 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 2rem;
-            background: linear-gradient(180deg, #e8f5e9 0%, #f0f4f0 100%);
+            padding: 4rem 2rem;
+            background: radial-gradient(circle at top center, #ffffff 0%, #f0f4f0 100%);
+        }
+        .hero-badge {
+            background: rgba(26, 86, 50, 0.08);
+            color: var(--primary);
+            padding: 0.4rem 1.2rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
         }
         .hero h1 {
-            font-size: 3rem;
+            font-size: 3.5rem;
             font-weight: 800;
             color: var(--primary-dark);
-            letter-spacing: -1px;
-            margin-bottom: 1rem;
+            letter-spacing: -1.5px;
+            margin-bottom: 1.2rem;
+            line-height: 1.15;
+            max-width: 800px;
         }
         .hero p {
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             color: var(--text-light);
-            max-width: 600px;
-            margin-bottom: 2rem;
+            max-width: 640px;
+            margin-bottom: 2.5rem;
         }
-        .hero-buttons {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
+
+        /* Lep, moderen glavni gumb za rezervacijo */
+        .btn-hero {
+            padding: 1.1rem 2.8rem;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            font-family: var(--font);
+            font-weight: 700;
+            font-size: 1.15rem;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
             justify-content: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, #ffe047 0%, #fdd835 50%, #f9a825 100%);
+            color: var(--primary-dark);
+            box-shadow: var(--shadow-btn);
+            position: relative;
+            overflow: hidden;
         }
+        .btn-hero::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: 0.5s;
+        }
+        .btn-hero:hover::after {
+            left: 100%;
+        }
+        .btn-hero:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: var(--shadow-btn-hover);
+        }
+        .btn-hero:active {
+            transform: translateY(-1px);
+        }
+        .btn-icon {
+            font-size: 1.3rem;
+            transition: transform 0.3s ease;
+        }
+        .btn-hero:hover .btn-icon {
+            transform: translateX(4px);
+        }
+
         .footer {
             text-align: center;
             padding: 1.5rem;
             background: var(--primary-dark);
             color: rgba(255,255,255,0.7);
-            font-size: 0.8rem;
+            font-size: 0.85rem;
         }
+
         @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                text-align: center;
-                padding: 1rem;
-            }
-            .hero h1 {
-                font-size: 2.2rem;
-            }
+            .header { padding: 1rem 1.5rem; }
+            .hero h1 { font-size: 2.4rem; }
+            .hero p { font-size: 1.05rem; }
+            .btn-hero { width: 100%; max-width: 320px; padding: 1rem 2rem; }
         }
     </style>
 </head>
@@ -153,20 +189,20 @@
             <div class="logo-icon">ZT</div>
             <span>Zavrl Tennis Team</span>
         </div>
-        <div class="nav-buttons">
-            <a href="/app" class="btn btn-primary">Rezerviraj termin</a>
-            <a href="/app?auth=login" class="btn btn-outline">Prijava</a>
-            <a href="/app?auth=register" class="btn btn-outline">Registracija</a>
-        </div>
+        <a href="/index.html" class="btn-header">
+            <span>Rezerviraj</span>
+            <span style="font-size: 1.1rem;">→</span>
+        </a>
     </header>
 
     <section class="hero">
-        <h1>Dobrodošli v teniškem klubu Ptuj</h1>
-        <p>Rezervirajte igrišče hitro in enostavno. Osem igrišč, dnevne rezervacije od 8.00 do 22.00. Pridružite se naši teniški družini!</p>
-        <div class="hero-buttons">
-            <a href="/app" class="btn btn-primary" style="font-size:1.1rem; padding:0.8rem 2rem;">Rezerviraj igrišče</a>
-            <a href="/app?auth=register" class="btn btn-outline" style="font-size:1.1rem; padding:0.8rem 2rem; color:var(--primary); border-color:var(--primary);">Brezplačna registracija</a>
-        </div>
+        <div class="hero-badge">🎾 Teniški klub Ptuj</div>
+        <h1>Rezervirajte teniško igrišče v nekaj sekundah</h1>
+        <p>Na voljo 8 vrhunskih igrišč vsak dan od 8.00 do 22.00. Izberite svoj termin in uživajte v igri!</p>
+        <a href="/index.html" class="btn-hero">
+            <span>Rezerviraj igrišče zdaj</span>
+            <span class="btn-icon">➔</span>
+        </a>
     </section>
 
     <footer class="footer">

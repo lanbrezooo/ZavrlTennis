@@ -15,20 +15,23 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);
 
-// Statične datoteke
+// Statične datoteke iz mape frontend
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Landing page
+// Ob obisku domene / se odpre landing.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/landing.html'));
 });
 
-// Aplikacija (koledar)
+// Povezava za sistem rezervacij
+app.get('/index.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
 app.get('/app', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-// Vse ostale GET zahteve (razen /api) preusmeri na landing
+// Vse ostale poti preusmeri na landing.html
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/landing.html'));
 });
