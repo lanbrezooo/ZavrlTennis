@@ -5,39 +5,172 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zavrl Tennis Team - Dobrodošli</title>
     <style>
+        :root {
+            --primary: #1a5632;
+            --primary-dark: #0e3a20;
+            --primary-light: #2e7d32;
+            --accent: #fdd835;
+            --accent-dark: #f9a825;
+            --bg: #f0f4f0;
+            --text: #1a1a1a;
+            --text-light: #666;
+            --border: #e0e0e0;
+            --radius: 14px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, sans-serif; background: linear-gradient(135deg, #0e3a20, #1a5632); color: white; min-height: 100vh; display: flex; flex-direction: column; }
-        .hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; }
-        .hero h1 { font-size: 3rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 1rem; }
-        .hero p { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin-bottom: 2rem; }
-        .btn-group { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
-        .btn { padding: 0.8rem 2rem; border-radius: 50px; border: none; font-weight: 600; cursor: pointer; font-size: 1rem; transition: 0.2s; }
-        .btn-primary { background: #fdd835; color: #0e3a20; }
-        .btn-outline { background: transparent; border: 2px solid white; color: white; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary), var(--primary-light));
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: var(--primary-dark);
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 0.6rem 1.5rem;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            font-family: var(--font);
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            letter-spacing: 0.3px;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: var(--primary-dark);
+            box-shadow: 0 4px 14px rgba(253,216,53,0.35);
+        }
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(253,216,53,0.5);
+        }
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .btn-outline:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: white;
+            transform: translateY(-1px);
+        }
+        .hero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(180deg, #e8f5e9 0%, #f0f4f0 100%);
+        }
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary-dark);
+            letter-spacing: -1px;
+            margin-bottom: 1rem;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-light);
+            max-width: 600px;
+            margin-bottom: 2rem;
+        }
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            background: var(--primary-dark);
+            color: rgba(255,255,255,0.7);
+            font-size: 0.8rem;
+        }
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+                padding: 1rem;
+            }
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="hero">
-        <h1>🎾 Zavrl Tennis Team</h1>
-        <p>Teniški klub Ptuj – rezervirajte igrišče hitro in enostavno. Pridružite se naši skupnosti.</p>
-        <div class="btn-group">
-            <a href="/app" class="btn btn-primary">Vstopi v rezervacije</a>
-            <button class="btn btn-outline" onclick="showLogin()">Prijava</button>
-            <button class="btn btn-outline" onclick="showRegister()">Registracija</button>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">ZT</div>
+            <span>Zavrl Tennis Team</span>
         </div>
-    </div>
-    <!-- Tukaj lahko vključite modal za prijavo/registracijo, podobno kot v index.html -->
-    <script>
-        // Poenostavljena logika za prijavo in registracijo
-        const API_URL = ''; // ker strežnik servira to stran, lahko pustite prazno
-        function showLogin() {
-            // Odpre modal za prijavo (lahko uporabite enak obrazec kot v index.html)
-            alert('Prijava bo kmalu na voljo. Za zdaj pojdite na /app');
-        }
-        function showRegister() {
-            alert('Registracija bo kmalu na voljo. Za zdaj pojdite na /app');
-        }
-    </script>
+        <div class="nav-buttons">
+            <a href="/app" class="btn btn-primary">Rezerviraj termin</a>
+            <a href="/app?auth=login" class="btn btn-outline">Prijava</a>
+            <a href="/app?auth=register" class="btn btn-outline">Registracija</a>
+        </div>
+    </header>
+
+    <section class="hero">
+        <h1>Dobrodošli v teniškem klubu Ptuj</h1>
+        <p>Rezervirajte igrišče hitro in enostavno. Osem igrišč, dnevne rezervacije od 8.00 do 22.00. Pridružite se naši teniški družini!</p>
+        <div class="hero-buttons">
+            <a href="/app" class="btn btn-primary" style="font-size:1.1rem; padding:0.8rem 2rem;">Rezerviraj igrišče</a>
+            <a href="/app?auth=register" class="btn btn-outline" style="font-size:1.1rem; padding:0.8rem 2rem; color:var(--primary); border-color:var(--primary);">Brezplačna registracija</a>
+        </div>
+    </section>
+
+    <footer class="footer">
+        &copy; 2025 Zavrl Tennis Team · Ptuj · Vse pravice pridržane
+    </footer>
 </body>
 </html>
