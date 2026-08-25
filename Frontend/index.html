@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zavrl Tennis Team - Rezervacije</title>
+    <style>
+        :root {
+            --primary: #1a5632;
+            --primary-dark: #0e3a20;
+            --primary-light: #2e7d32;
+            --accent: #fdd835;
+            --accent-dark: #f9a825;
+            --bg: #f0f4f0;
+            --card: #ffffff;
+            --text: #1a1a1a;
+            --text-light: #666;
+            --border: #e0e0e0;
+            --available: #ffffff;
+            --booked: #c8e6c9;
+            --booked-own: #a5d6a7;
+            --hover: #e8f5e9;
+            --danger: #e53935;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.12);
+            --radius: 14px;
+            --radius-sm: 8px;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* === HEADER === */
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--primary-light) 100%);
+            color: white;
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(253, 216, 53, 0.4);
+            flex-shrink: 0;
+            letter-spacing: -1px;
+        }
+
+        .logo-text h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+
+        .logo-text p {
+            font-size: 0.8rem;
+            opacity: 0.85;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 1.1rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            transition: var(--transition);
+        }
+
+        .user-badge .avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--primary-dark);
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            padding: 0.6rem 1.4rem;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            font-family: var(--font);
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            letter-spacing: 0.3px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--primary-dark);
+            box-shadow: 0 4px 14px rgba(253, 216, 53, 0.35);
+        }
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            box-shadow: 0 6px 20px rgba(253, 216, 53, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: white;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c62828;
+            transform: translateY(-1px);
+        }
+
+        .btn-sm {
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* === MAIN CONTENT === */
+        .main {
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+            width: 100%;
+        }
+
+        /* === DATE NAVIGATION === */
+        .date-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 1rem 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .date-nav-center {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .date-nav .date-display {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            min-width: 180px;
+            text-align: center;
+        }
+
+        .date-nav .date-display .day-name {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            font-weight: 500;
+            display: block;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .nav-arrow {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            font-size: 1.2rem;
+            color: var(--text);
+            font-weight: 600;
+        }
+        .nav-arrow:hover:not(:disabled) {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            transform: scale(1.05);
+        }
+        .nav-arrow:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* === CALENDAR GRID === */
+        .calendar-wrapper {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .calendar-scroll {
+            overflow-x: auto;
+            overflow-y: visible;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(8, minmax(120px, 1fr));
+            min-width: 1000px;
+            border-collapse: collapse;
+        }
+
+        .calendar-cell {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            text-align: center;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 2px;
+            cursor: default;
+            position: relative;
+            user-select: none;
+        }
+
+        .calendar-cell.header-cell {
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0.75rem 0.5rem;
+        }
+
+        .calendar-cell.time-cell {
+            background: #fafafa;
+            font-weight: 600;
+            color: var(--text-light);
+            font-size: 0.8rem;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+            cursor: default;
+            letter-spacing: 0.5px;
+        }
+
+        .calendar-cell.available {
+            background: var(--available);
+            cursor: pointer;
+        }
+        .calendar-cell.available:hover {
+            background: var(--hover);
+            box-shadow: inset 0 0 0 2px var(--primary-light);
+            transform: scale(1.02);
+            z-index: 2;
+        }
+
+        .calendar-cell.booked {
+            background: var(--booked);
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+        .calendar-cell.booked:hover {
+            background: #b8dcc0;
+            box-shadow: inset 0 0 0 2px var(--primary);
+            transform: scale(1.02);
+            z-index: 2;
+        }
+
+        .calendar-cell.booked-own {
+            background: var(--booked-own);
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--primary-dark);
+            box-shadow: inset 0 0 0 2px var(--accent);
+        }
+        .calendar-cell.booked-own:hover {
+            background: #8bc98f;
+            transform: scale(1.02);
+            z-index: 2;
+            box-shadow: inset 0 0 0 2px var(--accent-dark);
+        }
+
+        .calendar-cell.past {
+            background: #f5f5f5;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .calendar-cell .res-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            padding: 0 4px;
+        }
+
+        .calendar-cell .res-duration {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            font-weight: 500;
+        }
+
+        /* === LEGEND === */
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            padding: 0.75rem 1.5rem;
+            background: #fafafa;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .legend-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+        .legend-dot.available {
+            background: white;
+        }
+        .legend-dot.booked {
+            background: var(--booked);
+        }
+        .legend-dot.own {
+            background: var(--booked-own);
+            border-color: var(--accent);
+        }
+        .legend-dot.past {
+            background: #f5f5f5;
+        }
+
+        /* === MODAL === */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            animation: fadeIn 0.2s ease;
+            padding: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius);
+            padding: 2rem;
+            max-width: 520px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: #f5f5f5;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            color: var(--text-light);
+        }
+        .modal-close:hover {
+            background: #e0e0e0;
+            color: var(--text);
+        }
+
+        .modal h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            text-align: center;
+        }
+
+        .modal h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+            color: var(--text-light);
+            letter-spacing: 0.3px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: var(--font);
+            font-size: 0.95rem;
+            transition: var(--transition);
+            background: #fafafa;
+            color: var(--text);
+            outline: none;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(26, 86, 50, 0.1);
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .form-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 0.5rem;
+            cursor: pointer;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-error {
+            color: var(--danger);
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-top: 0.25rem;
+            min-height: 1.2em;
+        }
+
+        .booking-summary {
+            background: #f9f9f9;
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            margin: 1rem 0;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .booking-summary .court-num {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -1px;
+        }
+        .booking-summary .time-range {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .booking-summary .date-info {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        /* === TOAST === */
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-sm);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 280px;
+            letter-spacing: 0.3px;
+        }
+        .toast.success {
+            background: var(--primary);
+        }
+        .toast.error {
+            background: var(--danger);
+        }
+        .toast.info {
+            background: #1565c0;
+        }
+
+        /* === MY RESERVATIONS === */
+        .my-reservations {
+            margin-top: 1.5rem;
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+
+        .my-reservations h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .res-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .res-card {
+            background: #f9f9f9;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: var(--transition);
+        }
+        .res-card:hover {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            border-color: var(--primary-light);
+        }
+        .res-card .res-info {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .res-card .res-info small {
+            display: block;
+            font-weight: 400;
+            color: var(--text-light);
+            font-size: 0.75rem;
+        }
+        .res-card .btn {
+            flex-shrink: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-light);
+            padding: 2rem;
+            font-style: italic;
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            .header-inner {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            .logo-section {
+                justify-content: center;
+            }
+            .header-actions {
+                justify-content: center;
+            }
+            .main {
+                padding: 1rem;
+            }
+            .date-nav {
+                flex-direction: column;
+                padding: 0.75rem 1rem;
+            }
+            .date-nav-center {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .modal {
+                padding: 1.5rem;
+                margin: 0.5rem;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .calendar-grid {
+                grid-template-columns: 60px repeat(8, minmax(90px, 1fr));
+                min-width: 700px;
+            }
+            .calendar-cell {
+                font-size: 0.7rem;
+                padding: 0.35rem;
+                min-height: 40px;
+            }
+            .calendar-cell .res-name {
+                font-size: 0.65rem;
+            }
+            .calendar-cell .res-duration {
+                font-size: 0.55rem;
+            }
+            .toast-container {
+                bottom: 1rem;
+                right: 1rem;
+                left: 1rem;
+            }
+            .toast {
+                min-width: auto;
+                width: 100%;
+            }
+        }
+
+        /* === SCROLLBAR === */
+        .calendar-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .calendar-scroll::-webkit-scrollbar-track {
+            background: #f0f0f0;
+        }
+        .calendar-scroll::-webkit-scrollbar-thumb {
+            background: #bbb;
+            border-radius: 3px;
+        }
+        .calendar-scroll::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        /* === MISC === */
+        .text-center {
+            text-align: center;
+        }
+        .mt-1 {
+            margin-top: 0.5rem;
+        }
+        .mt-2 {
+            margin-top: 1rem;
+        }
+        .mb-1 {
+            margin-bottom: 0.5rem;
+        }
+        .gap-1 {
+            gap: 0.5rem;
+        }
+        .flex-wrap {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .hidden {
+            display: none !important;
+        }
+
+        .login-hint {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+            background: #fafafa;
+            border-radius: var(--radius-sm);
+            border: 2px dashed var(--border);
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo-section">
+                <div class="logo-icon">ZT</div>
+                <div class="logo-text">
+                    <h1>Zavrl Tennis Team</h1>
+                    <p>Ptuj · Teniški klub</p>
+                </div>
+            </div>
+            <div class="header-actions" id="headerActions">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main">
+        <!-- DATE NAVIGATION -->
+        <div class="date-nav">
+            <button class="nav-arrow" id="prevDayBtn" title="Prejšnji dan">←</button>
+            <div class="date-nav-center">
+                <span class="date-display" id="dateDisplay"></span>
+            </div>
+            <button class="nav-arrow" id="nextDayBtn" title="Naslednji dan">→</button>
+        </div>
+
+        <!-- CALENDAR -->
+        <div class="calendar-wrapper">
+            <div class="calendar-scroll" id="calendarScroll">
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+            <div class="legend">
+                <span class="legend-item"><span class="legend-dot available"></span> Prosto</span>
+                <span class="legend-item"><span class="legend-dot booked"></span> Zasedeno</span>
+                <span class="legend-item"><span class="legend-dot own"></span> Moja rezervacija</span>
+                <span class="legend-item"><span class="legend-dot past"></span> Pretečeno</span>
+            </div>
+        </div>
+
+        <!-- MY RESERVATIONS -->
+        <div class="my-reservations" id="myReservations" style="display:none;">
+            <h3>🎾 Moje rezervacije</h3>
+            <div class="res-list" id="resList"></div>
+        </div>
+    </main>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- MODAL OVERLAY (dynamic) -->
+    <div id="modalRoot"></div>
+
+    <script>
+        // ============================================================
+        // ZAVRL TENNIS TEAM - Full Frontend Application
+        // ============================================================
+
+        // --- CONFIGURATION ---
+        const API_URL = ''; // Same origin, Express server will serve API
+        const MAX_DAYS_AHEAD = 14;
+        const COURTS = 8;
+        const START_HOUR = 8;
+        const END_HOUR = 22; // 22 = 10 PM, last slot starts at 21:00
+
+        // --- STATE ---
+        let state = {
+            user: null,
+            token: localStorage.getItem('zt_token') || null,
+            selectedDate: new Date(), // Today
+            reservations: [],
+            allReservations: [],
+        };
+
+        // --- DOM REFS ---
+        const headerActions = document.getElementById('headerActions');
+        const dateDisplay = document.getElementById('dateDisplay');
+        const prevDayBtn = document.getElementById('prevDayBtn');
+        const nextDayBtn = document.getElementById('nextDayBtn');
+        const calendarGrid = document.getElementById('calendarGrid');
+        const modalRoot = document.getElementById('modalRoot');
+        const toastContainer = document.getElementById('toastContainer');
+        const myReservationsEl = document.getElementById('myReservations');
+        const resListEl = document.getElementById('resList');
+
+        // ============================================================
+        // UTILITY FUNCTIONS
+        // ============================================================
+        function formatDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function formatDateDisplay(date) {
+            const days = ['Nedelja', 'Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota'];
+            const months = ['januar', 'februar', 'marec', 'april', 'maj', 'junij', 'julij', 'avgust', 'september', 'oktober',
+                'november', 'december'
+            ];
+            const dayName = days[date.getDay()];
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            return `<span class="day-name">${dayName}</span>${day}. ${month} ${year}`;
+        }
+
+        function formatDateShort(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            const days = ['Ned', 'Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob'];
+            const months = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec'];
+            return `${days[d.getDay()]}, ${d.getDate()}. ${months[d.getMonth()]}`;
+        }
+
+        function isToday(date) {
+            const today = new Date();
+            return date.getFullYear() === today.getFullYear() &&
+                date.getMonth() === today.getMonth() &&
+                date.getDate() === today.getDate();
+        }
+
+        function isPastDate(date) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return date < today;
+        }
+
+        function daysBetween(date1, date2) {
+            const d1 = new Date(date1);
+            d1.setHours(0, 0, 0, 0);
+            const d2 = new Date(date2);
+            d2.setHours(0, 0, 0, 0);
+            return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+        }
+
+        function getToday() {
+            const d = new Date();
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        function getMaxDate() {
+            const d = getToday();
+            d.setDate(d.getDate() + MAX_DAYS_AHEAD);
+            return d;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function getUserInitials(user) {
+            if (!user) return '?';
+            return (user.ime?.[0] || '') + (user.priimek?.[0] || '');
+        }
+
+        function getFullName(user) {
+            if (!user) return '';
+            return `${user.ime} ${user.priimek}`.trim();
+        }
+
+        // ============================================================
+        // API CALLS
+        // ============================================================
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (state.token) {
+                headers['Authorization'] = `Bearer ${state.token}`;
+            }
+            const options = { method, headers };
+            if (body) options.body = JSON.stringify(body);
+
+            const res = await fetch(`${API_URL}/api${endpoint}`, options);
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.message || 'Napaka pri zahtevi');
+            }
+            return data;
+        }
+
+        // --- AUTH ---
+        async function registerUser(userData) {
+            const data = await apiCall('/auth/register', 'POST', userData);
+            if (data.token) {
+                state.token = data.token;
+                localStorage.setItem('zt_token', data.token);
+                state.user = data.user;
+            }
+            return data;
+        }
+
+        async function loginUser(email, geslo) {
+            const data = await apiCall('/auth/login', 'POST', { email, geslo });
+            if (data.token) {
+                state.token = data.token;
+                localStorage.setItem('zt_token', data.token);
+                state.user = data.user;
+            }
+            return data;
+        }
+
+        async function logoutUser() {
+            state.token = null;
+            state.user = null;
+            localStorage.removeItem('zt_token');
+        }
+
+        async function fetchCurrentUser() {
+            if (!state.token) return null;
+            try {
+                const data = await apiCall('/auth/me');
+                state.user = data.user;
+                return data.user;
+            } catch (e) {
+                state.token = null;
+                localStorage.removeItem('zt_token');
+                state.user = null;
+                return null;
+            }
+        }
+
+        // --- RESERVATIONS ---
+        async function fetchReservations(dateStr) {
+            const data = await apiCall(`/reservations?date=${dateStr}`);
+            state.allReservations = data.reservations || [];
+            state.reservations = state.allReservations.filter(r => r.datum === dateStr);
+            return state.reservations;
+        }
+
+        async function createReservation(igrisce, datum, uraZacetka, trajanje) {
+            return await apiCall('/reservations', 'POST', { igrisce, datum, ura_zacetka: uraZacetka, trajanje });
+        }
+
+        async function deleteReservation(id) {
+            return await apiCall(`/reservations/${id}`, 'DELETE');
+        }
+
+        // ============================================================
+        // UI RENDERING
+        // ============================================================
+
+        // --- HEADER ---
+        function renderHeader() {
+            if (state.user) {
+                headerActions.innerHTML = `
+                    <div class="user-badge">
+                        <span class="avatar">${getUserInitials(state.user)}</span>
+                        <span>${getFullName(state.user)}</span>
+                        ${state.user.letna_karta ? '<span title="Letna karta">🎫</span>' : ''}
+                        ${state.user.krediti !== null && state.user.krediti !== undefined ? `<span title="Krediti">💰 ${state.user.krediti}</span>` : ''}
+                    </div>
+                    <button class="btn btn-outline btn-sm" onclick="logout()">Odjava</button>
+                `;
+            } else {
+                headerActions.innerHTML = `
+                    <button class="btn btn-outline" onclick="showLoginModal()">Prijava</button>
+                    <button class="btn btn-primary" onclick="showRegisterModal()">Registracija</button>
+                `;
+            }
+        }
+
+        // --- DATE NAVIGATION ---
+        function renderDateNav() {
+            const dateStr = formatDate(state.selectedDate);
+            dateDisplay.innerHTML = formatDateDisplay(state.selectedDate);
+
+            const today = getToday();
+            const maxDate = getMaxDate();
+
+            prevDayBtn.disabled = state.selectedDate <= today;
+            nextDayBtn.disabled = state.selectedDate >= maxDate;
+        }
+
+        // --- CALENDAR ---
+        function renderCalendar() {
+            const dateStr = formatDate(state.selectedDate);
+            const today = getToday();
+            const isPast = isPastDate(state.selectedDate);
+            const isTodaySelected = isToday(state.selectedDate);
+            const nowHour = new Date().getHours();
+
+            // Build grid
+            let html = '';
+
+            // Header row: empty corner + court numbers
+            html += `<div class="calendar-cell header-cell">Ura</div>`;
+            for (let c = 1; c <= COURTS; c++) {
+                html += `<div class="calendar-cell header-cell">Igrišče ${c}</div>`;
+            }
+
+            // Time rows
+            for (let h = START_HOUR; h < END_HOUR; h++) {
+                const timeLabel = `${String(h).padStart(2, '0')}:00`;
+                html += `<div class="calendar-cell time-cell">${timeLabel}</div>`;
+
+                for (let c = 1; c <= COURTS; c++) {
+                    const isPastSlot = isPast || (isTodaySelected && h <= nowHour);
+                    const reservation = state.reservations.find(r =>
+                        r.igrisce === c && r.ura_zacetka === h
+                    );
+
+                    let cellClass = 'available';
+                    let cellContent = '';
+                    let dataAttrs = '';
+
+                    if (isPastSlot) {
+                        cellClass = 'past';
+                    } else if (reservation) {
+                        const isOwn = state.user && reservation.user_id === state.user.id;
+                        cellClass = isOwn ? 'booked-own' : 'booked';
+                        const userName = reservation.ime && reservation.priimek ?
+                            `${reservation.ime} ${reservation.priimek}` :
+                            'Zasedeno';
+                        cellContent = `
+                            <span class="res-name">${userName}</span>
+                            <span class="res-duration">${reservation.trajanje}h</span>
+                        `;
+                        dataAttrs = `data-reservation-id="${reservation.id}"`;
+                        if (isOwn) {
+                            dataAttrs += ` data-own="true"`;
+                        }
+                    } else {
+                        cellContent = '';
+                    }
+
+                    const clickable = !isPastSlot;
+                    const clickAttr = clickable ? `onclick="handleCellClick(${c}, ${h})"` : '';
+                    const style = isPastSlot ? 'cursor:not-allowed;' : '';
+
+                    html += `<div class="calendar-cell ${cellClass}" ${clickAttr} ${dataAttrs} style="${style}">
+                        ${cellContent}
+                    </div>`;
+                }
+            }
+
+            calendarGrid.innerHTML = html;
+            renderMyReservations();
+        }
+
+        // --- MY RESERVATIONS ---
+        function renderMyReservations() {
+            if (!state.user) {
+                myReservationsEl.style.display = 'none';
+                return;
+            }
+
+            const dateStr = formatDate(state.selectedDate);
+            const myRes = state.reservations.filter(r => r.user_id === state.user.id);
+
+            if (myRes.length === 0) {
+                myReservationsEl.style.display = 'block';
+                resListEl.innerHTML = `<div class="empty-state">Ni rezervacij za izbrani dan.</div>`;
+                return;
+            }
+
+            myReservationsEl.style.display = 'block';
+            resListEl.innerHTML = myRes.map(r => {
+                const endHour = r.ura_zacetka + r.trajanje;
+                const timeStr = `${String(r.ura_zacetka).padStart(2, '0')}:00 - ${String(endHour).padStart(2, '0')}:00`;
+                return `
+                    <div class="res-card">
+                        <div class="res-info">
+                            Igrišče ${r.igrisce}
+                            <small>${formatDateShort(r.datum)} · ${timeStr} · ${r.trajanje}h</small>
+                        </div>
+                        <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">Prekliči</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================================
+        // EVENT HANDLERS
+        // ============================================================
+        function handleCellClick(igrisce, uraZacetka) {
+            if (!state.user) {
+                showToast('Za rezervacijo se morate prijaviti.', 'error');
+                showLoginModal();
+                return;
+            }
+
+            const isPast = isPastDate(state.selectedDate) ||
+                (isToday(state.selectedDate) && uraZacetka <= new Date().getHours());
+
+            if (isPast) {
+                showToast('Tega termina ni več mogoče rezervirati.', 'error');
+                return;
+            }
+
+            // Check if already reserved
+            const existing = state.reservations.find(r => r.igrisce === igrisce && r.ura_zacetka === uraZacetka);
+            if (existing) {
+                if (state.user && existing.user_id === state.user.id) {
+                    showDeleteModal(existing);
+                } else {
+                    showToast('Ta termin je že zaseden.', 'error');
+                }
+                return;
+            }
+
+            showBookingModal(igrisce, uraZacetka);
+        }
+
+        async function cancelReservation(id) {
+            if (!confirm('Ali res želite preklicati to rezervacijo?')) return;
+            try {
+                await deleteReservation(id);
+                showToast('Rezervacija preklicana.', 'success');
+                await loadReservations();
+                renderCalendar();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function loadReservations() {
+            const dateStr = formatDate(state.selectedDate);
+            try {
+                await fetchReservations(dateStr);
+            } catch (e) {
+                showToast('Napaka pri nalaganju rezervacij.', 'error');
+            }
+        }
+
+        // --- NAVIGATION ---
+        prevDayBtn.addEventListener('click', async () => {
+            const today = getToday();
+            if (state.selectedDate > today) {
+                state.selectedDate.setDate(state.selectedDate.getDate() - 1);
+                await refreshView();
+            }
+        });
+
+        nextDayBtn.addEventListener('click', async () => {
+            const maxDate = getMaxDate();
+            if (state.selectedDate < maxDate) {
+                state.selectedDate.setDate(state.selectedDate.getDate() + 1);
+                await refreshView();
+            }
+        });
+
+        async function refreshView() {
+            renderDateNav();
+            await loadReservations();
+            renderCalendar();
+        }
+
+        // --- AUTH HANDLERS (global) ---
+        window.logout = async function() {
+            await logoutUser();
+            renderHeader();
+            renderCalendar();
+            renderMyReservations();
+            showToast('Uspešno ste se odjavili.', 'info');
+        };
+
+        window.showLoginModal = function() {
+            showAuthModal('login');
+        };
+
+        window.showRegisterModal = function() {
+            showAuthModal('register');
+        };
+
+        // ============================================================
+        // MODALS
+        // ============================================================
+        function showAuthModal(mode) {
+            const isLogin = mode === 'login';
+            const title = isLogin ? 'Prijava' : 'Registracija';
+            const submitText = isLogin ? 'Prijavi se' : 'Registriraj se';
+
+            modalRoot.innerHTML = `
+                <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+                    <div class="modal">
+                        <button class="modal-close" onclick="closeModal()">✕</button>
+                        <h2>${title}</h2>
+                        <form id="authForm" onsubmit="handleAuth(event, '${mode}')">
+                            ${isLogin ? `
+                                <div class="form-group">
+                                    <label>Email</label>
+                                    <input type="email" name="email" required placeholder="vase@email.si">
+                                </div>
+                                <div class="form-group">
+                                    <label>Geslo</label>
+                                    <input type="password" name="geslo" required placeholder="Vaše geslo">
+                                </div>
+                            ` : `
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Ime *</label>
+                                        <input type="text" name="ime" required placeholder="Ime">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Priimek *</label>
+                                        <input type="text" name="priimek" required placeholder="Priimek">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email *</label>
+                                    <input type="email" name="email" required placeholder="vase@email.si">
+                                </div>
+                                <div class="form-group">
+                                    <label>Geslo *</label>
+                                    <input type="password" name="geslo" required placeholder="Min. 6 znakov" minlength="6">
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Leto rojstva</label>
+                                        <input type="number" name="leto_rojstva" min="1920" max="2025" placeholder="npr. 1990">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Nivo</label>
+                                        <select name="nivo">
+                                            <option value="Začetnik">Začetnik</option>
+                                            <option value="Rekreativec" selected>Rekreativec</option>
+                                            <option value="Srednji nivo">Srednji nivo</option>
+                                            <option value="Napreden">Napreden</option>
+                                            <option value="Tekmovalec">Tekmovalec</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Opis</label>
+                                    <textarea name="opis" placeholder="Nekaj o vas..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label style="display:flex;align-items:center;gap:0.5rem;">
+                                        <input type="checkbox" name="letna_karta" value="1" style="width:auto;margin:0;">
+                                        Imam letno karto
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label>Krediti</label>
+                                    <input type="number" name="krediti" min="0" value="0" placeholder="0">
+                                </div>
+                            `}
+                            <div class="form-error" id="formError"></div>
+                            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem;">
+                                ${submitText}
+                            </button>
+                            <div style="text-align:center;margin-top:1rem;">
+                                <small style="color:var(--text-light);">
+                                    ${isLogin ?
+                                        'Še nimate računa? <a href="#" onclick="event.preventDefault();showRegisterModal();" style="color:var(--primary);font-weight:600;">Registrirajte se</a>' :
+                                        'Že imate račun? <a href="#" onclick="event.preventDefault();showLoginModal();" style="color:var(--primary);font-weight:600;">Prijavite se</a>'
+                                    }
+                                </small>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.handleAuth = async function(e, mode) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const errorEl = document.getElementById('formError');
+            errorEl.textContent = '';
+
+            try {
+                if (mode === 'login') {
+                    const email = formData.get('email');
+                    const geslo = formData.get('geslo');
+                    await loginUser(email, geslo);
+                    showToast('Uspešno ste se prijavili!', 'success');
+                } else {
+                    const userData = {
+                        ime: formData.get('ime'),
+                        priimek: formData.get('priimek'),
+                        email: formData.get('email'),
+                        geslo: formData.get('geslo'),
+                        leto_rojstva: formData.get('leto_rojstva') ? parseInt(formData.get('leto_rojstva')) :
+                            null,
+                        opis: formData.get('opis') || null,
+                        nivo: formData.get('nivo') || 'Rekreativec',
+                        letna_karta: formData.get('letna_karta') ? 1 : 0,
+                        krediti: formData.get('krediti') ? parseInt(formData.get('krediti')) : 0,
+                    };
+                    await registerUser(userData);
+                    showToast('Registracija uspešna! Dobrodošli!', 'success');
+                }
+                closeModal();
+                renderHeader();
+                await refreshView();
+            } catch (err) {
+                errorEl.textContent = err.message;
+            }
+        };
+
+        function showBookingModal(igrisce, uraZacetka) {
+            const dateStr = formatDate(state.selectedDate);
+            const dateDisplayStr = formatDateShort(dateStr);
+            const endHour = Math.min(uraZacetka + 3, END_HOUR);
+            const maxDuration = endHour - uraZacetka;
+
+            // Check if next hours are free
+            let availableDurations = [];
+            for (let d = 1; d <= maxDuration; d++) {
+                const isFree = !state.reservations.some(r =>
+                    r.igrisce === igrisce &&
+                    r.ura_zacetka >= uraZacetka &&
+                    r.ura_zacetka < uraZacetka + d
+                );
+                if (isFree) {
+                    availableDurations.push(d);
+                }
+            }
+            if (availableDurations.length === 0) availableDurations = [1];
+
+            const durationOptions = availableDurations.map(d =>
+                `<option value="${d}">${d} ${d === 1 ? 'ura' : 'uri'} (${String(uraZacetka).padStart(2, '0')}:00 - ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`
+            ).join('');
+
+            modalRoot.innerHTML = `
+                <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+                    <div class="modal" style="max-width:440px;">
+                        <button class="modal-close" onclick="closeModal()">✕</button>
+                        <h2>Rezervacija termina</h2>
+                        <div class="booking-summary">
+                            <div class="court-num">Igrišče ${igrisce}</div>
+                            <div class="time-range">${String(uraZacetka).padStart(2, '0')}:00</div>
+                            <div class="date-info">${dateDisplayStr}</div>
+                        </div>
+                        <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
+                            <div class="form-group">
+                                <label>Trajanje rezervacije</label>
+                                <select name="trajanje" id="trajanjeSelect">
+                                    ${durationOptions}
+                                </select>
+                            </div>
+                            <div class="form-error" id="bookingError"></div>
+                            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+                                Potrdi rezervacijo
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.handleBooking = async function(e, igrisce, uraZacetka) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const trajanje = parseInt(formData.get('trajanje'));
+            const errorEl = document.getElementById('bookingError');
+            errorEl.textContent = '';
+
+            const dateStr = formatDate(state.selectedDate);
+            try {
+                await createReservation(igrisce, dateStr, uraZacetka, trajanje);
+                showToast('Rezervacija uspešno ustvarjena!', 'success');
+                closeModal();
+                await refreshView();
+            } catch (err) {
+                errorEl.textContent = err.message;
+            }
+        };
+
+        function showDeleteModal(reservation) {
+            const dateStr = formatDateShort(reservation.datum);
+            const endHour = reservation.ura_zacetka + reservation.trajanje;
+            const timeStr = `${String(reservation.ura_zacetka).padStart(2, '0')}:00 - ${String(endHour).padStart(2, '0')}:00`;
+
+            modalRoot.innerHTML = `
+                <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+                    <div class="modal" style="max-width:400px;">
+                        <button class="modal-close" onclick="closeModal()">✕</button>
+                        <h2>Prekliči rezervacijo</h2>
+                        <div class="booking-summary">
+                            <div class="court-num">Igrišče ${reservation.igrisce}</div>
+                            <div class="time-range">${timeStr}</div>
+                            <div class="date-info">${dateStr}</div>
+                        </div>
+                        <p style="text-align:center;color:var(--text-light);margin:1rem 0;">
+                            Ali res želite preklicati to rezervacijo?
+                        </p>
+                        <div style="display:flex;gap:0.75rem;">
+                            <button class="btn btn-outline" style="flex:1;" onclick="closeModal()">Nazaj</button>
+                            <button class="btn btn-danger" style="flex:1;justify-content:center;" onclick="confirmDelete(${reservation.id})">
+                                Prekliči
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.confirmDelete = async function(id) {
+            try {
+                await deleteReservation(id);
+                showToast('Rezervacija preklicana.', 'success');
+                closeModal();
+                await refreshView();
+            } catch (e) {
+                showToast(e.message, 'error');
+                closeModal();
+            }
+        };
+
+        window.closeModal = function() {
+            modalRoot.innerHTML = '';
+        };
+
+        // ============================================================
+        // INITIALIZATION
+        // ============================================================
+        async function init() {
+            // Set selected date to today
+            state.selectedDate = getToday();
+
+            // Fetch current user if token exists
+            if (state.token) {
+                await fetchCurrentUser();
+            }
+
+            renderHeader();
+            renderDateNav();
+            await loadReservations();
+            renderCalendar();
+        }
+
+        // Expose functions to global scope for inline onclick
+        window.handleCellClick = handleCellClick;
+        window.cancelReservation = cancelReservation;
+        window.closeModal = closeModal;
+        window.handleAuth = handleAuth;
+        window.handleBooking = handleBooking;
+        window.confirmDelete = confirmDelete;
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
