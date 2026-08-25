@@ -31,8 +31,7 @@ router.post('/register', async (req, res) => {
             telefon: telefon || null,
             admin: false
         };
-        const token = jwt.sign({ userId: result.insertId, admin: false }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.status(201).json({ token, user });
+        const token = jwt.sign({ userId: user.id, admin: user.admin }, process.env.JWT_SECRET, { expiresIn: '7d' });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ message: 'Email že obstaja' });

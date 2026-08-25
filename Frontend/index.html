@@ -290,7 +290,7 @@
         <button class="btn btn-outline" style="color:black; border-color:var(--primary);" onclick="loadAdminUsers()">Osveži seznam</button>
     </div>
     <div style="margin-bottom:1rem;">
-        <input type="text" id="adminSearchInput" placeholder="Išči po imenu ali priimku..." oninput="filterAdminUsers()" style="width:100%; padding:0.6rem 1rem; border:2px solid var(--border); border-radius:var(--radius-sm); font-family:var(--font); font-size:0.9rem;">
+        <input type="text" id="adminSearchInput" oninput="filterAdminUsers()" style="width:100%; padding:0.6rem 1rem; border:2px solid var(--border); border-radius:var(--radius-sm); font-family:var(--font); font-size:0.9rem;">
     </div>
     <div id="adminUsersList"></div>
 </div>
@@ -912,130 +912,6 @@ function renderAdminUsersTable(users) {
             }
         };
 
-        // ============================================================
-        // ADMIN FUNCTIONS
-        // ============================================================
-        window.toggleAdminPanel = function() {
-    const panel = document.getElementById('adminPanel');
-    if (panel.style.display === 'block') {
-        panel.style.display = 'none';
-    } else {
-        panel.style.display = 'block';
-        loadAdminUsers();
-    }
-};
-
-        async function loadAdminUsers() {
-            try {
-                const data = await apiCall('/admin/users');
-                const users = data.users;
-                const container = document.getElementById('adminUsersList');
-                if (users.length === 0) {
-                    container.innerHTML = '<p>Ni uporabnikov.</p>';
-                    return;
-                }
-                let html = `<table class="admin-table"><thead><tr><th>ID</th><th>Ime</th><th>Priimek</th><th>Email</th><th>Telefon</th><th>Letna karta</th><th>Krediti</th><th>Admin</th><th>Dejanja</th></tr></thead><tbody>`;
-                users.forEach(u => {
-                    html += `<tr>
-                        <td>${u.id}</td><td>${u.ime}</td><td>${u.priimek}</td><td>${u.email}</td><td>${u.telefon || ''}</td>
-                        <td>${u.letna_karta ? 'Da' : 'Ne'}</td><td>${u.krediti}</td><td>${u.admin ? 'Da' : 'Ne'}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline" style="color:black;" onclick="editUser(${u.id})">Uredi</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Izbriši</button>
-                        </td>
-                    </tr>`;
-                });
-                html += '</tbody></table>';
-                container.innerHTML = html;
-            } catch (err) {
-                showToast(err.message, 'error');
-            }
-        }
-
-        window.deleteUser = async function(id) {
-            if (!confirm('Izbrisati uporabnika?')) return;
-            try {
-                await apiCall(`/admin/users/${id}`, 'DELETE');
-                showToast('Uporabnik izbrisan', 'success');
-                loadAdminUsers();
-            } catch (err) {
-                showToast(err.message, 'error');
-            }
-        };
-
-        window.editUser = async function(id) {
-            try {
-                const data = await apiCall('/admin/users');
-                const user = data.users.find(u => u.id === id);
-                if (!user) return;
-                modalRoot.innerHTML = `
-                    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
-                        <div class="modal">
-                            <button class="modal-close" onclick="closeModal()">✕</button>
-                            <h2>Uredi uporabnika #${id}</h2>
-                            <form onsubmit="handleAdminUserUpdate(event, ${id})">
-                                <div class="form-row">
-                                    <div class="form-group"><label>Letna karta</label>
-                                        <select id="adminLetnaKarta"><option value="0" ${!user.letna_karta ? 'selected' : ''}>Ne</option><option value="1" ${user.letna_karta ? 'selected' : ''}>Da</option></select>
-                                    </div>
-                                    <div class="form-group"><label>Krediti</label><input type="number" id="adminKrediti" value="${user.krediti}"></div>
-                                </div>
-                                <div class="form-group"><label>Admin</label>
-                                    <select id="adminAdmin"><option value="0" ${!user.admin ? 'selected' : ''}>Ne</option><option value="1" ${user.admin ? 'selected' : ''}>Da</option></select>
-                                </div>
-                                <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Shrani</button>
-                            </form>
-                        </div>
-                    </div>
-                `;
-            } catch (err) {
-                showToast(err.message, 'error');
-            }
-        };
-
-        window.handleAdminUserUpdate = async function(e, id) {
-            e.preventDefault();
-            const payload = {
-                letna_karta: document.getElementById('adminLetnaKarta').value === '1',
-                krediti: parseInt(document.getElementById('adminKrediti').value) || 0,
-                admin: document.getElementById('adminAdmin').value === '1'
-            };
-            try {
-                await apiCall(`/admin/users/${id}`, 'PUT', payload);
-                closeModal();
-                loadAdminUsers();
-                showToast('Uporabnik posodobljen', 'success');
-            } catch (err) {
-                showToast(err.message, 'error');
-            }
-        };
-
-        window.deleteAllReservations = async function() {
-            if (!confirm('Izbrisati VSE rezervacije?')) return;
-            try {
-                await apiCall('/admin/reservations/all', 'DELETE');
-                showToast('Vse rezervacije izbrisane', 'success');
-                await refreshView();
-            } catch (err) {
-                showToast(err.message, 'error');
-            }
-        };
-
-        window.closeModal = function() { modalRoot.innerHTML = ''; };
-
-        // ============================================================
-        // INITIALIZATION
-        // ============================================================
-        async function init() {
-            state.selectedDate = getToday();
-            if (state.token) await fetchCurrentUser();
-            renderHeader();
-            renderDateNav();
-            await loadReservations();
-            renderCalendar();
-        }
-
-        init();
-    </script>
+</script>
 </body>
 </html>
