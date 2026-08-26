@@ -198,7 +198,10 @@
         .legend-dot { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border); }
         .legend-dot.available { background: white; }
         .legend-dot.booked { background: var(--booked); }
-        .legend-dot.own { background: var(--booked-own); border-color: var(--accent); }
+        .legend-dot.own {
+    background: #dbeafe;
+    border-color: #2563eb;
+}
         .legend-dot.past { background: #f5f5f5; }
 
         .modal-overlay {
@@ -486,11 +489,19 @@
             return `<span class="day-name">${dayName}</span>${day}. ${month} ${year}`;
         }
         function formatDateShort(dateStr) {
-            const d = new Date(dateStr + 'T00:00:00');
-            const days = ['Ned', 'Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob'];
-            const months = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec'];
-            return `${days[d.getDay()]}, ${d.getDate()}. ${months[d.getMonth()]}`;
-        }
+    if (!dateStr) return 'Neznan datum';
+    // Preveri, ali je datum v obliki YYYY-MM-DD ali ISO
+    let date;
+    if (typeof dateStr === 'string' && dateStr.includes('T')) {
+        date = new Date(dateStr);
+    } else {
+        date = new Date(dateStr + 'T00:00:00');
+    }
+    if (isNaN(date.getTime())) return 'Neznan datum';
+    const days = ['Ned', 'Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob'];
+    const months = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec'];
+    return `${days[date.getDay()]}, ${date.getDate()}. ${months[date.getMonth()]}`;
+}
         function isToday(date) {
             const today = new Date();
             return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
@@ -598,98 +609,179 @@
         // KOLEDAR
         // ============================================================
         function renderCalendar() {
-            renderCreditsLegend();
-            const dateStr = formatDate(state.selectedDate);
-            const today = new Date(); today.setHours(0,0,0,0);
-            const isPast = state.selectedDate < today;
-            const isTodaySelected = state.selectedDate.toDateString() === today.toDateString();
-            const nowHour = new Date().getHours();
+    renderCreditsLegend();
 
-            let html = '';
-            html += `<div class="calendar-cell header-cell">Ura</div>`;
-            for (let c = 1; c <= COURTS; c++) {
-                html += `<div class="calendar-cell header-cell">Igrišče ${c}</div>`;
-            }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-            for (let h = START_HOUR; h < END_HOUR; h++) {
-                const timeLabel = `${String(h).padStart(2, '0')}:00`;
-                html += `<div class="calendar-cell time-cell">${timeLabel}</div>`;
-                for (let c = 1; c <= COURTS; c++) {
-                    const isPastSlot = isPast || (isTodaySelected && h <= nowHour);
-                    // Poišči rezervacijo, ki pokriva to uro
-                    const reservation = state.reservations.find(r => 
-                        r.igrisce === c && 
-                        r.ura_zacetka <= h && 
-                        (r.ura_zacetka + r.trajanje) > h
-                    );
-                    let cellClass = 'available';
-                    let cellContent = '';
-                    if (isPastSlot) {
-                        cellClass = 'past';
-                    } else if (reservation) {
-                        const isOwn = state.user && reservation.user_id === state.user.id;
-                        cellClass = isOwn ? 'booked-own' : 'booked';
-                        // Prikaži ime samo na prvi uri
-                        if (reservation.ura_zacetka === h) {
-                            const userName = reservation.ime && reservation.priimek ? `${reservation.ime} ${reservation.priimek}` : 'Zasedeno';
-                            cellContent = `<span class="res-name">${userName}</span><span class="res-duration">${reservation.trajanje}h</span>`;
-                        } else {
-                            cellContent = `<span class="res-duration">↕</span>`;
-                        }
+    const isPast = state.selectedDate < today;
+
+    const isTodaySelected =
+        state.selectedDate.toDateString() === today.toDateString();
+
+    const nowHour = new Date().getHours();
+
+    let html = '';
+
+    // Glava koledarja
+    html += `<div class="calendar-cell header-cell">Ura</div>`;
+
+    for (let c = 1; c <= COURTS; c++) {
+        html += `
+            <div class="calendar-cell header-cell">
+                Igrišče ${c}
+            </div>
+        `;
+    }
+
+    // Ure
+    for (let h = START_HOUR; h < END_HOUR; h++) {
+
+        const timeLabel =
+            `${String(h).padStart(2, '0')}:00`;
+
+        html += `
+            <div class="calendar-cell time-cell">
+                ${timeLabel}
+            </div>
+        `;
+
+        // Igrišča
+        for (let c = 1; c <= COURTS; c++) {
+
+            const isPastSlot =
+                isPast ||
+                (isTodaySelected && h <= nowHour);
+
+            // Poiščemo rezervacijo za to uro in igrišče
+            const reservation = state.reservations.find(r => {
+
+                const startHour = Number(r.ura_zacetka);
+                const duration = Number(r.trajanje);
+                const endHour = startHour + duration;
+
+                return (
+                    Number(r.igrisce) === Number(c) &&
+                    startHour <= h &&
+                    endHour > h
+                );
+            });
+
+            let cellClass = 'available';
+            let cellContent = '';
+
+            if (isPastSlot) {
+
+                cellClass = 'past';
+
+            } else if (reservation) {
+
+                // Pomembno:
+                // Number() prepreči problem, če backend vrne
+                // user_id kot string, state.user.id pa kot number.
+                const isOwn =
+                    state.user &&
+                    Number(reservation.user_id) === Number(state.user.id);
+
+                // Moja rezervacija = modra
+                // Tuja rezervacija = zelena
+                cellClass = isOwn
+                    ? 'booked-own'
+                    : 'booked';
+
+                const startHour =
+                    Number(reservation.ura_zacetka);
+
+                // Ime pokažemo samo na prvi uri rezervacije
+                if (startHour === h) {
+
+                    let userName = 'Zasedeno';
+
+                    if (
+                        reservation.ime &&
+                        reservation.priimek
+                    ) {
+                        userName =
+                            `${reservation.ime} ${reservation.priimek}`;
+                    } else if (isOwn && state.user) {
+
+                        // Če backend slučajno ne vrne imena,
+                        // za svojo rezervacijo uporabimo ime
+                        // trenutno prijavljenega uporabnika.
+                        userName =
+                            getFullName(state.user);
+
+                    } else if (reservation.ime) {
+
+                        userName = reservation.ime;
                     }
-                    const clickable = !isPastSlot;
-                    const clickAttr = clickable ? `onclick="handleCellClick(${c}, ${h})"` : '';
-                    html += `<div class="calendar-cell ${cellClass}" ${clickAttr}>${cellContent}</div>`;
-                }
-            }
-            calendarGrid.innerHTML = html;
-            renderMyReservations();
-        }
 
-        function handleCellClick(igrisce, uraZacetka) {
-            if (!state.user) {
-                showToast('Za rezervacijo se morate prijaviti.', 'error');
-                showLoginModal();
-                return;
-            }
-            const isPast = isPastDate(state.selectedDate) || (isToday(state.selectedDate) && uraZacetka <= new Date().getHours());
-            if (isPast) {
-                showToast('Tega termina ni več mogoče rezervirati.', 'error');
-                return;
-            }
-            const existing = state.reservations.find(r => r.igrisce === igrisce && r.ura_zacetka === uraZacetka);
-            if (existing) {
-                if (state.user && existing.user_id === state.user.id) {
-                    showDeleteModal(existing);
+                    cellContent = `
+                        <span class="res-name">
+                            ${escapeHtml(userName)}
+                        </span>
+
+                        <span class="res-duration">
+                            ${reservation.trajanje}h
+                        </span>
+                    `;
+
                 } else {
-                    showToast('Ta termin je že zaseden.', 'error');
-                }
-                return;
-            }
-            showBookingModal(igrisce, uraZacetka);
-        }
 
-        function renderMyReservations() {
-            if (!state.user) {
-                myReservationsEl.style.display = 'none';
-                return;
+                    // Nadaljevanje rezervacije
+                    cellContent = `
+                        <span class="res-duration">
+                            ↕
+                        </span>
+                    `;
+                }
             }
-            const myRes = state.reservations.filter(r => r.user_id === state.user.id);
-            if (myRes.length === 0) {
-                myReservationsEl.style.display = 'block';
-                resListEl.innerHTML = `<div class="empty-state">Ni rezervacij za izbrani dan.</div>`;
-                return;
-            }
-            myReservationsEl.style.display = 'block';
-            resListEl.innerHTML = myRes.map(r => {
-                const endHour = r.ura_zacetka + r.trajanje;
-                const timeStr = `${String(r.ura_zacetka).padStart(2, '0')}:00 - ${String(endHour).padStart(2, '0')}:00`;
-                return `<div class="res-card">
-                    <div class="res-info">Igrišče ${r.igrisce}<small>${formatDateShort(r.datum)} · ${timeStr} · ${r.trajanje}h</small></div>
-                    <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">Prekliči</button>
-                </div>`;
-            }).join('');
+
+            const clickable = !isPastSlot;
+
+            const clickAttr = clickable
+                ? `onclick="handleCellClick(${c}, ${h})"`
+                : '';
+
+            html += `
+                <div
+                    class="calendar-cell ${cellClass}"
+                    ${clickAttr}
+                >
+                    ${cellContent}
+                </div>
+            `;
         }
+    }
+
+    calendarGrid.innerHTML = html;
+
+    renderMyReservations();
+    
+function renderMyReservations() {
+    if (!state.user) {
+        myReservationsEl.style.display = 'none';
+        return;
+    }
+    const myRes = state.reservations.filter(r => Number(r.user_id) === Number(state.user.id));
+    if (myRes.length === 0) {
+        myReservationsEl.style.display = 'block';
+        resListEl.innerHTML = `<div class="empty-state">Ni rezervacij za izbrani dan.</div>`;
+        return;
+    }
+    myReservationsEl.style.display = 'block';
+    resListEl.innerHTML = myRes.map(r => {
+        const endHour = Number(r.ura_zacetka) + Number(r.trajanje);
+        const timeStr = `${String(Number(r.ura_zacetka)).padStart(2, '0')}:00 - ${String(endHour).padStart(2, '0')}:00`;
+        return `<div class="res-card">
+            <div class="res-info">Igrišče ${r.igrisce}<small>${formatDateShort(r.datum)} · ${timeStr} · ${r.trajanje}h</small></div>
+            <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">Prekliči</button>
+        </div>`;
+    }).join('');
+}
+
+
+}
 
         // ============================================================
         // ADMIN FUNKCIJE
