@@ -6,11 +6,11 @@ const router = express.Router();
 const START_HOUR = 8;
 const MORNING_END_HOUR = 12;
 const END_HOUR = 22;
-const COURTS = 8;
+const COURTS = 9; // ✅ 9 igrišč
 const MAX_DAYS = 14;
-const MAX_DAYS_BACK = 3;
-const MORNING_CREDITS_PER_HOUR = 1;   // 08:00–12:00
-const AFTERNOON_CREDITS_PER_HOUR = 2; // 12:00–22:00
+const MAX_DAYS_BACK = 3; // ✅ POPRAVLJENO: 3 dni nazaj (ne 30)
+const MORNING_CREDITS_PER_HOUR = 1;
+const AFTERNOON_CREDITS_PER_HOUR = 2;
 
 function validDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value || '') && !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
@@ -41,13 +41,10 @@ async function deleteOldReservations() {
   }
 }
 
-// GET /api/reservations?date=YYYY-MM-DD
 router.get('/', async (req, res) => {
   const date = String(req.query.date || '');
   if (!validDate(date)) return res.status(400).json({ message: 'Neveljaven datum' });
-
   await deleteOldReservations();
-
   try {
     const [rows] = await pool.query(
       `SELECT r.id, r.user_id, r.igrisce, r.datum, r.ura_zacetka, r.trajanje, r.oznaka, u.ime, u.priimek, u.prikazi_telefon
@@ -64,16 +61,14 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/reservations
 router.post('/', requireAuth, async (req, res) => {
   const igrisce = Number(req.body.igrisce);
   const ura = Number(req.body.ura_zacetka);
   const trajanje = Number(req.body.trajanje);
   const datum = String(req.body.datum || '');
   const useAnnualCard = req.body.useAnnualCard === true;
-  const oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : null; // ⬅️ DODANO
+  const oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : null;
 
-  // Dovoljeno trajanje: običajni uporabniki 1-3, admin do konca dneva
   const maxDuration = req.user.admin ? (END_HOUR - ura) : 3;
 
   if (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > COURTS ||
@@ -84,26 +79,16 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(400).json({ message: 'Neveljaven termin rezervacije' });
   }
 
-  // Če admin pošlje oznako, jo shranimo – za navadne uporabnike ignoriramo
   const finalOznaka = req.user.admin ? oznaka : null;
 
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    const [users] = await conn.query(
-      'SELECT id, krediti, letna_karta FROM uporabniki WHERE id=? FOR UPDATE',
-      [req.user.id]
-    );
-    if (!users.length) {
-      await conn.rollback();
-      return res.status(401).json({ message: 'Uporabnik ne obstaja' });
-    }
+    const [users] = await conn.query('SELECT id, krediti, letna_karta FROM uporabniki WHERE id=? FOR UPDATE', [req.user.id]);
+    if (!users.length) { await conn.rollback(); return res.status(401).json({ message: 'Uporabnik ne obstaja' }); }
     const user = users[0];
-    if (useAnnualCard && !user.letna_karta) {
-      await conn.rollback();
-      return res.status(403).json({ message: 'Letna karta za vaš račun ni aktivna' });
-    }
+    if (useAnnualCard && !user.letna_karta) { await conn.rollback(); return res.status(403).json({ message: 'Letna karta za vaš račun ni aktivna' }); }
 
     const [conflicts] = await conn.query(
       `SELECT id FROM rezervacije
@@ -111,19 +96,12 @@ router.post('/', requireAuth, async (req, res) => {
        FOR UPDATE`,
       [igrisce, datum, ura + trajanje, ura]
     );
-    if (conflicts.length) {
-      await conn.rollback();
-      return res.status(409).json({ message: 'Termin je že zaseden' });
-    }
+    if (conflicts.length) { await conn.rollback(); return res.status(409).json({ message: 'Termin je že zaseden' }); }
 
     const creditsRequired = useAnnualCard ? 0 : calculateCredits(ura, trajanje);
     if (!useAnnualCard && Number(user.krediti) < creditsRequired) {
       await conn.rollback();
-      return res.status(409).json({
-        message: `Za to rezervacijo potrebujete ${creditsRequired} kredit${creditsRequired === 1 ? '' : 'ov'}. Na voljo imate ${user.krediti}.`,
-        requiredCredits: creditsRequired,
-        availableCredits: Number(user.krediti)
-      });
+      return res.status(409).json({ message: `Za to rezervacijo potrebujete ${creditsRequired} kredit${creditsRequired === 1 ? '' : 'ov'}. Na voljo imate ${user.krediti}.` });
     }
 
     const [result] = await conn.query(
@@ -133,23 +111,11 @@ router.post('/', requireAuth, async (req, res) => {
       [req.user.id, igrisce, datum, ura, trajanje, creditsRequired, useAnnualCard ? 1 : 0, finalOznaka]
     );
 
-    if (creditsRequired > 0) {
-      await conn.query('UPDATE uporabniki SET krediti = krediti - ? WHERE id=?', [creditsRequired, req.user.id]);
-    }
+    if (creditsRequired > 0) await conn.query('UPDATE uporabniki SET krediti = krediti - ? WHERE id=?', [creditsRequired, req.user.id]);
     const remainingCredits = Number(user.krediti) - creditsRequired;
 
     await conn.commit();
-    res.status(201).json({
-      reservation: {
-        id: result.insertId, user_id: req.user.id, igrisce, datum,
-        ura_zacetka: ura, trajanje,
-        krediti_porabili: creditsRequired,
-        letna_karta_uporabljena: useAnnualCard ? 1 : 0,
-        oznaka: finalOznaka
-      },
-      creditsCharged: creditsRequired,
-      remainingCredits
-    });
+    res.status(201).json({ reservation: { id: result.insertId, user_id: req.user.id, igrisce, datum, ura_zacetka: ura, trajanje, krediti_porabili: creditsRequired, letna_karta_uporabljena: useAnnualCard ? 1 : 0, oznaka: finalOznaka }, creditsCharged: creditsRequired, remainingCredits });
   } catch (err) {
     await conn.rollback();
     console.error('create reservation', err.message);
@@ -159,7 +125,6 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/reservations/:id (nespremenjeno)
 router.delete('/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Neveljaven ID' });
@@ -167,15 +132,9 @@ router.delete('/:id', requireAuth, async (req, res) => {
   try {
     await conn.beginTransaction();
     const [rows] = await conn.query('SELECT * FROM rezervacije WHERE id=? FOR UPDATE', [id]);
-    if (!rows.length) {
-      await conn.rollback();
-      return res.status(404).json({ message: 'Rezervacija ne obstaja' });
-    }
+    if (!rows.length) { await conn.rollback(); return res.status(404).json({ message: 'Rezervacija ne obstaja' }); }
     const reservation = rows[0];
-    if (reservation.user_id !== req.user.id && !req.user.admin) {
-      await conn.rollback();
-      return res.status(403).json({ message: 'Nimate dovoljenja' });
-    }
+    if (reservation.user_id !== req.user.id && !req.user.admin) { await conn.rollback(); return res.status(403).json({ message: 'Nimate dovoljenja' }); }
     const refund = Number(reservation.krediti_porabili || 0);
     if (refund > 0) await conn.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id=?', [refund, reservation.user_id]);
     await conn.query('DELETE FROM rezervacije WHERE id=?', [id]);

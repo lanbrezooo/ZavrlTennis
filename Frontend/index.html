@@ -2,6 +2,8 @@
 <html lang="sl">
 <head>
     <meta charset="UTF-8">
+    <!-- Favicon (emoji) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎾</text></svg>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zavrl Tennis Team - Rezervacije</title>
     <style>
@@ -112,7 +114,7 @@
         .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
 
         .booking-layout { display:grid; grid-template-columns:minmax(0, 1fr) 270px; gap:1.25rem; align-items:start; }
-        .calendar-wrapper { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; max-width: 1040px; width:100%; justify-self:center; }
+        .calendar-wrapper { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; max-width: 1100px; width:100%; justify-self:center; }
         .calendar-scroll {
             max-height: 55vh;
             overflow-y: auto;
@@ -120,8 +122,8 @@
         }
         .calendar-grid {
             display: grid;
-            grid-template-columns: 70px repeat(8, minmax(90px, 1fr));
-            min-width: 800px;
+            grid-template-columns: 70px repeat(9, minmax(90px, 1fr)); /* ✅ 9 igrišč */
+            min-width: 900px;
         }
         .calendar-cell {
             min-height: 40px;
@@ -160,7 +162,7 @@
             background: #2563eb;
         }
         .calendar-cell.booked-own:hover { background: #bfdbfe; transform: scale(1.02); z-index: 2; box-shadow: inset 0 0 0 3px #1d4ed8; }
-        .calendar-cell.past { background: #f5f5f5; cursor: not-allowed; opacity: 0.5; }
+        .calendar-cell.past { background: #f5f5f5; cursor: not-allowed; opacity: 0.7; }
         .res-name { font-size: 0.75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 4px; }
         .res-duration { font-size: 0.65rem; opacity: 0.7; font-weight: 500; }
 
@@ -269,43 +271,45 @@
         .admin-table .btn { margin: 0.1rem; }
         .search-input { width: 100%; padding: 0.6rem 1rem; border: 2px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 0.9rem; margin-bottom: 1rem; }
 
-        @media (max-width: 1000px) { .booking-layout { grid-template-columns:1fr; } .credits-legend { position:static; max-width:1040px; width:100%; justify-self:center; } }
+        @media (max-width: 1000px) { .booking-layout { grid-template-columns:1fr; } .credits-legend { position:static; max-width:1100px; width:100%; justify-self:center; } }
         @media (max-width: 768px) {
             .header-inner { padding: 0.75rem 1rem; flex-direction: column; align-items: stretch; text-align: center; }
             .logo-section { justify-content: center; }
             .header-actions { justify-content: center; }
-            .main { padding: 1rem; }
+            .main { padding: 0.75rem; }
             .date-nav { flex-direction: column; padding: 0.75rem 1rem; }
             .date-nav-center { width: 100%; justify-content: space-between; }
-            .modal { padding: 1.5rem; margin: 0.5rem; }
+            .modal { padding: 1.25rem; margin: 0.5rem; }
             .form-row { grid-template-columns: 1fr; }
             .booking-layout { gap:1rem; }
-            .calendar-wrapper { border-radius:14px; }
-            .calendar-scroll { max-height:62vh; -webkit-overflow-scrolling:touch; }
-            .calendar-grid { grid-template-columns: 52px repeat(8, minmax(78px, 1fr)); min-width:676px; }
-            .calendar-cell { font-size: 0.66rem; padding: 0.28rem; min-height:44px; }
-            .calendar-cell.header-cell { font-size:.68rem; padding:.65rem .25rem; }
-            .calendar-cell.time-cell { font-size:.7rem; }
-            .legend { gap:.55rem .9rem; padding:.7rem .8rem; font-size:.72rem; }
-            .legend-dot { width:13px; height:13px; }
-            .credits-legend { border-radius:14px; }
-            .credit-balance { margin:.75rem; }
+            .calendar-wrapper { border-radius:12px; max-width:100%; }
+            .calendar-scroll { max-height:70vh; -webkit-overflow-scrolling:touch; border-radius:12px; }
+            .calendar-grid { grid-template-columns: 52px repeat(9, minmax(72px, 1fr)); min-width:700px; }
+            .calendar-cell { font-size: 0.62rem; padding: 0.25rem; min-height:48px; }
+            .calendar-cell.header-cell { font-size:.62rem; padding:.6rem .2rem; letter-spacing:.5px; }
+            .calendar-cell.time-cell { font-size:.65rem; }
+            .res-name { font-size: 0.58rem; padding: 0 2px; }
+            .res-duration { font-size: 0.52rem; }
+            .legend { gap:.5rem .75rem; padding:.6rem .7rem; font-size:.68rem; }
+            .legend-dot { width:12px; height:12px; }
+            .credits-legend { border-radius:12px; margin-top:1rem; }
+            .credit-balance { margin:.75rem; padding:.75rem; }
             .credit-list { padding:.25rem .75rem .75rem; }
             .price-card { margin:0 .75rem .75rem; }
-            .modal { padding:1.25rem 1rem; max-height:94vh; }
-            .booking-summary { padding:.8rem; }
-            .booking-summary .court-num { font-size:1.65rem; }
-            .booking-cost { padding:.8rem; }
+            .modal { padding:1rem; max-height:92vh; }
+            .booking-summary { padding:.7rem; }
+            .booking-summary .court-num { font-size:1.5rem; }
+            .booking-cost { padding:.7rem; }
             .res-list { flex-direction:column; }
-            .res-card { width:100%; justify-content:space-between; gap:.6rem; padding:.75rem; }
-            .admin-panel { padding:.85rem; border-radius:14px; }
-            .admin-section { padding:.75rem; border-radius:12px; }
+            .res-card { width:100%; justify-content:space-between; gap:.6rem; padding:.7rem; }
+            .admin-panel { padding:.7rem; border-radius:12px; }
+            .admin-section { padding:.6rem; border-radius:10px; }
             .admin-toolbar .btn, .admin-toolbar .search-input { width:100%; flex-basis:100%; }
-            .site-footer { margin-left:-1rem; margin-right:-1rem; border-radius:14px 14px 0 0; }
+            .site-footer { margin-left:-0.75rem; margin-right:-0.75rem; border-radius:12px 12px 0 0; }
             .footer-inner { align-items:flex-start; flex-direction:column; }
-            .footer-contact { flex-direction:column; gap:.45rem; }
+            .footer-contact { flex-direction:column; gap:.4rem; }
             .toast-container { bottom: .75rem; right: .75rem; left: .75rem; }
-            .toast { min-width: auto; width: 100%; }
+            .toast { min-width: auto; width: 100%; font-size:.85rem; padding:.8rem 1rem; }
         }
         .calendar-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .calendar-scroll::-webkit-scrollbar-track { background: #f0f0f0; }
@@ -415,8 +419,8 @@
 
         const API_URL = '';
         const MAX_DAYS_AHEAD = 14;
-        const MAX_DAYS_BACK = 3;
-        const COURTS = 8;
+        const MAX_DAYS_BACK = 3; // 
+        const COURTS = 9; // 
         const START_HOUR = 8;
         const END_HOUR = 22;
         const MORNING_END_HOUR = 12;
@@ -443,9 +447,7 @@
         const myReservationsEl = document.getElementById('myReservations');
         const resListEl = document.getElementById('resList');
 
-        // ============================================================
         // API KLICI
-        // ============================================================
         async function apiCall(endpoint, method = 'GET', body = null) {
             const headers = { 'Content-Type': 'application/json' };
             if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
@@ -459,9 +461,7 @@
             return data;
         }
 
-        // ============================================================
         // POMOŽNE FUNKCIJE
-        // ============================================================
         function formatDate(date) {
             const y = date.getFullYear();
             const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -502,15 +502,13 @@
             const d = new Date(); d.setHours(0,0,0,0); return d;
         }
         function getMinDate() {
-    const d = getToday();
-    d.setDate(d.getDate() - MAX_DAYS_BACK);
-    return d;
-}
-function getMaxDate() {
-    const d = getToday();
-    d.setDate(d.getDate() + MAX_DAYS_AHEAD);
-    return d;
-}
+            const d = getToday(); d.setDate(d.getDate() - MAX_DAYS_BACK);
+            return d;
+        }
+        function getMaxDate() {
+            const d = getToday(); d.setDate(d.getDate() + MAX_DAYS_AHEAD);
+            return d;
+        }
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
@@ -528,9 +526,7 @@ function getMaxDate() {
         function getUserInitials(user) { return (user?.ime?.[0] || '') + (user?.priimek?.[0] || ''); }
         function getFullName(user) { return user ? `${user.ime} ${user.priimek}`.trim() : ''; }
 
-        // ============================================================
         // AUTH FUNKCIJE
-        // ============================================================
         async function registerUser(userData) {
             const data = await apiCall('/auth/register', 'POST', userData);
             if (data.token) { state.token = data.token; localStorage.setItem('zt_token', data.token); state.user = data.user; }
@@ -559,24 +555,20 @@ function getMaxDate() {
             }
         }
 
-        // ============================================================
         // REZERVACIJE
-        // ============================================================
         async function fetchReservations(dateStr) {
             const data = await apiCall(`/reservations?date=${dateStr}`);
             state.reservations = data.reservations || [];
             return state.reservations;
         }
         async function createReservation(igrisce, datum, uraZacetka, trajanje, useAnnualCard = false, oznaka = null) {
-    return await apiCall('/reservations', 'POST', { igrisce, datum, ura_zacetka: uraZacetka, trajanje, useAnnualCard, oznaka });
-}
+            return await apiCall('/reservations', 'POST', { igrisce, datum, ura_zacetka: uraZacetka, trajanje, useAnnualCard, oznaka });
+        }
         async function deleteReservation(id) {
             return await apiCall(`/reservations/${id}`, 'DELETE');
         }
 
-        // ============================================================
         // RENDER HEADER
-        // ============================================================
         function renderHeader() {
             if (!state.user?.admin) { state.adminPanelOpen = false; const p=document.getElementById('adminPanel'); if(p) p.style.display='none'; }
             if (state.user) {
@@ -600,70 +592,74 @@ function getMaxDate() {
             }
         }
 
-        // ============================================================
-        // KOLEDAR
-        // ============================================================
+        // KOLEDAR – ✅ Popravljen prikaz preteklih terminov + 9 igrišč
         function renderCalendar() {
-    renderCreditsLegend();
+            renderCreditsLegend();
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-    const isPast = state.selectedDate < today;
-    const isTodaySelected = state.selectedDate.toDateString() === today.toDateString();
-    const nowHour = new Date().getHours();
+            const isPast = state.selectedDate < today;
+            const isTodaySelected = state.selectedDate.toDateString() === today.toDateString();
+            const nowHour = new Date().getHours();
 
-    let html = '';
+            let html = '';
 
-    html += `<div class="calendar-cell header-cell">Ura</div>`;
-    for (let c = 1; c <= COURTS; c++) {
-        html += `<div class="calendar-cell header-cell">Igrišče ${c}</div>`;
-    }
+            html += `<div class="calendar-cell header-cell">Ura</div>`;
+            for (let c = 1; c <= COURTS; c++) {
+    // Dodamo oznako "hard" pod 9. igriščem
+    const courtLabel = c === 9 ? 'Igrišče 9<small style="display:block;font-size:0.65rem;font-weight:400;opacity:0.9;">hard</small>' : `Igrišče ${c}`;
+    html += `<div class="calendar-cell header-cell">${courtLabel}</div>`;
+}
 
-    for (let h = START_HOUR; h < END_HOUR; h++) {
-        const timeLabel = `${String(h).padStart(2, '0')}:00`;
-        html += `<div class="calendar-cell time-cell">${timeLabel}</div>`;
+            for (let h = START_HOUR; h < END_HOUR; h++) {
+                const timeLabel = `${String(h).padStart(2, '0')}:00`;
+                html += `<div class="calendar-cell time-cell">${timeLabel}</div>`;
 
-        for (let c = 1; c <= COURTS; c++) {
-            const isPastSlot = isPast || (isTodaySelected && h <= nowHour);
-            const reservation = state.reservations.find(r => {
-                const startHour = Number(r.ura_zacetka);
-                const duration = Number(r.trajanje);
-                const endHour = startHour + duration;
-                return Number(r.igrisce) === Number(c) && startHour <= h && endHour > h;
-            });
+                for (let c = 1; c <= COURTS; c++) {
+                    const isPastSlot = isPast || (isTodaySelected && h <= nowHour);
+                    const reservation = state.reservations.find(r => {
+                        const startHour = Number(r.ura_zacetka);
+                        const duration = Number(r.trajanje);
+                        const endHour = startHour + duration;
+                        return Number(r.igrisce) === Number(c) && startHour <= h && endHour > h;
+                    });
 
-            let cellClass = 'available';
-            let cellContent = '';
+                    let cellClass = 'available';
+                    let cellContent = '';
 
-            if (isPastSlot) {
-                cellClass = 'past';
-            } else if (reservation) {
-                const isOwn = state.user && Number(reservation.user_id) === Number(state.user.id);
-                cellClass = isOwn ? 'booked-own' : 'booked';
+                    if (reservation) {
+                        const isOwn = state.user && Number(reservation.user_id) === Number(state.user.id);
+                        cellClass = isOwn ? 'booked-own' : 'booked';
 
-                // ⬅️ SPREMENJENO: Najprej preverimo oznako, če obstaja
-                let displayName = '';
-                if (reservation.oznaka) {
-                    displayName = reservation.oznaka; // npr. "TURNIR"
-                } else if (reservation.ime && reservation.priimek) {
-                    displayName = `${reservation.ime} ${reservation.priimek}`;
-                } else if (isOwn && state.user) {
-                    displayName = getFullName(state.user);
-                } else {
-                    displayName = 'Zasedeno';
+                        // ✅ Pretekle rezervacije prikažemo sivo, ampak z imenom
+                        if (isPastSlot) {
+                            cellClass = 'past';
+                        }
+
+                        let displayName = '';
+                        if (reservation.oznaka) {
+                            displayName = reservation.oznaka;
+                        } else if (reservation.ime && reservation.priimek) {
+                            displayName = `${reservation.ime} ${reservation.priimek}`;
+                        } else if (isOwn && state.user) {
+                            displayName = getFullName(state.user);
+                        } else {
+                            displayName = 'Zasedeno';
+                        }
+                        cellContent = `<span class="res-name">${escapeHtml(displayName)}</span><span class="res-duration">${reservation.trajanje}h</span>`;
+                    } else if (isPastSlot) {
+                        cellClass = 'past';
+                    }
+
+                    const clickable = !isPastSlot;
+                    html += `<div class="calendar-cell ${cellClass}" data-igrisce="${c}" data-ura="${h}" ${clickable ? 'style="cursor:pointer;"' : ''}>${cellContent}</div>`;
                 }
-                cellContent = `<span class="res-name">${escapeHtml(displayName)}</span><span class="res-duration">${reservation.trajanje}h</span>`;
             }
 
-            const clickable = !isPastSlot;
-            html += `<div class="calendar-cell ${cellClass}" data-igrisce="${c}" data-ura="${h}" ${clickable ? 'style="cursor:pointer;"' : ''}>${cellContent}</div>`;
+            calendarGrid.innerHTML = html;
+            renderMyReservations();
         }
-    }
-
-    calendarGrid.innerHTML = html;
-    renderMyReservations();
-}
 
         function renderMyReservations() {
             if (!state.user) {
@@ -687,9 +683,7 @@ function getMaxDate() {
             }).join('');
         }
 
-        // ============================================================
-        // KLIK NA KOLEDAR – EVENT DELEGATION (deluje na telefonu)
-        // ============================================================
+        // KLIK NA KOLEDAR – EVENT DELEGATION
         calendarGrid.addEventListener('click', function(e) {
             const cell = e.target.closest('.calendar-cell');
             if (!cell) return;
@@ -711,13 +705,18 @@ function getMaxDate() {
                 showToast('Tega termina ni več mogoče rezervirati.', 'error');
                 return;
             }
-            const existing = state.reservations.find(r => Number(r.igrisce) === igrisce && Number(r.ura_zacetka) === uraZacetka);
+            
+            const existing = state.reservations.find(r => {
+                const start = Number(r.ura_zacetka);
+                const end = start + Number(r.trajanje);
+                return Number(r.igrisce) === igrisce && start <= uraZacetka && uraZacetka < end;
+            });
+
             if (existing) {
                 const isOwn = Number(existing.user_id) === Number(state.user.id);
                 if (isOwn) {
                     showDeleteModal(existing);
                 } else {
-                    // Če je tuja rezervacija – prikaži podatke uporabnika
                     showUserDetails(existing.user_id);
                 }
                 return;
@@ -725,9 +724,7 @@ function getMaxDate() {
             showBookingModal(igrisce, uraZacetka);
         }
 
-        // ============================================================
-        // PRIKAZ PODATKOV UPORABNIKA (klik na tujo rezervacijo)
-        // ============================================================
+        // PRIKAZ PODATKOV UPORABNIKA
         async function showUserDetails(userId) {
             try {
                 const data = await apiCall(`/auth/user/${userId}`);
@@ -754,9 +751,7 @@ function getMaxDate() {
             }
         }
 
-        // ============================================================
         // ADMIN FUNKCIJE
-        // ============================================================
         window.toggleAdminPanel = function() {
             if (!state.user?.admin) return;
             const panel = document.getElementById('adminPanel');
@@ -919,7 +914,7 @@ function getMaxDate() {
         window.filterAdminReservations = function() {
             const input = (document.getElementById('adminReservationSearchInput')?.value || '').trim().toLowerCase();
             const filtered = (state.adminReservations || []).filter(r => {
-                const haystack = `${r.ime || ''} ${r.priimek || ''} ${r.email || ''} ${r.datum || ''} ${r.igrisce || ''} ${r.ura_zacetka || ''}`.toLowerCase();
+                const haystack = `${r.ime || ''} ${r.priimek || ''} ${r.email || ''} ${r.datum || ''} ${r.igrisce || ''} ${r.ura_zacetka || ''} ${r.oznaka || ''}`.toLowerCase();
                 return haystack.includes(input);
             });
             renderAdminReservationsTable(filtered);
@@ -934,7 +929,7 @@ function getMaxDate() {
             }
             const displayRes = reservations.slice(0, 100);
             let html = `<table class="admin-table">
-                <thead><tr><th>ID</th><th>Uporabnik</th><th>Igrišče</th><th>Datum</th><th>Ura</th><th>Trajanje</th><th>Dejanja</th></tr></thead><tbody>`;
+                <thead><tr><th>ID</th><th>Uporabnik</th><th>Igrišče</th><th>Datum</th><th>Ura</th><th>Trajanje</th><th>Oznaka</th><th>Dejanja</th></tr></thead><tbody>`;
             displayRes.forEach(r => {
                 html += `<tr>
                     <td>${r.id}</td>
@@ -943,6 +938,7 @@ function getMaxDate() {
                     <td>${r.datum}</td>
                     <td>${r.ura_zacetka}:00</td>
                     <td>${r.trajanje}h</td>
+                    <td>${escapeHtml(r.oznaka || '')}</td>
                     <td>
                         <button class="btn btn-sm btn-danger" onclick="deleteAdminReservation(${r.id})">Izbriši</button>
                     </td>
@@ -977,9 +973,7 @@ function getMaxDate() {
             }
         };
 
-        // ============================================================
         // AUTH MODALI
-        // ============================================================
         window.showLoginModal = function() { showAuthModal('login'); };
         window.showRegisterModal = function() { showAuthModal('register'); };
 
@@ -1063,64 +1057,61 @@ function getMaxDate() {
             }
         };
 
-        // ============================================================
         // BOOKING MODAL
-        // ============================================================
         function showBookingModal(igrisce, uraZacetka) {
-    const dateStr = formatDate(state.selectedDate);
-    const dateDisplayStr = formatDateShort(dateStr);
-    const endHour = END_HOUR;
-    const maxDuration = endHour - uraZacetka; // ⬅️ Za admina do konca dneva, za druge 3
-    const isAdmin = state.user?.admin === true;
-    const maxSelectableDuration = isAdmin ? maxDuration : Math.min(maxDuration, 3);
+            const dateStr = formatDate(state.selectedDate);
+            const dateDisplayStr = formatDateShort(dateStr);
+            const endHour = END_HOUR;
+            const maxDuration = endHour - uraZacetka;
+            const isAdmin = state.user?.admin === true;
+            const maxSelectableDuration = isAdmin ? maxDuration : Math.min(maxDuration, 3);
 
-    let availableDurations = [];
-    for (let d = 1; d <= maxSelectableDuration; d++) {
-        const isFree = !state.reservations.some(r => r.igrisce === igrisce && r.ura_zacetka >= uraZacetka && r.ura_zacetka < uraZacetka + d);
-        if (isFree) availableDurations.push(d);
-    }
-    if (availableDurations.length === 0) availableDurations = [1];
+            let availableDurations = [];
+            for (let d = 1; d <= maxSelectableDuration; d++) {
+                const isFree = !state.reservations.some(r => r.igrisce === igrisce && r.ura_zacetka >= uraZacetka && r.ura_zacetka < uraZacetka + d);
+                if (isFree) availableDurations.push(d);
+            }
+            if (availableDurations.length === 0) availableDurations = [1];
 
-    const durationOptions = availableDurations.map(d => `<option value="${d}">${d} ${d === 1 ? 'ura' : 'uri'} (${String(uraZacetka).padStart(2, '0')}:00 - ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`).join('');
+            const durationOptions = availableDurations.map(d => `<option value="${d}">${d} ${d === 1 ? 'ura' : 'uri'} (${String(uraZacetka).padStart(2, '0')}:00 - ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`).join('');
 
-    const hasAnnualCard = Boolean(state.user?.letna_karta);
-    
-    // ⬅️ DODANO: polje za oznako, če je admin
-    const oznakaField = isAdmin ? `
-        <div class="form-group">
-            <label>Ime na rezervaciji (neobvezno)</label>
-            <input type="text" id="bookingOznaka" placeholder="npr. TURNIR" maxlength="100">
-        </div>
-    ` : '';
-
-    modalRoot.innerHTML = `
-        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
-            <div class="modal" style="max-width:470px;">
-                <button class="modal-close" onclick="closeModal()">✕</button>
-                <h2>Rezervacija termina</h2>
-                <div class="booking-summary">
-                    <div class="court-num">Igrišče ${igrisce}</div>
-                    <div class="time-range">${String(uraZacetka).padStart(2, '0')}:00</div>
-                    <div class="date-info">${dateDisplayStr}</div>
+            const hasAnnualCard = Boolean(state.user?.letna_karta);
+            
+            const oznakaField = isAdmin ? `
+                <div class="form-group">
+                    <label>Ime na rezervaciji (neobvezno)</label>
+                    <input type="text" id="bookingOznaka" placeholder="npr. TURNIR" maxlength="100">
                 </div>
-                <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
-                    <div class="form-group">
-                        <label>Trajanje rezervacije</label>
-                        <select name="trajanje" onchange="updateBookingCost(${uraZacetka})">${durationOptions}</select>
+            ` : '';
+
+            modalRoot.innerHTML = `
+                <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+                    <div class="modal" style="max-width:470px;">
+                        <button class="modal-close" onclick="closeModal()">✕</button>
+                        <h2>Rezervacija termina</h2>
+                        <div class="booking-summary">
+                            <div class="court-num">Igrišče ${igrisce}</div>
+                            <div class="time-range">${String(uraZacetka).padStart(2, '0')}:00</div>
+                            <div class="date-info">${dateDisplayStr}</div>
+                        </div>
+                        <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
+                            <div class="form-group">
+                                <label>Trajanje rezervacije</label>
+                                <select name="trajanje" onchange="updateBookingCost(${uraZacetka})">${durationOptions}</select>
+                            </div>
+                            ${oznakaField}
+                            <div class="annual-option ${hasAnnualCard ? '' : 'locked'}">
+                                <label><input type="checkbox" name="useAnnualCard" ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+')"' : 'disabled'}> <span>${hasAnnualCard ? '🎫 Uporabi mojo letno karto – 0 kreditov' : '🔒 Letna karta ni aktivna za vaš račun'}</span></label>
+                            </div>
+                            <div class="booking-cost"><span id="bookingCostLabel">Cena rezervacije</span><strong id="bookingCostValue">—</strong></div>
+                            <div class="form-error" id="bookingError"></div>
+                            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Potrdi rezervacijo</button>
+                        </form>
                     </div>
-                    ${oznakaField}
-                    <div class="annual-option ${hasAnnualCard ? '' : 'locked'}">
-                        <label><input type="checkbox" name="useAnnualCard" ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+')"' : 'disabled'}> <span>${hasAnnualCard ? '🎫 Uporabi mojo letno karto – 0 kreditov' : '🔒 Letna karta ni aktivna za vaš račun'}</span></label>
-                    </div>
-                    <div class="booking-cost"><span id="bookingCostLabel">Cena rezervacije</span><strong id="bookingCostValue">—</strong></div>
-                    <div class="form-error" id="bookingError"></div>
-                    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Potrdi rezervacijo</button>
-                </form>
-            </div>
-        </div>
-    `;
-    updateBookingCost(uraZacetka);
-}
+                </div>
+            `;
+            updateBookingCost(uraZacetka);
+        }
 
         window.updateBookingCost = function(uraZacetka) {
             const form = document.getElementById('bookingForm'); if (!form) return;
@@ -1137,32 +1128,31 @@ function getMaxDate() {
         };
 
         window.handleBooking = async function(e, igrisce, uraZacetka) {
-    e.preventDefault();
-    const form = e.target;
-    const trajanje = parseInt(new FormData(form).get('trajanje'));
-    const useAnnualCard = Boolean(form.elements.useAnnualCard?.checked && state.user?.letna_karta);
-    const cost = useAnnualCard ? 0 : calculateReservationCredits(uraZacetka, trajanje);
-    const errorEl = document.getElementById('bookingError');
-    errorEl.textContent = '';
+            e.preventDefault();
+            const form = e.target;
+            const trajanje = parseInt(new FormData(form).get('trajanje'));
+            const useAnnualCard = Boolean(form.elements.useAnnualCard?.checked && state.user?.letna_karta);
+            const cost = useAnnualCard ? 0 : calculateReservationCredits(uraZacetka, trajanje);
+            const errorEl = document.getElementById('bookingError');
+            errorEl.textContent = '';
 
-    // ⬅️ DODANO: Preberi oznako, če polje obstaja (samo admin ga vidi)
-    const oznakaInput = document.getElementById('bookingOznaka');
-    const oznaka = oznakaInput ? oznakaInput.value.trim() : null;
+            const oznakaInput = document.getElementById('bookingOznaka');
+            const oznaka = oznakaInput ? oznakaInput.value.trim() : null;
 
-    if (!useAnnualCard && (!state.user || Number(state.user.krediti || 0) < cost)) {
-        errorEl.textContent = `Za rezervacijo potrebujete ${cost} kredit${cost === 1 ? '' : 'ov'}.`;
-        return;
-    }
+            if (!useAnnualCard && (!state.user || Number(state.user.krediti || 0) < cost)) {
+                errorEl.textContent = `Za rezervacijo potrebujete ${cost} kredit${cost === 1 ? '' : 'ov'}.`;
+                return;
+            }
 
-    const dateStr = formatDate(state.selectedDate);
-    try {
-        const data = await createReservation(igrisce, dateStr, uraZacetka, trajanje, useAnnualCard, oznaka);
-        if (state.user && Number.isFinite(Number(data.remainingCredits))) state.user.krediti = Number(data.remainingCredits);
-        renderCreditsLegend(); renderHeader();
-        showToast(useAnnualCard ? 'Rezervacija uspešno ustvarjena z letno karto!' : `Rezervacija uspešna. Porabljeno: ${data.creditsCharged} kreditov.`, 'success');
-        closeModal(); await refreshView();
-    } catch (err) { errorEl.textContent = err.message; }
-};
+            const dateStr = formatDate(state.selectedDate);
+            try {
+                const data = await createReservation(igrisce, dateStr, uraZacetka, trajanje, useAnnualCard, oznaka);
+                if (state.user && Number.isFinite(Number(data.remainingCredits))) state.user.krediti = Number(data.remainingCredits);
+                renderCreditsLegend(); renderHeader();
+                showToast(useAnnualCard ? 'Rezervacija uspešno ustvarjena z letno karto!' : `Rezervacija uspešna. Porabljeno: ${data.creditsCharged} kreditov.`, 'success');
+                closeModal(); await refreshView();
+            } catch (err) { errorEl.textContent = err.message; }
+        };
 
         function showDeleteModal(reservation) {
             const dateStr = formatDateShort(reservation.datum);
@@ -1209,9 +1199,7 @@ function getMaxDate() {
             }
         }
 
-        // ============================================================
         // PROFILE MODAL
-        // ============================================================
         window.showProfileModal = function() {
             if (!state.user) return;
             const u = state.user;
@@ -1280,9 +1268,7 @@ function getMaxDate() {
             modalRoot.innerHTML = '';
         }
 
-        // ============================================================
         // NAVIGACIJA PO DNEVIH
-        // ============================================================
         prevDayBtn.addEventListener('click', async () => {
             const today = getToday();
             if (state.selectedDate > today) {
@@ -1314,18 +1300,16 @@ function getMaxDate() {
         }
 
         function renderDateNav() {
-    renderCreditsLegend();
-    dateDisplay.innerHTML = formatDateDisplay(state.selectedDate);
-    const today = getToday();
-    const minDate = getMinDate();
-    const maxDate = getMaxDate();
-    prevDayBtn.disabled = state.selectedDate <= minDate;
-    nextDayBtn.disabled = state.selectedDate >= maxDate;
-}
+            renderCreditsLegend();
+            dateDisplay.innerHTML = formatDateDisplay(state.selectedDate);
+            const today = getToday();
+            const minDate = getMinDate();
+            const maxDate = getMaxDate();
+            prevDayBtn.disabled = state.selectedDate <= minDate;
+            nextDayBtn.disabled = state.selectedDate >= maxDate;
+        }
 
-        // ============================================================
         // INICIALIZACIJA
-        // ============================================================
         document.addEventListener('DOMContentLoaded', async () => {
             await fetchCurrentUser();
             renderHeader();
