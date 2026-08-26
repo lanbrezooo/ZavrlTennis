@@ -1,84 +1,81 @@
 const express = require('express');
-const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
+const { requireAuth } = require('../middleware');
+const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tvoja_tajna_beseda';
+const JWT_SECRET = process.env.JWT_SECRET;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const levels = new Set(['Začetnik','Rekreativec','Srednji nivo','Napreden','Tekmovalec']);
 
-// Registracija
+function cleanString(value, max = 255) { return typeof value === 'string' ? value.trim().slice(0, max) : ''; }
+function publicUser(user) {
+  const { geslo_hash, ...safe } = user;
+  return safe;
+}
+function signToken(id) { return jwt.sign({ id }, JWT_SECRET, { expiresIn: '7d' }); }
+function validateRegistration(body) {
+  const ime = cleanString(body.ime, 50), priimek = cleanString(body.priimek, 50);
+  const email = cleanString(body.email, 100).toLowerCase(), geslo = String(body.geslo || '');
+  if (!ime || !priimek || !EMAIL_RE.test(email)) return 'Preverite ime, priimek in email.';
+  if (geslo.length < 8 || geslo.length > 128) return 'Geslo mora imeti najmanj 8 in največ 128 znakov.';
+  return null;
+}
+
 router.post('/register', async (req, res) => {
-    const { ime, priimek, email, geslo, telefon, leto_rojstva, opis, nivo, letna_karta, krediti } = req.body;
-    try {
-        const [existing] = await pool.query('SELECT id FROM uporabniki WHERE email = ?', [email]);
-        if (existing.length > 0) return res.status(400).json({ message: 'Email že obstaja' });
-
-        const geslo_hash = await bcrypt.hash(geslo, 10);
-        const [result] = await pool.query(
-            `INSERT INTO uporabniki (ime, priimek, email, geslo_hash, telefon, leto_rojstva, opis, nivo, letna_karta, krediti) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [ime, priimek, email, geslo_hash, telefon || null, leto_rojstva || null, opis || '', nivo || 'Rekreativec', letna_karta ? 1 : 0, krediti || 0]
-        );
-        const userId = result.insertId;
-        const token = jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '7d' });
-        const [user] = await pool.query('SELECT * FROM uporabniki WHERE id = ?', [userId]);
-        res.json({ token, user: user[0] });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Napaka pri registraciji' });
-    }
+  const error = validateRegistration(req.body);
+  if (error) return res.status(400).json({ message: error });
+  const { ime, priimek, email, geslo, telefon, leto_rojstva, opis, nivo } = req.body;
+  try {
+    const normalizedEmail = cleanString(email, 100).toLowerCase();
+    const [existing] = await pool.query('SELECT id FROM uporabniki WHERE email = ?', [normalizedEmail]);
+    if (existing.length) return res.status(409).json({ message: 'Email že obstaja' });
+    const hash = await bcrypt.hash(String(geslo), 12);
+    const birthYear = leto_rojstva ? Number(leto_rojstva) : null;
+    if (birthYear && (!Number.isInteger(birthYear) || birthYear < 1900 || birthYear > new Date().getFullYear())) return res.status(400).json({ message: 'Neveljavno leto rojstva.' });
+    const safeLevel = levels.has(nivo) ? nivo : 'Rekreativec';
+    const [result] = await pool.query(
+      `INSERT INTO uporabniki (ime, priimek, email, geslo_hash, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+      [cleanString(ime,50), cleanString(priimek,50), normalizedEmail, hash, cleanString(telefon,30) || null, birthYear, cleanString(opis,1000), safeLevel]
+    );
+    const [rows] = await pool.query('SELECT id, ime, priimek, email, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin FROM uporabniki WHERE id = ?', [result.insertId]);
+    res.status(201).json({ token: signToken(result.insertId), user: rows[0] });
+  } catch (err) {
+    console.error('register', err.code || err.message);
+    res.status(500).json({ message: 'Napaka pri registraciji' });
+  }
 });
 
-// Prijava
 router.post('/login', async (req, res) => {
-    const { email, geslo } = req.body;
-    try {
-        const [users] = await pool.query('SELECT * FROM uporabniki WHERE email = ?', [email]);
-        if (users.length === 0) return res.status(401).json({ message: 'Napačen email ali geslo' });
-
-        const user = users[0];
-        const valid = await bcrypt.compare(geslo, user.geslo_hash);
-        if (!valid) return res.status(401).json({ message: 'Napačen email ali geslo' });
-
-        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
-        res.json({ token, user });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Napaka pri prijavi' });
-    }
+  const email = cleanString(req.body.email,100).toLowerCase();
+  const geslo = String(req.body.geslo || '');
+  if (!EMAIL_RE.test(email) || !geslo) return res.status(400).json({ message: 'Vnesite email in geslo.' });
+  try {
+    const [rows] = await pool.query('SELECT * FROM uporabniki WHERE email = ?', [email]);
+    if (!rows.length || !(await bcrypt.compare(geslo, rows[0].geslo_hash))) return res.status(401).json({ message: 'Napačen email ali geslo' });
+    res.json({ token: signToken(rows[0].id), user: publicUser(rows[0]) });
+  } catch (err) {
+    console.error('login', err.message);
+    res.status(500).json({ message: 'Napaka pri prijavi' });
+  }
 });
 
-// Trenutni uporabnik
-router.get('/me', async (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ message: 'Niste prijavljeni' });
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        const [users] = await pool.query('SELECT * FROM uporabniki WHERE id = ?', [decoded.id]);
-        if (users.length === 0) return res.status(404).json({ message: 'Uporabnik ne obstaja' });
-        res.json({ user: users[0] });
-    } catch (err) {
-        return res.status(401).json({ message: 'Neveljaven token' });
-    }
-});
+router.get('/me', requireAuth, (req, res) => res.json({ user: req.user }));
 
-// Posodobi profil
-router.put('/profile', async (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ message: 'Niste prijavljeni' });
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        const { ime, priimek, email, telefon, leto_rojstva, nivo, opis } = req.body;
-        await pool.query(
-            `UPDATE uporabniki SET ime = ?, priimek = ?, email = ?, telefon = ?, leto_rojstva = ?, nivo = ?, opis = ? WHERE id = ?`,
-            [ime, priimek, email, telefon || null, leto_rojstva || null, nivo, opis, decoded.id]
-        );
-        const [users] = await pool.query('SELECT * FROM uporabniki WHERE id = ?', [decoded.id]);
-        res.json({ user: users[0] });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Napaka pri posodabljanju profila' });
-    }
+router.put('/profile', requireAuth, async (req, res) => {
+  const ime = cleanString(req.body.ime,50), priimek = cleanString(req.body.priimek,50), email = cleanString(req.body.email,100).toLowerCase();
+  const leto = req.body.leto_rojstva ? Number(req.body.leto_rojstva) : null;
+  if (!ime || !priimek || !EMAIL_RE.test(email)) return res.status(400).json({ message: 'Preverite ime, priimek in email.' });
+  if (leto && (!Number.isInteger(leto) || leto < 1900 || leto > new Date().getFullYear())) return res.status(400).json({ message: 'Neveljavno leto rojstva.' });
+  try {
+    const [exists] = await pool.query('SELECT id FROM uporabniki WHERE email = ? AND id <> ?', [email, req.user.id]);
+    if (exists.length) return res.status(409).json({ message: 'Ta email že uporablja drug uporabnik.' });
+    const nivo = levels.has(req.body.nivo) ? req.body.nivo : 'Rekreativec';
+    await pool.query(`UPDATE uporabniki SET ime=?, priimek=?, email=?, telefon=?, leto_rojstva=?, nivo=?, opis=? WHERE id=?`, [ime, priimek, email, cleanString(req.body.telefon,30)||null, leto, nivo, cleanString(req.body.opis,1000), req.user.id]);
+    const [rows] = await pool.query('SELECT id, ime, priimek, email, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin FROM uporabniki WHERE id=?', [req.user.id]);
+    res.json({ user: rows[0] });
+  } catch (err) { console.error('profile', err.message); res.status(500).json({ message: 'Napaka pri posodabljanju profila' }); }
 });
-
 module.exports = router;

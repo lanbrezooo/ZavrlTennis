@@ -111,7 +111,8 @@
         .nav-arrow:hover:not(:disabled) { border-color: var(--primary); background: var(--primary); color: white; transform: scale(1.05); }
         .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
 
-        .calendar-wrapper { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; }
+        .booking-layout { display:grid; grid-template-columns:minmax(0, 1fr) 270px; gap:1.25rem; align-items:start; }
+        .calendar-wrapper { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; max-width: 1040px; width:100%; justify-self:center; }
         .calendar-scroll {
             max-height: 55vh;
             overflow-y: auto;
@@ -147,7 +148,30 @@
         .res-name { font-size: 0.75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 4px; }
         .res-duration { font-size: 0.65rem; opacity: 0.7; font-weight: 500; }
 
-        .legend { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; padding: 0.75rem 1.5rem; background: #fafafa; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--text-light); }
+        .legend { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; padding:.75rem 1.25rem; background:#fafafa; border-top:1px solid var(--border); font-size:.8rem; color:var(--text-light); }
+        .credits-legend { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; position:sticky; top:92px; }
+        .credits-legend h3 { padding:1rem 1.1rem; color:var(--primary); font-size:1rem; border-bottom:1px solid var(--border); }
+        .credit-balance { margin:1rem; padding:1rem; border-radius:12px; background:linear-gradient(135deg,var(--primary-dark),var(--primary)); color:white; }
+        .credit-balance strong { display:block; font-size:2rem; line-height:1; margin-top:.25rem; color:var(--accent); }
+        .credit-list { padding:.25rem 1rem 1rem; display:grid; gap:.65rem; }
+        .credit-row { display:flex; justify-content:space-between; gap:1rem; padding:.65rem 0; border-bottom:1px solid var(--border); font-size:.88rem; }
+        .credit-note { padding:0 1rem 1rem; color:var(--text-light); font-size:.75rem; }
+        .price-card { margin:0 1rem 1rem; padding:.9rem; border:1px solid var(--border); border-radius:12px; background:#fafafa; }
+        .price-card h4 { margin:0 0 .65rem; color:var(--primary); font-size:.85rem; text-transform:uppercase; letter-spacing:.5px; }
+        .price-row { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.55rem 0; border-top:1px solid var(--border); font-size:.86rem; }
+        .price-row:first-of-type { border-top:0; }
+        .price-row strong { color:var(--primary-dark); }
+        .annual-option { border:1px solid var(--border); border-radius:12px; padding:.85rem 1rem; background:#fafafa; margin:1rem 0; }
+        .annual-option label { display:flex; align-items:center; gap:.65rem; margin:0; color:var(--text); cursor:pointer; }
+        .annual-option input { width:auto; accent-color:var(--primary); }
+        .annual-option.locked { opacity:.6; background:#f3f3f3; }
+        .booking-cost { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1rem; border-radius:12px; background:#edf7ef; border:1px solid #cde5d1; margin:1rem 0; }
+        .booking-cost strong { font-size:1.35rem; color:var(--primary-dark); }
+        .site-footer { margin-top:2rem; padding:1.5rem; background:var(--primary-dark); color:white; border-radius:var(--radius) var(--radius) 0 0; }
+        .footer-inner { max-width:1400px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; gap:1.5rem; flex-wrap:wrap; }
+        .footer-contact { display:flex; flex-wrap:wrap; gap:.8rem 1.2rem; font-size:.9rem; }
+        .footer-contact a { color:#fff; text-decoration:none; }
+        .footer-contact a:hover { text-decoration:underline; }
         .legend-item { display: flex; align-items: center; gap: 0.5rem; }
         .legend-dot { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border); }
         .legend-dot.available { background: white; }
@@ -213,16 +237,22 @@
         .res-card .btn { flex-shrink: 0; }
         .empty-state { text-align: center; color: var(--text-light); padding: 2rem; font-style: italic; }
 
-        .admin-panel { display: none; margin-top: 1.5rem; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); padding: 1.5rem; }
+        .admin-panel { display:none; margin-top:1.5rem; background:var(--card); border-radius:20px; box-shadow:var(--shadow-lg); border:1px solid var(--border); padding:1.5rem; }
+        .admin-panel > h3 { display:flex; align-items:center; gap:.5rem; color:var(--primary); padding-bottom:1rem; border-bottom:1px solid var(--border); margin-bottom:1rem; }
+        .admin-section { background:#fbfcfb; border:1px solid var(--border); border-radius:16px; padding:1rem; }
+        .admin-toolbar { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem; }
+        .admin-toolbar .search-input { flex:1 1 240px; margin:0; }
+        .admin-table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:12px; }
         .admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 1rem; }
         .admin-table th, .admin-table td { padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border); }
         .admin-table th { background: #f5f5f5; }
         .admin-table .btn { margin: 0.1rem; }
 
-        .admin-section { margin-bottom: 2rem; }
+        .admin-section { margin-bottom:1rem; }
         .admin-section h4 { margin-bottom: 0.5rem; color: var(--primary); }
         .search-input { width: 100%; padding: 0.6rem 1rem; border: 2px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 0.9rem; margin-bottom: 1rem; }
 
+        @media (max-width: 1000px) { .booking-layout { grid-template-columns:1fr; } .credits-legend { position:static; max-width:1040px; width:100%; justify-self:center; } }
         @media (max-width: 768px) {
             .header-inner { padding: 0.75rem 1rem; flex-direction: column; align-items: stretch; text-align: center; }
             .logo-section { justify-content: center; }
@@ -232,11 +262,33 @@
             .date-nav-center { width: 100%; justify-content: space-between; }
             .modal { padding: 1.5rem; margin: 0.5rem; }
             .form-row { grid-template-columns: 1fr; }
-            .calendar-grid { grid-template-columns: 60px repeat(8, minmax(90px, 1fr)); min-width: 700px; }
-            .calendar-cell { font-size: 0.7rem; padding: 0.35rem; min-height: 40px; }
-            .res-name { font-size: 0.65rem; }
-            .res-duration { font-size: 0.55rem; }
-            .toast-container { bottom: 1rem; right: 1rem; left: 1rem; }
+            .booking-layout { gap:1rem; }
+            .calendar-wrapper { border-radius:14px; }
+            .calendar-scroll { max-height:62vh; -webkit-overflow-scrolling:touch; }
+            .calendar-grid { grid-template-columns: 52px repeat(8, minmax(78px, 1fr)); min-width:676px; }
+            .calendar-cell { font-size: 0.66rem; padding: 0.28rem; min-height:44px; }
+            .calendar-cell.header-cell { font-size:.68rem; padding:.65rem .25rem; }
+            .calendar-cell.time-cell { font-size:.7rem; }
+            .legend { gap:.55rem .9rem; padding:.7rem .8rem; font-size:.72rem; }
+            .legend-dot { width:13px; height:13px; }
+            .credits-legend { border-radius:14px; }
+            .credit-balance { margin:.75rem; }
+            .credit-list { padding:.25rem .75rem .75rem; }
+            .price-card { margin:0 .75rem .75rem; }
+            .modal { padding:1.25rem 1rem; max-height:94vh; }
+            .modal h2 { padding-right:2rem; margin-bottom:1rem; }
+            .booking-summary { padding:.8rem; }
+            .booking-summary .court-num { font-size:1.65rem; }
+            .booking-cost { padding:.8rem; }
+            .res-list { flex-direction:column; }
+            .res-card { width:100%; justify-content:space-between; gap:.6rem; padding:.75rem; }
+            .admin-panel { padding:.85rem; border-radius:14px; }
+            .admin-section { padding:.75rem; border-radius:12px; }
+            .admin-toolbar .btn, .admin-toolbar .search-input { width:100%; flex-basis:100%; }
+            .site-footer { margin-left:-1rem; margin-right:-1rem; border-radius:14px 14px 0 0; }
+            .footer-inner { align-items:flex-start; flex-direction:column; }
+            .footer-contact { flex-direction:column; gap:.45rem; }
+            .toast-container { bottom: .75rem; right: .75rem; left: .75rem; }
             .toast { min-width: auto; width: 100%; }
         }
         .calendar-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -270,16 +322,30 @@
             <button class="nav-arrow" id="nextDayBtn" title="Naslednji dan">→</button>
         </div>
 
-        <div class="calendar-wrapper">
-            <div class="calendar-scroll" id="calendarScroll">
-                <div class="calendar-grid" id="calendarGrid"></div>
+        <div class="booking-layout">
+            <div class="calendar-wrapper">
+                <div class="calendar-scroll" id="calendarScroll"><div class="calendar-grid" id="calendarGrid"></div></div>
+                <div class="legend">
+                    <span class="legend-item"><span class="legend-dot available"></span> Prosto</span>
+                    <span class="legend-item"><span class="legend-dot booked"></span> Zasedeno</span>
+                    <span class="legend-item"><span class="legend-dot own"></span> Moja rezervacija</span>
+                    <span class="legend-item"><span class="legend-dot past"></span> Pretečeno</span>
+                </div>
             </div>
-            <div class="legend">
-                <span class="legend-item"><span class="legend-dot available"></span> Prosto</span>
-                <span class="legend-item"><span class="legend-dot booked"></span> Zasedeno</span>
-                <span class="legend-item"><span class="legend-dot own"></span> Moja rezervacija</span>
-                <span class="legend-item"><span class="legend-dot past"></span> Pretečeno</span>
-            </div>
+            <aside class="credits-legend" aria-label="Moji krediti">
+                <h3>💳 Moji krediti</h3>
+                <div class="credit-balance"><span>Trenutno stanje</span><strong id="creditsBalance">—</strong></div>
+                <div class="credit-list">
+                    <div class="credit-row"><span>Letna karta</span><strong id="annualCardStatus">—</strong></div>
+                    <div class="credit-row"><span>Izbrani datum</span><strong id="creditsDate">—</strong></div>
+                </div>
+                <div class="price-card">
+                    <h4>🎾 Cena rezervacije</h4>
+                    <div class="price-row"><span>08:00–12:00</span><strong>1 kredit / uro</strong></div>
+                    <div class="price-row"><span>12:00–21:00</span><strong>2 kredita / uro</strong></div>
+                </div>
+                <p class="credit-note">Cena se izračuna glede na izbrani termin. Z aktivno letno karto lahko izberete rezervacijo brez porabe kreditov.</p>
+            </aside>
         </div>
 
         <div class="my-reservations" id="myReservations" style="display:none;">
@@ -293,20 +359,34 @@
             
             <div class="admin-section">
                 <h4>Uporabniki</h4>
-                <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem;">
-                    <button class="btn btn-danger" onclick="deleteAllReservations()">Izbriši vse rezervacije</button>
-                    <button class="btn btn-outline" style="color:black; border-color:var(--primary);" onclick="loadAdminUsers()">Osveži uporabnike</button>
+                <div class="admin-toolbar">
+                    <button class="btn btn-outline" style="color:black; border-color:var(--primary);" onclick="loadAdminUsers()">↻ Osveži uporabnike</button>
+                    <input type="search" id="adminSearchInput" class="search-input" oninput="filterAdminUsers()" placeholder="Išči po imenu, priimku ali emailu...">
                 </div>
-                <input type="text" id="adminSearchInput" class="search-input" oninput="filterAdminUsers()" placeholder="Išči po imenu, priimku ali emailu...">
-                <div id="adminUsersList"></div>
+                <div class="admin-table-wrap"><div id="adminUsersList"></div></div>
             </div>
 
             <div class="admin-section">
                 <h4>Rezervacije</h4>
-                <button class="btn btn-outline" style="color:black; border-color:var(--primary);" onclick="loadAdminReservations()">Osveži rezervacije</button>
-                <div id="adminReservationsList"></div>
+                <div class="admin-toolbar">
+                    <button class="btn btn-outline" style="color:black; border-color:var(--primary);" onclick="loadAdminReservations()">↻ Osveži rezervacije</button>
+                    <input type="search" id="adminReservationSearchInput" class="search-input" oninput="filterAdminReservations()" placeholder="Išči po imenu, priimku, datumu ali igrišču...">
+                </div>
+                <div class="admin-table-wrap"><div id="adminReservationsList"></div></div>
+                <button class="btn btn-danger btn-sm" style="margin-top:1rem;" onclick="deleteAllReservations()">Izbriši vse rezervacije</button>
             </div>
         </div>
+
+        <footer class="site-footer">
+            <div class="footer-inner">
+                <div><strong>Zavrl Tennis Team</strong><div style="opacity:.8;font-size:.82rem;margin-top:.25rem;">Rezervacije teniških igrišč</div></div>
+                <div class="footer-contact">
+                    <a href="tel:+38640233089">📞 +386 40 233 089</a>
+                    <a href="mailto:zavrl.samo@gmail.com">✉️ zavrl.samo@gmail.com</a>
+                    <span>📍 Pot v Toplice 10, 2250 Ptuj</span>
+                </div>
+            </div>
+        </footer>
     </main>
 
     <div class="toast-container" id="toastContainer"></div>
@@ -323,6 +403,9 @@
         const COURTS = 8;
         const START_HOUR = 8;
         const END_HOUR = 22;
+        const MORNING_END_HOUR = 12;
+        const MORNING_CREDITS_PER_HOUR = 1;
+        const AFTERNOON_CREDITS_PER_HOUR = 2;
 
         // ===== STANJE =====
         let state = {
@@ -331,7 +414,8 @@
             selectedDate: new Date(),
             reservations: [],
             adminUsers: [],
-            adminReservations: []
+            adminReservations: [],
+            adminPanelOpen: false
         };
 
         // ===== DOM ELEMENTI =====
@@ -402,7 +486,7 @@
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
-            toast.innerHTML = message;
+            toast.textContent = message;
             toastContainer.appendChild(toast);
             setTimeout(() => {
                 toast.style.opacity = '0';
@@ -410,6 +494,9 @@
                 setTimeout(() => toast.remove(), 300);
             }, 3500);
         }
+        function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+        function calculateReservationCredits(startHour, duration) { let total=0; for(let hour=startHour; hour<startHour+duration; hour++) total += hour < MORNING_END_HOUR ? MORNING_CREDITS_PER_HOUR : AFTERNOON_CREDITS_PER_HOUR; return total; }
+        function renderCreditsLegend() { const credits=document.getElementById('creditsBalance'); const annual=document.getElementById('annualCardStatus'); const date=document.getElementById('creditsDate'); if(!credits||!annual||!date)return; credits.textContent=state.user ? `${state.user.krediti ?? 0} kreditov` : 'Prijavite se'; annual.textContent=state.user ? (state.user.letna_karta ? 'Aktivna ✓' : 'Ni aktivna') : '—'; date.textContent=formatDateShort(formatDate(state.selectedDate)); }
         function getUserInitials(user) { return (user?.ime?.[0] || '') + (user?.priimek?.[0] || ''); }
         function getFullName(user) { return user ? `${user.ime} ${user.priimek}`.trim() : ''; }
 
@@ -427,7 +514,12 @@
             return data;
         }
         async function logoutUser() {
-            state.token = null; state.user = null; localStorage.removeItem('zt_token');
+            state.token = null; state.user = null; state.adminPanelOpen = false;
+            state.adminUsers = []; state.adminReservations = [];
+            localStorage.removeItem('zt_token');
+            const panel = document.getElementById('adminPanel');
+            if (panel) panel.style.display = 'none';
+            renderCreditsLegend();
         }
         async function fetchCurrentUser() {
             if (!state.token) return null;
@@ -447,8 +539,8 @@
             state.reservations = data.reservations || [];
             return state.reservations;
         }
-        async function createReservation(igrisce, datum, uraZacetka, trajanje) {
-            return await apiCall('/reservations', 'POST', { igrisce, datum, ura_zacetka: uraZacetka, trajanje });
+        async function createReservation(igrisce, datum, uraZacetka, trajanje, useAnnualCard = false) {
+            return await apiCall('/reservations', 'POST', { igrisce, datum, ura_zacetka: uraZacetka, trajanje, useAnnualCard });
         }
         async function deleteReservation(id) {
             return await apiCall(`/reservations/${id}`, 'DELETE');
@@ -458,12 +550,13 @@
         // RENDER HEADER
         // ============================================================
         function renderHeader() {
+            if (!state.user?.admin) { state.adminPanelOpen = false; const p=document.getElementById('adminPanel'); if(p) p.style.display='none'; }
             if (state.user) {
                 const adminButton = state.user.admin ? `<button class="btn btn-outline btn-sm" onclick="toggleAdminPanel()">Admin</button>` : '';
                 headerActions.innerHTML = `
                     <div class="user-badge">
                         <span class="avatar">${getUserInitials(state.user)}</span>
-                        <span>${getFullName(state.user)}</span>
+                        <span>${escapeHtml(getFullName(state.user))}</span>
                         ${state.user.letna_karta ? '<span title="Letna karta">🎫</span>' : ''}
                         ${state.user.krediti !== null && state.user.krediti !== undefined ? `<span title="Krediti">💰 ${state.user.krediti}</span>` : ''}
                     </div>
@@ -483,6 +576,7 @@
         // KOLEDAR
         // ============================================================
         function renderCalendar() {
+            renderCreditsLegend();
             const dateStr = formatDate(state.selectedDate);
             const today = new Date(); today.setHours(0,0,0,0);
             const isPast = state.selectedDate < today;
@@ -579,14 +673,11 @@
         // ADMIN FUNKCIJE
         // ============================================================
         window.toggleAdminPanel = function() {
+            if (!state.user?.admin) return;
             const panel = document.getElementById('adminPanel');
-            if (panel.style.display === 'none' || panel.style.display === '') {
-                panel.style.display = 'block';
-                loadAdminUsers();
-                loadAdminReservations();
-            } else {
-                panel.style.display = 'none';
-            }
+            state.adminPanelOpen = !state.adminPanelOpen;
+            panel.style.display = state.adminPanelOpen ? 'block' : 'none';
+            if (state.adminPanelOpen) { loadAdminUsers(); loadAdminReservations(); }
         };
 
         async function loadAdminUsers() {
@@ -601,7 +692,7 @@
         }
 
         window.filterAdminUsers = function() {
-            const input = document.getElementById('adminSearchInput').value.toLowerCase();
+            const input = document.getElementById('adminSearchInput').value.trim().toLowerCase();
             const allUsers = state.adminUsers || [];
             const filtered = allUsers.filter(u => 
                 (u.ime && u.ime.toLowerCase().includes(input)) || 
@@ -624,9 +715,9 @@
             displayUsers.forEach(u => {
                 html += `<tr>
                     <td>${u.id}</td>
-                    <td>${u.ime}</td>
-                    <td>${u.priimek}</td>
-                    <td>${u.email}</td>
+                    <td>${escapeHtml(u.ime)}</td>
+                    <td>${escapeHtml(u.priimek)}</td>
+                    <td>${escapeHtml(u.email)}</td>
                     <td>${u.telefon || ''}</td>
                     <td>${u.letna_karta ? 'Da' : 'Ne'}</td>
                     <td>${u.krediti}</td>
@@ -734,6 +825,15 @@
             }
         }
 
+        window.filterAdminReservations = function() {
+            const input = (document.getElementById('adminReservationSearchInput')?.value || '').trim().toLowerCase();
+            const filtered = (state.adminReservations || []).filter(r => {
+                const haystack = `${r.ime || ''} ${r.priimek || ''} ${r.email || ''} ${r.datum || ''} ${r.igrisce || ''} ${r.ura_zacetka || ''}`.toLowerCase();
+                return haystack.includes(input);
+            });
+            renderAdminReservationsTable(filtered);
+        };
+
         function renderAdminReservationsTable(reservations) {
             const container = document.getElementById('adminReservationsList');
             if (!container) return;
@@ -741,13 +841,13 @@
                 container.innerHTML = '<p>Ni rezervacij.</p>';
                 return;
             }
-            const displayRes = reservations.slice(0, 50);
+            const displayRes = reservations.slice(0, 100);
             let html = `<table class="admin-table">
                 <thead><tr><th>ID</th><th>Uporabnik</th><th>Igrišče</th><th>Datum</th><th>Ura</th><th>Trajanje</th><th>Dejanja</th></tr></thead><tbody>`;
             displayRes.forEach(r => {
                 html += `<tr>
                     <td>${r.id}</td>
-                    <td>${r.ime} ${r.priimek}</td>
+                    <td>${escapeHtml(r.ime)} ${escapeHtml(r.priimek)}</td>
                     <td>${r.igrisce}</td>
                     <td>${r.datum}</td>
                     <td>${r.ura_zacetka}:00</td>
@@ -758,9 +858,7 @@
                 </tr>`;
             });
             html += '</tbody></table>';
-            if (reservations.length > 50) {
-                html += `<p style="margin-top:0.5rem;color:var(--text-light);">Prikazanih prvih 50 rezervacij.</p>`;
-            }
+            if (reservations.length > 100) { html += `<p style="margin-top:.5rem;color:var(--text-light);">Prikazanih prvih 100 zadetkov.</p>`; }
             container.innerHTML = html;
         }
 
@@ -859,9 +957,7 @@
                         ime: formData.get('ime'), priimek: formData.get('priimek'), email: formData.get('email'),
                         geslo: formData.get('geslo'), telefon: formData.get('telefon') || null,
                         leto_rojstva: formData.get('leto_rojstva') ? parseInt(formData.get('leto_rojstva')) : null,
-                        opis: formData.get('opis') || null, nivo: formData.get('nivo') || 'Rekreativec',
-                        letna_karta: formData.get('letna_karta') ? 1 : 0,
-                        krediti: formData.get('krediti') ? parseInt(formData.get('krediti')) : 0
+                        opis: formData.get('opis') || null, nivo: formData.get('nivo') || 'Rekreativec'
                     };
                     await registerUser(userData);
                     showToast('Registracija uspešna! Dobrodošli!', 'success');
@@ -887,9 +983,10 @@
             }
             if (availableDurations.length === 0) availableDurations = [1];
             const durationOptions = availableDurations.map(d => `<option value="${d}">${d} ${d === 1 ? 'ura' : 'uri'} (${String(uraZacetka).padStart(2, '0')}:00 - ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`).join('');
+            const hasAnnualCard = Boolean(state.user?.letna_karta);
             modalRoot.innerHTML = `
                 <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
-                    <div class="modal" style="max-width:440px;">
+                    <div class="modal" style="max-width:470px;">
                         <button class="modal-close" onclick="closeModal()">✕</button>
                         <h2>Rezervacija termina</h2>
                         <div class="booking-summary">
@@ -898,30 +995,54 @@
                             <div class="date-info">${dateDisplayStr}</div>
                         </div>
                         <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
-                            <div class="form-group"><label>Trajanje rezervacije</label><select name="trajanje">${durationOptions}</select></div>
+                            <div class="form-group"><label>Trajanje rezervacije</label><select name="trajanje" onchange="updateBookingCost(${uraZacetka})">${durationOptions}</select></div>
+                            <div class="annual-option ${hasAnnualCard ? '' : 'locked'}">
+                                <label><input type="checkbox" name="useAnnualCard" ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+')"' : 'disabled'}> <span>${hasAnnualCard ? '🎫 Uporabi mojo letno karto – 0 kreditov' : '🔒 Letna karta ni aktivna za vaš račun'}</span></label>
+                            </div>
+                            <div class="booking-cost"><span id="bookingCostLabel">Cena rezervacije</span><strong id="bookingCostValue">—</strong></div>
                             <div class="form-error" id="bookingError"></div>
                             <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Potrdi rezervacijo</button>
                         </form>
                     </div>
                 </div>
             `;
+            updateBookingCost(uraZacetka);
         }
+
+        window.updateBookingCost = function(uraZacetka) {
+            const form = document.getElementById('bookingForm'); if (!form) return;
+            const duration = Number(form.elements.trajanje.value);
+            const annual = Boolean(form.elements.useAnnualCard?.checked);
+            const cost = annual ? 0 : calculateReservationCredits(uraZacetka, duration);
+            const value = document.getElementById('bookingCostValue');
+            const label = document.getElementById('bookingCostLabel');
+            value.textContent = annual ? '0 kreditov' : `${cost} ${cost === 1 ? 'kredit' : 'kreditov'}`;
+            label.textContent = annual ? 'Letna karta uporabljena' : 'Cena rezervacije';
+            const errorEl = document.getElementById('bookingError');
+            if (!annual && state.user && Number(state.user.krediti || 0) < cost) errorEl.textContent = `Nimate dovolj kreditov. Potrebujete ${cost}, na voljo imate ${state.user.krediti || 0}.`;
+            else errorEl.textContent = '';
+        };
 
         window.handleBooking = async function(e, igrisce, uraZacetka) {
             e.preventDefault();
             const form = e.target;
-            const formData = new FormData(form);
-            const trajanje = parseInt(formData.get('trajanje'));
+            const trajanje = parseInt(new FormData(form).get('trajanje'));
+            const useAnnualCard = Boolean(form.elements.useAnnualCard?.checked && state.user?.letna_karta);
+            const cost = useAnnualCard ? 0 : calculateReservationCredits(uraZacetka, trajanje);
             const errorEl = document.getElementById('bookingError');
             errorEl.textContent = '';
+            if (!useAnnualCard && (!state.user || Number(state.user.krediti || 0) < cost)) {
+                errorEl.textContent = `Za rezervacijo potrebujete ${cost} kredit${cost === 1 ? '' : 'ov'}.`;
+                return;
+            }
             const dateStr = formatDate(state.selectedDate);
             try {
-                await createReservation(igrisce, dateStr, uraZacetka, trajanje);
-                showToast('Rezervacija uspešno ustvarjena!', 'success');
+                const data = await createReservation(igrisce, dateStr, uraZacetka, trajanje, useAnnualCard);
+                if (state.user && Number.isFinite(Number(data.remainingCredits))) state.user.krediti = Number(data.remainingCredits);
+                renderCreditsLegend(); renderHeader();
+                showToast(useAnnualCard ? 'Rezervacija uspešno ustvarjena z letno karto!' : `Rezervacija uspešna. Porabljeno: ${data.creditsCharged} kreditov.`, 'success');
                 closeModal(); await refreshView();
-            } catch (err) {
-                errorEl.textContent = err.message;
-            }
+            } catch (err) { errorEl.textContent = err.message; }
         };
 
         function showDeleteModal(reservation) {
@@ -1025,6 +1146,7 @@
 
         window.logout = async function() {
             await logoutUser();
+            const adminPanel = document.getElementById('adminPanel'); if (adminPanel) adminPanel.style.display = 'none';
             renderHeader(); renderCalendar(); renderMyReservations();
             showToast('Uspešno ste se odjavili.', 'info');
         };
@@ -1067,6 +1189,7 @@
         }
 
         function renderDateNav() {
+            renderCreditsLegend();
             dateDisplay.innerHTML = formatDateDisplay(state.selectedDate);
             const today = getToday();
             const maxDate = getMaxDate();
