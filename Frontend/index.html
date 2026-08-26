@@ -415,6 +415,7 @@
 
         const API_URL = '';
         const MAX_DAYS_AHEAD = 14;
+        const MAX_DAYS_BACK = 3;
         const COURTS = 8;
         const START_HOUR = 8;
         const END_HOUR = 22;
@@ -500,9 +501,16 @@
         function getToday() {
             const d = new Date(); d.setHours(0,0,0,0); return d;
         }
-        function getMaxDate() {
-            const d = getToday(); d.setDate(d.getDate() + MAX_DAYS_AHEAD); return d;
-        }
+        function getMinDate() {
+    const d = getToday();
+    d.setDate(d.getDate() - MAX_DAYS_BACK);
+    return d;
+}
+function getMaxDate() {
+    const d = getToday();
+    d.setDate(d.getDate() + MAX_DAYS_AHEAD);
+    return d;
+}
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
@@ -596,69 +604,64 @@
         // KOLEDAR
         // ============================================================
         function renderCalendar() {
-            renderCreditsLegend();
+    renderCreditsLegend();
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-            const isPast = state.selectedDate < today;
-            const isTodaySelected = state.selectedDate.toDateString() === today.toDateString();
-            const nowHour = new Date().getHours();
+    const isPast = state.selectedDate < today;
+    const isTodaySelected = state.selectedDate.toDateString() === today.toDateString();
+    const nowHour = new Date().getHours();
 
-            let html = '';
+    let html = '';
 
-            html += `<div class="calendar-cell header-cell">Ura</div>`;
-            for (let c = 1; c <= COURTS; c++) {
-                html += `<div class="calendar-cell header-cell">Igrišče ${c}</div>`;
-            }
+    html += `<div class="calendar-cell header-cell">Ura</div>`;
+    for (let c = 1; c <= COURTS; c++) {
+        html += `<div class="calendar-cell header-cell">Igrišče ${c}</div>`;
+    }
 
-            for (let h = START_HOUR; h < END_HOUR; h++) {
-                const timeLabel = `${String(h).padStart(2, '0')}:00`;
-                html += `<div class="calendar-cell time-cell">${timeLabel}</div>`;
+    for (let h = START_HOUR; h < END_HOUR; h++) {
+        const timeLabel = `${String(h).padStart(2, '0')}:00`;
+        html += `<div class="calendar-cell time-cell">${timeLabel}</div>`;
 
-                for (let c = 1; c <= COURTS; c++) {
-                    const isPastSlot = isPast || (isTodaySelected && h <= nowHour);
-                    const reservation = state.reservations.find(r => {
-                        const startHour = Number(r.ura_zacetka);
-                        const duration = Number(r.trajanje);
-                        const endHour = startHour + duration;
-                        return Number(r.igrisce) === Number(c) && startHour <= h && endHour > h;
-                    });
+        for (let c = 1; c <= COURTS; c++) {
+            const isPastSlot = isPast || (isTodaySelected && h <= nowHour);
+            const reservation = state.reservations.find(r => {
+                const startHour = Number(r.ura_zacetka);
+                const duration = Number(r.trajanje);
+                const endHour = startHour + duration;
+                return Number(r.igrisce) === Number(c) && startHour <= h && endHour > h;
+            });
 
-                    let cellClass = 'available';
-                    let cellContent = '';
+            let cellClass = 'available';
+            let cellContent = '';
 
-                    if (isPastSlot) {
-                        cellClass = 'past';
-                    } else if (reservation) {
-                        const isOwn = state.user && Number(reservation.user_id) === Number(state.user.id);
-                        cellClass = isOwn ? 'booked-own' : 'booked';
-                        const startHour = Number(reservation.ura_zacetka);
+            if (isPastSlot) {
+                cellClass = 'past';
+            } else if (reservation) {
+                const isOwn = state.user && Number(reservation.user_id) === Number(state.user.id);
+                cellClass = isOwn ? 'booked-own' : 'booked';
 
-                        if (startHour === h) {
-                            let userName = 'Zasedeno';
-                            if (reservation.ime && reservation.priimek) {
-                                userName = `${reservation.ime} ${reservation.priimek}`;
-                            } else if (isOwn && state.user) {
-                                userName = getFullName(state.user);
-                            } else if (reservation.ime) {
-                                userName = reservation.ime;
-                            }
-                            cellContent = `<span class="res-name">${escapeHtml(userName)}</span><span class="res-duration">${reservation.trajanje}h</span>`;
-                        } else {
-                            cellContent = `<span class="res-duration">↕</span>`;
-                        }
-                    }
-
-                    const clickable = !isPastSlot;
-                    // Uporabimo data-atribute namesto onclick – bolj zanesljivo na telefonu
-                    html += `<div class="calendar-cell ${cellClass}" data-igrisce="${c}" data-ura="${h}" ${clickable ? 'style="cursor:pointer;"' : ''}>${cellContent}</div>`;
+                // ⬅️ SPREMENJENO: Ime se izpiše v VSAKI celici rezervacije
+                let userName = 'Zasedeno';
+                if (reservation.ime && reservation.priimek) {
+                    userName = `${reservation.ime} ${reservation.priimek}`;
+                } else if (isOwn && state.user) {
+                    userName = getFullName(state.user);
+                } else if (reservation.ime) {
+                    userName = reservation.ime;
                 }
+                cellContent = `<span class="res-name">${escapeHtml(userName)}</span><span class="res-duration">${reservation.trajanje}h</span>`;
             }
 
-            calendarGrid.innerHTML = html;
-            renderMyReservations();
+            const clickable = !isPastSlot;
+            html += `<div class="calendar-cell ${cellClass}" data-igrisce="${c}" data-ura="${h}" ${clickable ? 'style="cursor:pointer;"' : ''}>${cellContent}</div>`;
         }
+    }
+
+    calendarGrid.innerHTML = html;
+    renderMyReservations();
+}
 
         function renderMyReservations() {
             if (!state.user) {
@@ -1285,13 +1288,14 @@
         }
 
         function renderDateNav() {
-            renderCreditsLegend();
-            dateDisplay.innerHTML = formatDateDisplay(state.selectedDate);
-            const today = getToday();
-            const maxDate = getMaxDate();
-            prevDayBtn.disabled = state.selectedDate <= today;
-            nextDayBtn.disabled = state.selectedDate >= maxDate;
-        }
+    renderCreditsLegend();
+    dateDisplay.innerHTML = formatDateDisplay(state.selectedDate);
+    const today = getToday();
+    const minDate = getMinDate();
+    const maxDate = getMaxDate();
+    prevDayBtn.disabled = state.selectedDate <= minDate;
+    nextDayBtn.disabled = state.selectedDate >= maxDate;
+}
 
         // ============================================================
         // INICIALIZACIJA

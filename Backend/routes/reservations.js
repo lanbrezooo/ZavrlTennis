@@ -8,8 +8,9 @@ const MORNING_END_HOUR = 12;
 const END_HOUR = 22;
 const COURTS = 8;
 const MAX_DAYS = 14;
+const MAX_DAYS_BACK = 3; // ⬅️ DODANO: za pregled nazaj
 const MORNING_CREDITS_PER_HOUR = 1;   // 08:00–12:00
-const AFTERNOON_CREDITS_PER_HOUR = 2; // 12:00–22:00 (UI displays 12:00–21:00 start times)
+const AFTERNOON_CREDITS_PER_HOUR = 2; // 12:00–22:00
 
 function validDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value || '') && !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
@@ -18,7 +19,8 @@ function withinWindow(date) {
   const d = new Date(`${date}T00:00:00`), now = new Date();
   now.setHours(0,0,0,0);
   const max = new Date(now); max.setDate(max.getDate() + MAX_DAYS);
-  return d >= now && d <= max;
+  const min = new Date(now); min.setDate(min.getDate() - MAX_DAYS_BACK); // ⬅️ DODANO
+  return d >= min && d <= max;
 }
 function calculateCredits(startHour, duration) {
   let total = 0;
@@ -28,11 +30,26 @@ function calculateCredits(startHour, duration) {
   return total;
 }
 
+// ⬅️ DODANO: Samodejno brisanje rezervacij, starejših od 3 dni
+async function deleteOldReservations() {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_BACK);
+    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    await pool.query('DELETE FROM rezervacije WHERE datum < ?', [cutoffStr]);
+  } catch (err) {
+    console.error('delete old reservations', err.message);
+  }
+}
+
 // ===== GET /api/reservations?date=YYYY-MM-DD =====
-// Zdaj vrača tudi ime in priimek uporabnika ter informacijo o prikazu telefona
 router.get('/', async (req, res) => {
   const date = String(req.query.date || '');
   if (!validDate(date)) return res.status(400).json({ message: 'Neveljaven datum' });
+
+  // ⬅️ DODANO: Počisti stare rezervacije pred odgovorom
+  await deleteOldReservations();
+
   try {
     const [rows] = await pool.query(
       `SELECT r.id, r.user_id, r.igrisce, r.datum, r.ura_zacetka, r.trajanje, u.ime, u.priimek, u.prikazi_telefon
@@ -49,6 +66,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+// (Ostale poti POST in DELETE ostanejo nespremenjene – tukaj jih ne spreminjam)
 router.post('/', requireAuth, async (req, res) => {
   const igrisce = Number(req.body.igrisce);
   const ura = Number(req.body.ura_zacetka);
