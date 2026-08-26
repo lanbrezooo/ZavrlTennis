@@ -26,7 +26,7 @@ function validateRegistration(body) {
 router.post('/register', async (req, res) => {
   const error = validateRegistration(req.body);
   if (error) return res.status(400).json({ message: error });
-  const { ime, priimek, email, geslo, telefon, leto_rojstva, opis, nivo } = req.body;
+  const { ime, priimek, email, geslo, telefon, leto_rojstva, opis, nivo, prikazi_telefon } = req.body;
   try {
     const normalizedEmail = cleanString(email, 100).toLowerCase();
     const [existing] = await pool.query('SELECT id FROM uporabniki WHERE email = ?', [normalizedEmail]);
@@ -36,11 +36,11 @@ router.post('/register', async (req, res) => {
     if (birthYear && (!Number.isInteger(birthYear) || birthYear < 1900 || birthYear > new Date().getFullYear())) return res.status(400).json({ message: 'Neveljavno leto rojstva.' });
     const safeLevel = levels.has(nivo) ? nivo : 'Rekreativec';
     const [result] = await pool.query(
-      `INSERT INTO uporabniki (ime, priimek, email, geslo_hash, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
-      [cleanString(ime,50), cleanString(priimek,50), normalizedEmail, hash, cleanString(telefon,30) || null, birthYear, cleanString(opis,1000), safeLevel]
+      `INSERT INTO uporabniki (ime, priimek, email, geslo_hash, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin, prikazi_telefon)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?)`,
+      [cleanString(ime,50), cleanString(priimek,50), normalizedEmail, hash, cleanString(telefon,30) || null, birthYear, cleanString(opis,1000), safeLevel, prikazi_telefon ? 1 : 0]
     );
-    const [rows] = await pool.query('SELECT id, ime, priimek, email, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin FROM uporabniki WHERE id = ?', [result.insertId]);
+    const [rows] = await pool.query('SELECT id, ime, priimek, email, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin, prikazi_telefon FROM uporabniki WHERE id = ?', [result.insertId]);
     res.status(201).json({ token: signToken(result.insertId), user: rows[0] });
   } catch (err) {
     console.error('register', err.code || err.message);
@@ -73,8 +73,9 @@ router.put('/profile', requireAuth, async (req, res) => {
     const [exists] = await pool.query('SELECT id FROM uporabniki WHERE email = ? AND id <> ?', [email, req.user.id]);
     if (exists.length) return res.status(409).json({ message: 'Ta email že uporablja drug uporabnik.' });
     const nivo = levels.has(req.body.nivo) ? req.body.nivo : 'Rekreativec';
-    await pool.query(`UPDATE uporabniki SET ime=?, priimek=?, email=?, telefon=?, leto_rojstva=?, nivo=?, opis=? WHERE id=?`, [ime, priimek, email, cleanString(req.body.telefon,30)||null, leto, nivo, cleanString(req.body.opis,1000), req.user.id]);
-    const [rows] = await pool.query('SELECT id, ime, priimek, email, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin FROM uporabniki WHERE id=?', [req.user.id]);
+    const prikaziTelefon = req.body.prikazi_telefon ? 1 : 0;
+    await pool.query(`UPDATE uporabniki SET ime=?, priimek=?, email=?, telefon=?, leto_rojstva=?, nivo=?, opis=?, prikazi_telefon=? WHERE id=?`, [ime, priimek, email, cleanString(req.body.telefon,30)||null, leto, nivo, cleanString(req.body.opis,1000), prikaziTelefon, req.user.id]);
+    const [rows] = await pool.query('SELECT id, ime, priimek, email, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin, prikazi_telefon FROM uporabniki WHERE id=?', [req.user.id]);
     res.json({ user: rows[0] });
   } catch (err) { console.error('profile', err.message); res.status(500).json({ message: 'Napaka pri posodabljanju profila' }); }
 });

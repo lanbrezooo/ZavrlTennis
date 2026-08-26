@@ -28,11 +28,20 @@ function calculateCredits(startHour, duration) {
   return total;
 }
 
+// ===== GET /api/reservations?date=YYYY-MM-DD =====
+// Zdaj vrača tudi ime in priimek uporabnika ter informacijo o prikazu telefona
 router.get('/', async (req, res) => {
   const date = String(req.query.date || '');
   if (!validDate(date)) return res.status(400).json({ message: 'Neveljaven datum' });
   try {
-    const [rows] = await pool.query('SELECT id, user_id, igrisce, datum, ura_zacetka, trajanje FROM rezervacije WHERE datum = ? ORDER BY igrisce, ura_zacetka', [date]);
+    const [rows] = await pool.query(
+      `SELECT r.id, r.user_id, r.igrisce, r.datum, r.ura_zacetka, r.trajanje, u.ime, u.priimek, u.prikazi_telefon
+       FROM rezervacije r
+       JOIN uporabniki u ON u.id = r.user_id
+       WHERE r.datum = ?
+       ORDER BY r.igrisce, r.ura_zacetka`,
+      [date]
+    );
     res.json({ reservations: rows });
   } catch (err) {
     console.error('list reservations', err.message);
@@ -59,7 +68,6 @@ router.post('/', requireAuth, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // Zaklenemo uporabnika, da se krediti pri hkratnih zahtevkih ne porabijo dvakrat.
     const [users] = await conn.query(
       'SELECT id, krediti, letna_karta FROM uporabniki WHERE id=? FOR UPDATE',
       [req.user.id]
