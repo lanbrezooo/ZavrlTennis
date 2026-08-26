@@ -1137,26 +1137,32 @@ function getMaxDate() {
         };
 
         window.handleBooking = async function(e, igrisce, uraZacetka) {
-            e.preventDefault();
-            const form = e.target;
-            const trajanje = parseInt(new FormData(form).get('trajanje'));
-            const useAnnualCard = Boolean(form.elements.useAnnualCard?.checked && state.user?.letna_karta);
-            const cost = useAnnualCard ? 0 : calculateReservationCredits(uraZacetka, trajanje);
-            const errorEl = document.getElementById('bookingError');
-            errorEl.textContent = '';
-            if (!useAnnualCard && (!state.user || Number(state.user.krediti || 0) < cost)) {
-                errorEl.textContent = `Za rezervacijo potrebujete ${cost} kredit${cost === 1 ? '' : 'ov'}.`;
-                return;
-            }
-            const dateStr = formatDate(state.selectedDate);
-            try {
-                const data = await createReservation(igrisce, dateStr, uraZacetka, trajanje, useAnnualCard);
-                if (state.user && Number.isFinite(Number(data.remainingCredits))) state.user.krediti = Number(data.remainingCredits);
-                renderCreditsLegend(); renderHeader();
-                showToast(useAnnualCard ? 'Rezervacija uspešno ustvarjena z letno karto!' : `Rezervacija uspešna. Porabljeno: ${data.creditsCharged} kreditov.`, 'success');
-                closeModal(); await refreshView();
-            } catch (err) { errorEl.textContent = err.message; }
-        };
+    e.preventDefault();
+    const form = e.target;
+    const trajanje = parseInt(new FormData(form).get('trajanje'));
+    const useAnnualCard = Boolean(form.elements.useAnnualCard?.checked && state.user?.letna_karta);
+    const cost = useAnnualCard ? 0 : calculateReservationCredits(uraZacetka, trajanje);
+    const errorEl = document.getElementById('bookingError');
+    errorEl.textContent = '';
+
+    // ⬅️ DODANO: Preberi oznako, če polje obstaja (samo admin ga vidi)
+    const oznakaInput = document.getElementById('bookingOznaka');
+    const oznaka = oznakaInput ? oznakaInput.value.trim() : null;
+
+    if (!useAnnualCard && (!state.user || Number(state.user.krediti || 0) < cost)) {
+        errorEl.textContent = `Za rezervacijo potrebujete ${cost} kredit${cost === 1 ? '' : 'ov'}.`;
+        return;
+    }
+
+    const dateStr = formatDate(state.selectedDate);
+    try {
+        const data = await createReservation(igrisce, dateStr, uraZacetka, trajanje, useAnnualCard, oznaka);
+        if (state.user && Number.isFinite(Number(data.remainingCredits))) state.user.krediti = Number(data.remainingCredits);
+        renderCreditsLegend(); renderHeader();
+        showToast(useAnnualCard ? 'Rezervacija uspešno ustvarjena z letno karto!' : `Rezervacija uspešna. Porabljeno: ${data.creditsCharged} kreditov.`, 'success');
+        closeModal(); await refreshView();
+    } catch (err) { errorEl.textContent = err.message; }
+};
 
         function showDeleteModal(reservation) {
             const dateStr = formatDateShort(reservation.datum);
