@@ -20,3 +20,4 @@ CREATE TABLE IF NOT EXISTS rezervacije (
  CONSTRAINT chk_ura CHECK (ura_zacetka BETWEEN 8 AND 21),
  CONSTRAINT chk_trajanje CHECK (trajanje BETWEEN 1 AND 3)
 ) ENGINE=InnoDB;
+ALTER TABLE rezervacije ADD COLUMN oznaka VARCHAR(100) DEFAULT NULL;

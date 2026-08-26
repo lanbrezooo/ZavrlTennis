@@ -1,6 +1,6 @@
 const express = require('express');
 const pool = require('../db');
-const { requireAuth } = require('../middleware');
+const { requireAuth, requireAdmin } = require('../middleware');
 const router = express.Router();
 
 const START_HOUR = 8;
@@ -8,7 +8,7 @@ const MORNING_END_HOUR = 12;
 const END_HOUR = 22;
 const COURTS = 8;
 const MAX_DAYS = 14;
-const MAX_DAYS_BACK = 3; // ⬅️ DODANO: za pregled nazaj
+const MAX_DAYS_BACK = 3;
 const MORNING_CREDITS_PER_HOUR = 1;   // 08:00–12:00
 const AFTERNOON_CREDITS_PER_HOUR = 2; // 12:00–22:00
 
@@ -19,7 +19,7 @@ function withinWindow(date) {
   const d = new Date(`${date}T00:00:00`), now = new Date();
   now.setHours(0,0,0,0);
   const max = new Date(now); max.setDate(max.getDate() + MAX_DAYS);
-  const min = new Date(now); min.setDate(min.getDate() - MAX_DAYS_BACK); // ⬅️ DODANO
+  const min = new Date(now); min.setDate(min.getDate() - MAX_DAYS_BACK);
   return d >= min && d <= max;
 }
 function calculateCredits(startHour, duration) {
@@ -30,7 +30,6 @@ function calculateCredits(startHour, duration) {
   return total;
 }
 
-// ⬅️ DODANO: Samodejno brisanje rezervacij, starejših od 3 dni
 async function deleteOldReservations() {
   try {
     const cutoffDate = new Date();
@@ -42,17 +41,16 @@ async function deleteOldReservations() {
   }
 }
 
-// ===== GET /api/reservations?date=YYYY-MM-DD =====
+// GET /api/reservations?date=YYYY-MM-DD
 router.get('/', async (req, res) => {
   const date = String(req.query.date || '');
   if (!validDate(date)) return res.status(400).json({ message: 'Neveljaven datum' });
 
-  // ⬅️ DODANO: Počisti stare rezervacije pred odgovorom
   await deleteOldReservations();
 
   try {
     const [rows] = await pool.query(
-      `SELECT r.id, r.user_id, r.igrisce, r.datum, r.ura_zacetka, r.trajanje, u.ime, u.priimek, u.prikazi_telefon
+      `SELECT r.id, r.user_id, r.igrisce, r.datum, r.ura_zacetka, r.trajanje, r.oznaka, u.ime, u.priimek, u.prikazi_telefon
        FROM rezervacije r
        JOIN uporabniki u ON u.id = r.user_id
        WHERE r.datum = ?
@@ -66,21 +64,28 @@ router.get('/', async (req, res) => {
   }
 });
 
-// (Ostale poti POST in DELETE ostanejo nespremenjene – tukaj jih ne spreminjam)
+// POST /api/reservations
 router.post('/', requireAuth, async (req, res) => {
   const igrisce = Number(req.body.igrisce);
   const ura = Number(req.body.ura_zacetka);
   const trajanje = Number(req.body.trajanje);
   const datum = String(req.body.datum || '');
   const useAnnualCard = req.body.useAnnualCard === true;
+  const oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : null; // ⬅️ DODANO
+
+  // Dovoljeno trajanje: običajni uporabniki 1-3, admin do konca dneva
+  const maxDuration = req.user.admin ? (END_HOUR - ura) : 3;
 
   if (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > COURTS ||
       !validDate(datum) || !withinWindow(datum) ||
       !Number.isInteger(ura) || !Number.isInteger(trajanje) ||
-      ura < START_HOUR || ura >= END_HOUR || trajanje < 1 || trajanje > 3 ||
+      ura < START_HOUR || ura >= END_HOUR || trajanje < 1 || trajanje > maxDuration ||
       ura + trajanje > END_HOUR) {
     return res.status(400).json({ message: 'Neveljaven termin rezervacije' });
   }
+
+  // Če admin pošlje oznako, jo shranimo – za navadne uporabnike ignoriramo
+  const finalOznaka = req.user.admin ? oznaka : null;
 
   const conn = await pool.getConnection();
   try {
@@ -123,9 +128,9 @@ router.post('/', requireAuth, async (req, res) => {
 
     const [result] = await conn.query(
       `INSERT INTO rezervacije
-       (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [req.user.id, igrisce, datum, ura, trajanje, creditsRequired, useAnnualCard ? 1 : 0]
+       (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.user.id, igrisce, datum, ura, trajanje, creditsRequired, useAnnualCard ? 1 : 0, finalOznaka]
     );
 
     if (creditsRequired > 0) {
@@ -139,7 +144,8 @@ router.post('/', requireAuth, async (req, res) => {
         id: result.insertId, user_id: req.user.id, igrisce, datum,
         ura_zacetka: ura, trajanje,
         krediti_porabili: creditsRequired,
-        letna_karta_uporabljena: useAnnualCard ? 1 : 0
+        letna_karta_uporabljena: useAnnualCard ? 1 : 0,
+        oznaka: finalOznaka
       },
       creditsCharged: creditsRequired,
       remainingCredits
@@ -153,6 +159,7 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/reservations/:id (nespremenjeno)
 router.delete('/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Neveljaven ID' });

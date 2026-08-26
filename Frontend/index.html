@@ -567,9 +567,9 @@ function getMaxDate() {
             state.reservations = data.reservations || [];
             return state.reservations;
         }
-        async function createReservation(igrisce, datum, uraZacetka, trajanje, useAnnualCard = false) {
-            return await apiCall('/reservations', 'POST', { igrisce, datum, ura_zacetka: uraZacetka, trajanje, useAnnualCard });
-        }
+        async function createReservation(igrisce, datum, uraZacetka, trajanje, useAnnualCard = false, oznaka = null) {
+    return await apiCall('/reservations', 'POST', { igrisce, datum, ura_zacetka: uraZacetka, trajanje, useAnnualCard, oznaka });
+}
         async function deleteReservation(id) {
             return await apiCall(`/reservations/${id}`, 'DELETE');
         }
@@ -642,16 +642,18 @@ function getMaxDate() {
                 const isOwn = state.user && Number(reservation.user_id) === Number(state.user.id);
                 cellClass = isOwn ? 'booked-own' : 'booked';
 
-                // ⬅️ SPREMENJENO: Ime se izpiše v VSAKI celici rezervacije
-                let userName = 'Zasedeno';
-                if (reservation.ime && reservation.priimek) {
-                    userName = `${reservation.ime} ${reservation.priimek}`;
+                // ⬅️ SPREMENJENO: Najprej preverimo oznako, če obstaja
+                let displayName = '';
+                if (reservation.oznaka) {
+                    displayName = reservation.oznaka; // npr. "TURNIR"
+                } else if (reservation.ime && reservation.priimek) {
+                    displayName = `${reservation.ime} ${reservation.priimek}`;
                 } else if (isOwn && state.user) {
-                    userName = getFullName(state.user);
-                } else if (reservation.ime) {
-                    userName = reservation.ime;
+                    displayName = getFullName(state.user);
+                } else {
+                    displayName = 'Zasedeno';
                 }
-                cellContent = `<span class="res-name">${escapeHtml(userName)}</span><span class="res-duration">${reservation.trajanje}h</span>`;
+                cellContent = `<span class="res-name">${escapeHtml(displayName)}</span><span class="res-duration">${reservation.trajanje}h</span>`;
             }
 
             const clickable = !isPastSlot;
@@ -1065,42 +1067,60 @@ function getMaxDate() {
         // BOOKING MODAL
         // ============================================================
         function showBookingModal(igrisce, uraZacetka) {
-            const dateStr = formatDate(state.selectedDate);
-            const dateDisplayStr = formatDateShort(dateStr);
-            const endHour = Math.min(uraZacetka + 3, END_HOUR);
-            const maxDuration = endHour - uraZacetka;
-            let availableDurations = [];
-            for (let d = 1; d <= maxDuration; d++) {
-                const isFree = !state.reservations.some(r => r.igrisce === igrisce && r.ura_zacetka >= uraZacetka && r.ura_zacetka < uraZacetka + d);
-                if (isFree) availableDurations.push(d);
-            }
-            if (availableDurations.length === 0) availableDurations = [1];
-            const durationOptions = availableDurations.map(d => `<option value="${d}">${d} ${d === 1 ? 'ura' : 'uri'} (${String(uraZacetka).padStart(2, '0')}:00 - ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`).join('');
-            const hasAnnualCard = Boolean(state.user?.letna_karta);
-            modalRoot.innerHTML = `
-                <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
-                    <div class="modal" style="max-width:470px;">
-                        <button class="modal-close" onclick="closeModal()">✕</button>
-                        <h2>Rezervacija termina</h2>
-                        <div class="booking-summary">
-                            <div class="court-num">Igrišče ${igrisce}</div>
-                            <div class="time-range">${String(uraZacetka).padStart(2, '0')}:00</div>
-                            <div class="date-info">${dateDisplayStr}</div>
-                        </div>
-                        <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
-                            <div class="form-group"><label>Trajanje rezervacije</label><select name="trajanje" onchange="updateBookingCost(${uraZacetka})">${durationOptions}</select></div>
-                            <div class="annual-option ${hasAnnualCard ? '' : 'locked'}">
-                                <label><input type="checkbox" name="useAnnualCard" ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+')"' : 'disabled'}> <span>${hasAnnualCard ? '🎫 Uporabi mojo letno karto – 0 kreditov' : '🔒 Letna karta ni aktivna za vaš račun'}</span></label>
-                            </div>
-                            <div class="booking-cost"><span id="bookingCostLabel">Cena rezervacije</span><strong id="bookingCostValue">—</strong></div>
-                            <div class="form-error" id="bookingError"></div>
-                            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Potrdi rezervacijo</button>
-                        </form>
-                    </div>
+    const dateStr = formatDate(state.selectedDate);
+    const dateDisplayStr = formatDateShort(dateStr);
+    const endHour = END_HOUR;
+    const maxDuration = endHour - uraZacetka; // ⬅️ Za admina do konca dneva, za druge 3
+    const isAdmin = state.user?.admin === true;
+    const maxSelectableDuration = isAdmin ? maxDuration : Math.min(maxDuration, 3);
+
+    let availableDurations = [];
+    for (let d = 1; d <= maxSelectableDuration; d++) {
+        const isFree = !state.reservations.some(r => r.igrisce === igrisce && r.ura_zacetka >= uraZacetka && r.ura_zacetka < uraZacetka + d);
+        if (isFree) availableDurations.push(d);
+    }
+    if (availableDurations.length === 0) availableDurations = [1];
+
+    const durationOptions = availableDurations.map(d => `<option value="${d}">${d} ${d === 1 ? 'ura' : 'uri'} (${String(uraZacetka).padStart(2, '0')}:00 - ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`).join('');
+
+    const hasAnnualCard = Boolean(state.user?.letna_karta);
+    
+    // ⬅️ DODANO: polje za oznako, če je admin
+    const oznakaField = isAdmin ? `
+        <div class="form-group">
+            <label>Ime na rezervaciji (neobvezno)</label>
+            <input type="text" id="bookingOznaka" placeholder="npr. TURNIR" maxlength="100">
+        </div>
+    ` : '';
+
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal" style="max-width:470px;">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2>Rezervacija termina</h2>
+                <div class="booking-summary">
+                    <div class="court-num">Igrišče ${igrisce}</div>
+                    <div class="time-range">${String(uraZacetka).padStart(2, '0')}:00</div>
+                    <div class="date-info">${dateDisplayStr}</div>
                 </div>
-            `;
-            updateBookingCost(uraZacetka);
-        }
+                <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
+                    <div class="form-group">
+                        <label>Trajanje rezervacije</label>
+                        <select name="trajanje" onchange="updateBookingCost(${uraZacetka})">${durationOptions}</select>
+                    </div>
+                    ${oznakaField}
+                    <div class="annual-option ${hasAnnualCard ? '' : 'locked'}">
+                        <label><input type="checkbox" name="useAnnualCard" ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+')"' : 'disabled'}> <span>${hasAnnualCard ? '🎫 Uporabi mojo letno karto – 0 kreditov' : '🔒 Letna karta ni aktivna za vaš račun'}</span></label>
+                    </div>
+                    <div class="booking-cost"><span id="bookingCostLabel">Cena rezervacije</span><strong id="bookingCostValue">—</strong></div>
+                    <div class="form-error" id="bookingError"></div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Potrdi rezervacijo</button>
+                </form>
+            </div>
+        </div>
+    `;
+    updateBookingCost(uraZacetka);
+}
 
         window.updateBookingCost = function(uraZacetka) {
             const form = document.getElementById('bookingForm'); if (!form) return;
