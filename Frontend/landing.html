@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zavrl Tennis Team - Dobrodošli</title>
+    <title>Zavrl Tennis Team - Teniški klub Ptuj</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #1a5632;
@@ -14,38 +15,55 @@
             --bg: #f0f4f0;
             --text: #1a1a1a;
             --text-light: #555;
-            --shadow-btn: 0 10px 25px rgba(253, 216, 53, 0.45);
-            --shadow-btn-hover: 0 14px 30px rgba(253, 216, 53, 0.65);
+            --white: #ffffff;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.12);
+            --radius: 16px;
             --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: var(--font);
+            font-family: 'Inter', sans-serif;
             background: var(--bg);
             color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
             line-height: 1.6;
+            overflow-x: hidden;
         }
+
+        /* Header */
         .header {
-            background: linear-gradient(135deg, var(--primary-dark), var(--primary), var(--primary-light));
-            color: white;
-            padding: 1.2rem 2.5rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
         }
+
+        .header.scrolled {
+            padding: 0.6rem 2rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
         .logo {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: -0.5px;
+            gap: 0.8rem;
+            text-decoration: none;
+            color: var(--primary-dark);
+            font-weight: 800;
+            font-size: 1.3rem;
         }
+
         .logo-icon {
             width: 48px;
             height: 48px;
@@ -54,159 +72,524 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
+            font-size: 1.4rem;
+            font-weight: 900;
             color: var(--primary-dark);
-            box-shadow: 0 4px 12px rgba(253,216,53,0.4);
-        }
-        
-        /* Gumb v glavi */
-        .btn-header {
-            padding: 0.75rem 1.8rem;
-            border-radius: 50px;
-            border: none;
-            cursor: pointer;
-            font-family: var(--font);
-            font-weight: 700;
-            font-size: 0.95rem;
-            transition: var(--transition);
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.6rem;
-            background: linear-gradient(135deg, #ffe047 0%, #fdd835 100%);
-            color: var(--primary-dark);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-        .btn-header:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(253, 216, 53, 0.5);
-            background: linear-gradient(135deg, #fff066 0%, #f9a825 100%);
+            box-shadow: 0 4px 12px rgba(253, 216, 53, 0.4);
         }
 
-        .hero {
-            flex: 1;
+        .nav-links {
             display: flex;
-            flex-direction: column;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Hero sekcija */
+        .hero {
+            min-height: 100vh;
+            display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 4rem 2rem;
-            background: radial-gradient(circle at top center, #ffffff 0%, #f0f4f0 100%);
+            padding: 6rem 2rem 4rem;
+            background: linear-gradient(135deg, #0e3a20 0%, #1a5632 50%, #2e7d32 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
         }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(253,216,53,0.3), transparent 70%);
+            top: -100px;
+            right: -100px;
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 70%);
+            bottom: -50px;
+            left: -50px;
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-20px) scale(1.05); }
+        }
+
+        .hero-content {
+            max-width: 800px;
+            z-index: 2;
+            position: relative;
+        }
+
         .hero-badge {
-            background: rgba(26, 86, 50, 0.08);
-            color: var(--primary);
-            padding: 0.4rem 1.2rem;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 1.5rem;
             border-radius: 50px;
             font-size: 0.85rem;
             font-weight: 700;
             letter-spacing: 1px;
             text-transform: uppercase;
+            display: inline-block;
             margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            animation: fadeInUp 0.8s ease;
         }
+
         .hero h1 {
             font-size: 3.5rem;
             font-weight: 800;
-            color: var(--primary-dark);
-            letter-spacing: -1.5px;
-            margin-bottom: 1.2rem;
             line-height: 1.15;
-            max-width: 800px;
-        }
-        .hero p {
-            font-size: 1.25rem;
-            color: var(--text-light);
-            max-width: 640px;
-            margin-bottom: 2.5rem;
+            margin-bottom: 1.2rem;
+            letter-spacing: -1px;
+            animation: fadeInUp 0.8s ease 0.2s both;
         }
 
-        /* Lep, moderen glavni gumb za rezervacijo */
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 2.5rem;
+            animation: fadeInUp 0.8s ease 0.4s both;
+        }
+
+        .hero-cta {
+            display: flex;
+            justify-content: center;
+            animation: fadeInUp 0.8s ease 0.6s both;
+        }
+
         .btn-hero {
-            padding: 1.1rem 2.8rem;
+            padding: 1.1rem 2.5rem;
             border-radius: 50px;
-            border: none;
-            cursor: pointer;
-            font-family: var(--font);
+            font-size: 1.1rem;
             font-weight: 700;
-            font-size: 1.15rem;
-            transition: var(--transition);
             text-decoration: none;
+            transition: all 0.3s;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            background: linear-gradient(135deg, #ffe047 0%, #fdd835 50%, #f9a825 100%);
+            gap: 0.7rem;
+            background: var(--accent);
             color: var(--primary-dark);
-            box-shadow: var(--shadow-btn);
-            position: relative;
-            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(253, 216, 53, 0.4);
         }
-        .btn-hero::after {
-            content: '';
-            position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-            transition: 0.5s;
-        }
-        .btn-hero:hover::after {
-            left: 100%;
-        }
+
         .btn-hero:hover {
-            transform: translateY(-4px) scale(1.02);
-            box-shadow: var(--shadow-btn-hover);
-        }
-        .btn-hero:active {
-            transform: translateY(-1px);
-        }
-        .btn-icon {
-            font-size: 1.3rem;
-            transition: transform 0.3s ease;
-        }
-        .btn-hero:hover .btn-icon {
-            transform: translateX(4px);
+            transform: translateY(-3px);
+            box-shadow: 0 14px 30px rgba(253, 216, 53, 0.5);
         }
 
-        .footer {
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stats sekcija */
+        .stats {
+            padding: 4rem 2rem;
+            background: white;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
+
+        .stats-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
             text-align: center;
-            padding: 1.5rem;
-            background: var(--primary-dark);
-            color: rgba(255,255,255,0.7);
-            font-size: 0.85rem;
         }
 
+        .stat-item {
+            padding: 2rem;
+            background: var(--bg);
+            border-radius: var(--radius);
+            transition: all 0.3s;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.95rem;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        /* Features sekcija */
+        .features {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-title h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .section-title p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+            border-bottom: 4px solid transparent;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            border-bottom-color: var(--accent);
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--bg);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+        }
+
+        .feature-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.8rem;
+            color: var(--primary-dark);
+        }
+
+        .feature-card p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        /* How it works sekcija */
+        .how-it-works {
+            padding: 5rem 2rem;
+            background: white;
+        }
+
+        .how-it-works .section-title {
+            margin-bottom: 3rem;
+        }
+
+        .steps-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .step-card {
+            text-align: center;
+            padding: 2rem;
+            background: var(--bg);
+            border-radius: var(--radius);
+            position: relative;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary-dark);
+            margin: 0 auto 1rem;
+        }
+
+        .step-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary-dark);
+        }
+
+        .step-card p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--primary-dark);
+            color: white;
+            padding: 3rem 2rem 1rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer h4 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer p {
+            opacity: 0.8;
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .footer a:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        /* Animacije ob drsenju */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
-            .header { padding: 1rem 1.5rem; }
-            .hero h1 { font-size: 2.4rem; }
-            .hero p { font-size: 1.05rem; }
-            .btn-hero { width: 100%; max-width: 320px; padding: 1rem 2rem; }
+            .header { padding: 0.8rem 1rem; }
+            .nav-links { display: none; }
+            .hero h1 { font-size: 2.5rem; }
+            .hero p { font-size: 1rem; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .features-grid { grid-template-columns: 1fr; }
+            .steps-grid { grid-template-columns: 1fr; }
+            .hero-cta { flex-direction: column; align-items: center; }
+            .btn-hero { width: 100%; justify-content: center; }
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="logo">
+
+    <!-- Header (brez gumba) -->
+    <header class="header" id="header">
+        <a href="index.html" class="logo">
             <div class="logo-icon">ZT</div>
             <span>Zavrl Tennis Team</span>
-        </div>
-        <a href="/index.html" class="btn-header">
-            <span>Rezerviraj</span>
-            <span style="font-size: 1.1rem;">→</span>
         </a>
+        <nav class="nav-links">
+            <a href="#features">O klubu</a>
+            <a href="#stats">Statistika</a>
+            <a href="#contact">Kontakt</a>
+        </nav>
     </header>
 
+    <!-- Hero (samo en gumb) -->
     <section class="hero">
-        <div class="hero-badge">🎾 Teniški klub Ptuj</div>
-        <h1>Rezervirajte teniško igrišče v nekaj sekundah</h1>
-        <p>Na voljo 8 vrhunskih igrišč vsak dan od 8.00 do 22.00. Izberite svoj termin in uživajte v igri!</p>
-        <a href="/index.html" class="btn-hero">
-            <span>Rezerviraj igrišče zdaj</span>
-            <span class="btn-icon">➔</span>
-        </a>
+        <div class="hero-content">
+            <div class="hero-badge">🎾 Teniški klub Ptuj</div>
+            <h1>Rezervirajte igrišče<br>v nekaj sekundah</h1>
+            <p>9 vrhunskih igrišč, odprtih vsak dan od 8.00 do 22.00. Uporabite letno karto ali kredite za enostavno rezervacijo.</p>
+            <div class="hero-cta">
+                <a href="index.html" class="btn-hero">Rezerviraj zdaj →</a>
+            </div>
+        </div>
     </section>
 
-    <footer class="footer">
-        &copy; 2025 Zavrl Tennis Team · Ptuj · Vse pravice pridržane
+    <!-- Statistika -->
+    <section class="stats" id="stats">
+        <div class="stats-grid">
+            <div class="stat-item reveal">
+                <div class="stat-number">9</div>
+                <div class="stat-label">Teniških igrišč</div>
+            </div>
+            <div class="stat-item reveal">
+                <div class="stat-number">14</div>
+                <div class="stat-label">Ur na dan odprto</div>
+            </div>
+            <div class="stat-item reveal">
+                <div class="stat-number">100+</div>
+                <div class="stat-label">Zadovoljnih igralcev</div>
+            </div>
+            <div class="stat-item reveal">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Dostop do rezervacij</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Značilnosti -->
+    <section class="features" id="features">
+        <div class="section-title reveal">
+            <h2>Zakaj izbrati nas?</h2>
+            <p>Vse, kar potrebujete za odlično teniško izkušnjo</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon">🏟️</div>
+                <h3>8 Igrišč</h3>
+                <p>Osem vrhunsko urejenih igrišč, primernih za rekreativce in tekmovalce.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">💳</div>
+                <h3>Kreditni sistem</h3>
+                <p>Enostavno upravljanje rezervacij s krediti ali letno karto.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">📱</div>
+                <h3>Online rezervacije</h3>
+                <p>Rezervirajte igrišče kadar koli in kjer koli, tudi iz telefona.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">👥</div>
+                <h3>Skupnost</h3>
+                <p>Pridružite se skupnosti teniških navdušencev in spoznajte nove igralce.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Kako rezervirati -->
+    <section class="how-it-works" id="how">
+        <div class="section-title reveal">
+            <h2>Kako rezervirati?</h2>
+            <p>Trije preprosti koraki do vašega termina</p>
+        </div>
+        <div class="steps-grid">
+            <div class="step-card reveal">
+                <div class="step-number">1</div>
+                <h3>Registrirajte se</h3>
+                <p>Ustvarite svoj račun v nekaj sekundah.</p>
+            </div>
+            <div class="step-card reveal">
+                <div class="step-number">2</div>
+                <h3>Izberite termin</h3>
+                <p>Preglejte koledar in izberite želeno uro ter igrišče.</p>
+            </div>
+            <div class="step-card reveal">
+                <div class="step-number">3</div>
+                <h3>Potrdite rezervacijo</h3>
+                <p>Rezervacija je potrjena. Uživajte v igri!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" id="contact">
+        <div class="footer-content">
+            <div>
+                <h4>Zavrl Tennis Team</h4>
+                <p>Rezervacije teniških igrišč za člane in goste. Enostavno, hitro in pregledno.</p>
+            </div>
+            <div>
+                <h4>Kontakt</h4>
+                <p>📞 <a href="tel:+38640233089">+386 40 233 089</a><br>
+                ✉️ <a href="mailto:zavrl.samo@gmail.com">zavrl.samo@gmail.com</a><br>
+                📍 Pot v Toplice 10, 2250 Ptuj</p>
+            </div>
+            <div>
+                <h4>Delovni čas</h4>
+                <p>Pon–Ned: 08:00–22:00</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2025 Zavrl Tennis Team · Vse pravice pridržane
+        </div>
     </footer>
+
+    <script>
+        // Header scroll učinek
+        const header = document.getElementById('header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // Animacije ob drsenju (Intersection Observer)
+        const revealElements = document.querySelectorAll('.reveal');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.2 });
+
+        revealElements.forEach(el => observer.observe(el));
+    </script>
 </body>
 </html>
