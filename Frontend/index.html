@@ -286,37 +286,80 @@
         .search-input { width: 100%; padding: 0.6rem 1rem; border: 2px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 0.9rem; margin-bottom: 1rem; }
 
         @media (max-width: 768px) {
-    .header-inner { padding: 0.75rem 1rem; flex-direction: column; align-items: stretch; text-align: center; }
-    .logo-section { justify-content: center; }
-    .header-actions { justify-content: center; }
-    .main { padding: 0.5rem; }
-    
-    /* Manjši datum zgoraj */
-    .date-nav { padding: 0.5rem 0.75rem; gap: 0.5rem; }
-    .date-display { font-size: 1rem; min-width: 140px; }
-    .date-display .day-name { font-size: 0.7rem; }
-    
-    .nav-arrow { width: 36px; height: 36px; font-size: 1rem; }
-    
-    /* Prilagodljiv koledar - vse igrišča in ure se vidijo naenkrat */
-    .booking-layout { gap: 0.75rem; }
-    .calendar-wrapper { border-radius: 10px; max-width: 100%; }
+    /* Zmanjšan header */
+    .header-inner {
+        padding: 0.5rem 0.75rem;
+        gap: 0.5rem;
+    }
+    .logo-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+    .logo-text h1 {
+        font-size: 1.1rem;
+    }
+    .logo-text p {
+        font-size: 0.65rem;
+    }
+    .header-actions {
+        gap: 0.4rem;
+    }
+    .header-actions .btn {
+        padding: 0.4rem 0.9rem;
+        font-size: 0.8rem;
+    }
+
+    /* Manjši datum */
+    .main {
+        padding: 0.5rem;
+    }
+    .date-nav {
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 1rem;
+        gap: 0.5rem;
+    }
+    .date-display {
+        font-size: 1rem;
+        min-width: 130px;
+    }
+    .date-display .day-name {
+        font-size: 0.7rem;
+    }
+    .nav-arrow {
+        width: 34px;
+        height: 34px;
+        font-size: 1rem;
+    }
+
+    /* Koledar - celotna širina, vsa igrišča vidna */
+    .booking-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .calendar-wrapper {
+        max-width: 100%;
+        border-radius: 10px;
+        margin: 0;
+    }
     .calendar-scroll {
-        max-height: none;           /* Ni notranjega drsenja - vidi se vse */
+        max-height: none;
         overflow-y: visible;
         overflow-x: visible;
-        touch-action: pan-x pinch-zoom; /* Omogoči približevanje s prsti */
+        touch-action: pan-x pinch-zoom;
         cursor: grab;
     }
     .calendar-grid {
-        grid-template-columns: 30px repeat(9, 1fr); /* Stolpci se prilagodijo širini */
-        min-width: 0;                /* Ni fiksne minimalne širine */
+        grid-template-columns: 30px repeat(9, 1fr);
+        min-width: 0;
     }
     .calendar-cell {
-        font-size: 0.55rem;         /* Manjše besedilo, da se vse vidi */
+        min-height: 38px;
         padding: 2px;
-        min-height: 36px;
+        font-size: 0.55rem;
         border-width: 0.5px;
+        word-break: break-word;
     }
     .calendar-cell.header-cell {
         font-size: 0.5rem;
@@ -326,34 +369,102 @@
     .calendar-cell.time-cell {
         font-size: 0.55rem;
     }
-    .res-name { font-size: 0.5rem; padding: 0; }
-    .res-duration { font-size: 0.45rem; }
-    
-    .legend { gap: 0.4rem 0.6rem; padding: 0.5rem 0.5rem; font-size: 0.6rem; }
-    .legend-dot { width: 10px; height: 10px; }
-    
-    /* Stranska kartica s krediti se premakne pod koledar */
-    .credits-legend { position: static; margin-top: 1rem; border-radius: 10px; }
-    .credit-balance { margin: 0.5rem; padding: 0.5rem; }
-    .credit-list { padding: 0.25rem 0.5rem 0.5rem; }
-    .price-card { margin: 0 0.5rem 0.5rem; }
-    
-    .modal { padding: 1rem; max-height: 92vh; }
-    .booking-summary { padding: 0.5rem; }
-    .booking-summary .court-num { font-size: 1.3rem; }
-    .booking-cost { padding: 0.5rem; }
-    
-    .res-list { flex-direction: column; }
-    .res-card { width: 100%; justify-content: space-between; gap: 0.5rem; padding: 0.6rem; }
-    .admin-panel { padding: 0.5rem; border-radius: 10px; }
-    .admin-section { padding: 0.5rem; border-radius: 8px; }
-    .admin-toolbar .btn, .admin-toolbar .search-input { width: 100%; flex-basis: 100%; }
-    
-    .site-footer { margin-left: -0.5rem; margin-right: -0.5rem; border-radius: 10px 10px 0 0; }
-    .footer-inner { align-items: flex-start; flex-direction: column; }
-    .footer-contact { flex-direction: column; gap: 0.3rem; }
-    .toast-container { bottom: 0.5rem; right: 0.5rem; left: 0.5rem; }
-    .toast { min-width: auto; width: 100%; font-size: 0.8rem; padding: 0.7rem 0.9rem; }
+    .res-name {
+        font-size: 0.5rem;
+        padding: 0;
+    }
+    .res-duration {
+        font-size: 0.45rem;
+    }
+
+    .legend {
+        gap: 0.4rem 0.6rem;
+        padding: 0.5rem;
+        font-size: 0.6rem;
+    }
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+    }
+
+    /* Kartica s krediti - pod koledarjem */
+    .credits-legend {
+        position: static;
+        width: 100%;
+        margin: 0;
+        border-radius: 10px;
+    }
+    .credit-balance {
+        margin: 0.5rem;
+        padding: 0.5rem;
+    }
+    .credit-list {
+        padding: 0.25rem 0.5rem 0.5rem;
+    }
+    .price-card {
+        margin: 0 0.5rem 0.5rem;
+    }
+
+    /* Modali in ostalo */
+    .modal {
+        padding: 1rem;
+        max-height: 92vh;
+    }
+    .booking-summary {
+        padding: 0.5rem;
+    }
+    .booking-summary .court-num {
+        font-size: 1.3rem;
+    }
+    .booking-cost {
+        padding: 0.5rem;
+    }
+    .res-list {
+        flex-direction: column;
+    }
+    .res-card {
+        width: 100%;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.6rem;
+    }
+    .admin-panel {
+        padding: 0.5rem;
+        border-radius: 10px;
+    }
+    .admin-section {
+        padding: 0.5rem;
+        border-radius: 8px;
+    }
+    .admin-toolbar .btn,
+    .admin-toolbar .search-input {
+        width: 100%;
+        flex-basis: 100%;
+    }
+    .site-footer {
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+        border-radius: 10px 10px 0 0;
+    }
+    .footer-inner {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+    .footer-contact {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+    .toast-container {
+        bottom: 0.5rem;
+        right: 0.5rem;
+        left: 0.5rem;
+    }
+    .toast {
+        min-width: auto;
+        width: 100%;
+        font-size: 0.8rem;
+        padding: 0.7rem 0.9rem;
+    }
 }
     </style>
 </head>
