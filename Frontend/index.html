@@ -363,9 +363,9 @@
         cursor: grab;
     }
     .calendar-grid {
-        grid-template-columns: 24px repeat(9, 1fr);
-        min-width: 0;
-    }
+    grid-template-columns: 34px repeat(9, 1fr);
+    min-width: 0;
+}
     .calendar-cell {
         min-height: 32px;
         padding: 1px;
@@ -381,8 +381,10 @@
         line-height: 1.1;
     }
     .calendar-cell.time-cell {
-        font-size: 0.5rem;
-    }
+    font-size: 0.55rem;
+    white-space: nowrap;
+    padding: 0.2rem 0.1rem;
+}
     .res-name {
         font-size: 0.45rem;
         padding: 0;
