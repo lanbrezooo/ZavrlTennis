@@ -278,8 +278,8 @@
         .admin-table .btn { margin: 0.1rem; }
         .search-input { width: 100%; padding: 0.6rem 1rem; border: 2px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 0.9rem; margin-bottom: 1rem; }
 
-        @media (max-width: 768px) {
-    /* Header - manjši, vse v eni vrstici */
+       @media (max-width: 768px) {
+    /* Header – manjši in kompaktnejši */
     .header-inner {
         padding: 0.5rem;
         gap: 0.5rem;
@@ -316,7 +316,6 @@
         padding: 0.3rem 0.6rem;
         font-size: 0.75rem;
         gap: 0.4rem;
-        border-radius: 30px;
     }
     .user-badge .avatar {
         width: 26px;
@@ -324,7 +323,7 @@
         font-size: 0.7rem;
     }
 
-    /* Koledar */
+    /* Koledar – vse naenkrat vidno */
     .main {
         padding: 0.5rem;
     }
@@ -336,9 +335,6 @@
     .date-display {
         font-size: 0.9rem;
         min-width: 120px;
-    }
-    .date-display .day-name {
-        font-size: 0.65rem;
     }
     .nav-arrow {
         width: 32px;
@@ -362,30 +358,34 @@
         touch-action: pan-x pinch-zoom;
         cursor: grab;
     }
+
+    /* ⬇️ KLJUČNA SPREMEMBA ZA KOLEDAR */
     .calendar-grid {
-    grid-template-columns: 30px repeat(9, 1fr);
-    min-width: 0;
-}
+        grid-template-columns: 40px repeat(9, 1fr); /* 40px za uro, ostalo za igrišča */
+        min-width: 0;
+    }
+    .calendar-cell.time-cell {
+        font-size: 0.55rem;  /* Manjša pisava, da se "08:00" ne prelomi */
+        white-space: nowrap;  /* Nikoli v novo vrstico */
+        padding: 0.2rem 0.1rem;
+    }
+    .calendar-cell.header-cell {
+        font-size: 0.42rem;   /* Zelo majhna pisava */
+        text-transform: none;  /* "Igrišče 1" namesto "IGRIŠČE 1" */
+        letter-spacing: 0;
+        padding: 0.2rem 0.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* Če ni prostora, se obreže, ampak se ne prelomi */
+    }
+
     .calendar-cell {
-        min-height: 32px;
-        padding: 1px;
+        min-height: 34px;
+        padding: 2px;
         font-size: 0.5rem;
         border-width: 0.5px;
         word-break: break-word;
     }
-    .calendar-cell.header-cell {
-    font-size: 0.45rem;
-    padding: 2px 1px;
-    letter-spacing: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-    .calendar-cell.time-cell {
-    font-size: 0.55rem;
-    white-space: nowrap;
-    padding: 0.2rem 0.1rem;
-}
     .res-name {
         font-size: 0.45rem;
         padding: 0;
@@ -404,22 +404,12 @@
         height: 10px;
     }
 
-    /* Kartica s krediti - pod koledarjem */
+    /* Kartica s krediti – pod koledarjem */
     .credits-legend {
         position: static;
         width: 100%;
         margin: 0;
         border-radius: 10px;
-    }
-    .credit-balance {
-        margin: 0.5rem;
-        padding: 0.5rem;
-    }
-    .credit-list {
-        padding: 0.25rem 0.5rem 0.5rem;
-    }
-    .price-card {
-        margin: 0 0.5rem 0.5rem;
     }
 
     /* Modali in ostalo */
@@ -430,20 +420,8 @@
     .booking-summary {
         padding: 0.5rem;
     }
-    .booking-summary .court-num {
-        font-size: 1.3rem;
-    }
-    .booking-cost {
-        padding: 0.5rem;
-    }
     .res-list {
         flex-direction: column;
-    }
-    .res-card {
-        width: 100%;
-        justify-content: space-between;
-        gap: 0.5rem;
-        padding: 0.6rem;
     }
     .admin-panel {
         padding: 0.5rem;
@@ -453,23 +431,10 @@
         padding: 0.5rem;
         border-radius: 8px;
     }
-    .admin-toolbar .btn,
-    .admin-toolbar .search-input {
-        width: 100%;
-        flex-basis: 100%;
-    }
     .site-footer {
         margin-left: -0.5rem;
         margin-right: -0.5rem;
         border-radius: 10px 10px 0 0;
-    }
-    .footer-inner {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-    .footer-contact {
-        flex-direction: column;
-        gap: 0.3rem;
     }
     .toast-container {
         bottom: 0.5rem;
