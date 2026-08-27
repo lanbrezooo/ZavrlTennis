@@ -363,7 +363,7 @@
         cursor: grab;
     }
     .calendar-grid {
-    grid-template-columns: 34px repeat(9, 1fr);
+    grid-template-columns: 30px repeat(9, 1fr);
     min-width: 0;
 }
     .calendar-cell {
@@ -374,12 +374,13 @@
         word-break: break-word;
     }
     .calendar-cell.header-cell {
-        font-size: 0.45rem;
-        padding: 2px;
-        letter-spacing: 0;
-        white-space: normal; /* Dovoli prelom v novo vrstico */
-        line-height: 1.1;
-    }
+    font-size: 0.45rem;
+    padding: 2px 1px;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
     .calendar-cell.time-cell {
     font-size: 0.55rem;
     white-space: nowrap;
