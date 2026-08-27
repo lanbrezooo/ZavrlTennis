@@ -359,9 +359,8 @@
         cursor: grab;
     }
 
-    /* ⬇️ KLJUČNA SPREMEMBA ZA KOLEDAR */
     .calendar-grid {
-        grid-template-columns: 40px repeat(9, minmax(55px, 1fr)); /* 40px za uro, ostalo za igrišča */
+        grid-template-columns: 40px repeat(9, 1fr); /* 40px za uro, ostalo za igrišča */
         min-width: 0;
     }
     .calendar-cell.time-cell {
@@ -370,12 +369,12 @@
         padding: 0.2rem 0.1rem;
     }
     .calendar-cell.header-cell {
-    font-size: 0.4rem;          /* Zelo majhna, a berljiva pisava */
-    text-transform: none;        /* "Igrišče 1" namesto "IGRIŠČE 1" */
+    font-size: 0.35rem; /* še manjša pisava */
+    text-transform: none;
     letter-spacing: 0;
-    padding: 0.15rem 0.1rem;
-    white-space: normal;         /* ⬅️ Dovoli prelom v novo vrstico */
-    word-break: break-word;      /* ⬅️ Beseda se prelomi, če je predolga */
+    padding: 0.1rem 0.05rem;
+    white-space: normal;
+    word-break: break-word;
     overflow: hidden;
     line-height: 1.1;
 }
