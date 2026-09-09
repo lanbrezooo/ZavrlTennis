@@ -17,6 +17,7 @@
         .nav-links a { text-decoration:none; color:var(--text); font-weight:600; font-size:0.95rem; transition:color 0.3s; }
         .nav-links a:hover { color:var(--primary); }
         .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:var(--primary-dark); padding:0.7rem 1.8rem; border-radius:50px; font-weight:700; text-decoration:none; }
+        .menu-toggle { display:none; background:none; border:none; font-size:1.8rem; cursor:pointer; color:var(--primary-dark); }
         .main { max-width:1200px; margin:0 auto; padding:8rem 2rem 4rem; }
         .section-title { text-align:center; margin-bottom:3rem; }
         .section-title h2 { font-size:2.5rem; font-weight:800; color:var(--primary-dark); }
@@ -30,14 +31,31 @@
         .price-card ul li { color:var(--text-light); }
         .price-card.featured { border-color:var(--accent); background:var(--white); box-shadow:var(--shadow-lg); }
         .footer { background:var(--primary-dark); color:white; padding:2rem; text-align:center; }
-        @media (max-width:768px) { .header { padding:0.8rem 1rem; } .nav-links { display:none; } .pricing-grid { grid-template-columns:1fr; } }
+        @media (max-width:768px) {
+            .header { padding:0.8rem 1rem; }
+            .logo { font-size:1.1rem; }
+            .logo-icon { width:40px; height:40px; font-size:1.1rem; }
+            .menu-toggle { display:block; }
+            .nav-links { display:none; position:absolute; top:100%; left:0; right:0; background:white; flex-direction:column; padding:1rem; box-shadow:0 4px 10px rgba(0,0,0,0.1); gap:1rem; align-items:flex-start; }
+            .nav-links.open { display:flex; }
+            .nav-links a { width:100%; padding:0.5rem 0; border-bottom:1px solid #eee; }
+            .pricing-grid { grid-template-columns:1fr; }
+            .main { padding:7rem 1rem 2rem; }
+        }
     </style>
 </head>
 <body>
     <header class="header">
         <a href="/" class="logo"><div class="logo-icon">ZT</div><span>Zavrl Tennis Team</span></a>
-        <nav class="nav-links"><a href="/o-klubu">O klubu</a><a href="/rekreacija">Rekreacija</a><a href="/cenik">Cenik</a><a href="/novice">Novice</a><a href="/kontakt">Kontakt</a></nav>
-        <a href="/app" class="btn-primary">Rezerviraj</a>
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <nav class="nav-links" id="navLinks">
+            <a href="/o-klubu">O klubu</a>
+            <a href="/rekreacija">Rekreacija</a>
+            <a href="/cenik">Cenik</a>
+            <a href="/novice">Novice</a>
+            <a href="/kontakt">Kontakt</a>
+            <a href="/app" class="btn-primary">Rezerviraj</a>
+        </nav>
     </header>
     <main class="main">
         <div class="section-title"><h2>Cenik</h2></div>
@@ -48,5 +66,11 @@
         </div>
     </main>
     <footer class="footer"><p>&copy; 2025 Zavrl Tennis Team</p></footer>
+    <script>
+        function toggleMenu() {
+            const nav = document.getElementById('navLinks');
+            nav.classList.toggle('open');
+        }
+    </script>
 </body>
 </html>

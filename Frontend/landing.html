@@ -24,57 +24,169 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
-        /* Skupni Header */
-        .header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); box-shadow: 0 2px 20px rgba(0,0,0,0.08); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        .logo { display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: var(--primary-dark); font-weight: 800; font-size: 1.3rem; }
-        .logo-icon { width: 48px; height: 48px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 900; color: var(--primary-dark); }
-        .nav-links { display: flex; gap: 1.5rem; align-items: center; }
-        .nav-links a { text-decoration: none; color: var(--text); font-weight: 600; font-size: 0.95rem; transition: color 0.3s; }
+        
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            text-decoration: none;
+            color: var(--primary-dark);
+            font-weight: 800;
+            font-size: 1.3rem;
+        }
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--primary-dark);
+        }
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
         .nav-links a:hover { color: var(--primary); }
-        .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: var(--primary-dark); padding: 0.7rem 1.8rem; border-radius: 50px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 15px rgba(253,216,53,0.4); transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: var(--primary-dark);
+            padding: 0.7rem 1.8rem;
+            border-radius: 50px;
+            font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(253,216,53,0.4);
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(253,216,53,0.5); }
+        
+        /* Hamburger meni - skrit na desktopu */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: var(--primary-dark);
+        }
+        
         /* Hero */
-        .hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6rem 2rem 4rem; background: linear-gradient(135deg, #0e3a20 0%, #1a5632 50%, #2e7d32 100%); color: white; position: relative; }
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6rem 2rem 4rem;
+            background: linear-gradient(135deg, #0e3a20 0%, #1a5632 50%, #2e7d32 100%);
+            color: white;
+            position: relative;
+        }
         .hero h1 { font-size: 3.5rem; font-weight: 800; margin-bottom: 1.2rem; }
         .hero p { font-size: 1.2rem; margin-bottom: 2.5rem; opacity: 0.9; }
         .btn-hero { background: var(--accent); color: var(--primary-dark); padding: 1.1rem 2.5rem; border-radius: 50px; font-size: 1.1rem; font-weight: 700; text-decoration: none; display: inline-block; transition: 0.3s; }
         .btn-hero:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(253,216,53,0.5); }
-        /* Kartice za sekcije */
-        .cards { max-width: 1200px; margin: 5rem auto; padding: 0 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; }
-        .card { background: white; border-radius: var(--radius); padding: 2rem; box-shadow: var(--shadow); text-align: center; transition: 0.3s; text-decoration: none; color: var(--text); }
+        
+        /* Kartice */
+        .cards {
+            max-width: 1200px;
+            margin: 5rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            text-align: center;
+            transition: 0.3s;
+            text-decoration: none;
+            color: var(--text);
+        }
         .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-bottom: 4px solid var(--accent); }
         .card-icon { font-size: 3rem; margin-bottom: 1rem; }
         .card h3 { color: var(--primary-dark); margin-bottom: 0.8rem; }
         .card p { color: var(--text-light); }
+        
         /* Footer */
         .footer { background: var(--primary-dark); color: white; padding: 2rem; text-align: center; }
         .footer a { color: white; text-decoration: none; }
+        
+        /* Mobilni prikaz */
         @media (max-width: 768px) {
             .header { padding: 0.8rem 1rem; }
-            .nav-links { display: none; }
+            .logo { font-size: 1.1rem; gap: 0.5rem; }
+            .logo-icon { width: 40px; height: 40px; font-size: 1.1rem; }
+            .menu-toggle { display: block; }
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: white;
+                flex-direction: column;
+                padding: 1rem;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            .nav-links.open { display: flex; }
+            .nav-links a { width: 100%; padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+            .btn-primary { padding: 0.6rem 1.2rem; font-size: 0.9rem; }
             .hero h1 { font-size: 2.5rem; }
-            .cards { grid-template-columns: 1fr; }
+            .hero p { font-size: 1rem; }
+            .cards { grid-template-columns: 1fr; padding: 0 1rem; }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <header class="header">
         <a href="/" class="logo">
             <div class="logo-icon">ZT</div>
             <span>Zavrl Tennis Team</span>
         </a>
-        <nav class="nav-links">
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <nav class="nav-links" id="navLinks">
             <a href="/o-klubu">O klubu</a>
             <a href="/rekreacija">Rekreacija</a>
             <a href="/cenik">Cenik</a>
             <a href="/novice">Novice</a>
             <a href="/kontakt">Kontakt</a>
+            <a href="/app" class="btn-primary">Rezerviraj</a>
         </nav>
-        <a href="/app" class="btn-primary">Rezerviraj</a>
     </header>
 
-    <!-- Hero -->
     <section class="hero">
         <div>
             <h1>Teniški klub v srcu Ptuja</h1>
@@ -83,38 +195,23 @@
         </div>
     </section>
 
-    <!-- Kartice do sekcij -->
     <div class="cards">
-        <a href="/o-klubu" class="card">
-            <div class="card-icon">🏆</div>
-            <h3>O klubu</h3>
-            <p>Spoznajte našo tradicijo, ekipo in vizijo.</p>
-        </a>
-        <a href="/rekreacija" class="card">
-            <div class="card-icon">🎾</div>
-            <h3>Rekreacija</h3>
-            <p>Pridružite se rekreativnim skupinam in turnirjem.</p>
-        </a>
-        <a href="/cenik" class="card">
-            <div class="card-icon">💰</div>
-            <h3>Cenik</h3>
-            <p>Pregleden sistem kreditov in letnih kart.</p>
-        </a>
-        <a href="/novice" class="card">
-            <div class="card-icon">📰</div>
-            <h3>Novice</h3>
-            <p>Spremljajte zadnje dogodke in tekmovanja.</p>
-        </a>
-        <a href="/kontakt" class="card">
-            <div class="card-icon">📞</div>
-            <h3>Kontakt</h3>
-            <p>Naslov, telefon, email in delovni čas.</p>
-        </a>
+        <a href="/o-klubu" class="card"><div class="card-icon">🏆</div><h3>O klubu</h3><p>Spoznajte našo tradicijo, ekipo in vizijo.</p></a>
+        <a href="/rekreacija" class="card"><div class="card-icon">🎾</div><h3>Rekreacija</h3><p>Pridružite se rekreativnim skupinam in turnirjem.</p></a>
+        <a href="/cenik" class="card"><div class="card-icon">💰</div><h3>Cenik</h3><p>Pregleden sistem kreditov in letnih kart.</p></a>
+        <a href="/novice" class="card"><div class="card-icon">📰</div><h3>Novice</h3><p>Spremljajte zadnje dogodke in tekmovanja.</p></a>
+        <a href="/kontakt" class="card"><div class="card-icon">📞</div><h3>Kontakt</h3><p>Naslov, telefon, email in delovni čas.</p></a>
     </div>
 
-    <!-- Footer -->
     <footer class="footer">
         <p>&copy; 2025 Zavrl Tennis Team · <a href="mailto:zavrl.samo@gmail.com">zavrl.samo@gmail.com</a></p>
     </footer>
+
+    <script>
+        function toggleMenu() {
+            const nav = document.getElementById('navLinks');
+            nav.classList.toggle('open');
+        }
+    </script>
 </body>
 </html>
