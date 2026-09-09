@@ -87,7 +87,45 @@
     color: white;
     border-color: #1a5632;
 }
-        @media (max-width:768px) { .header { padding:0.8rem 1rem; } .nav-links { display:none; } .news-grid { grid-template-columns:1fr; } }
+        /* Mobilni prikaz novic */
+@media (max-width: 768px) {
+    .main {
+        padding: 6rem 1rem 2rem; /* Manjši odmik od roba */
+    }
+    .news-grid {
+        grid-template-columns: 1fr; /* Ena kartica na vrsto */
+        gap: 1rem;
+    }
+    .news-card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .news-img {
+        height: 160px; /* Manjša slika na telefonu */
+    }
+    .news-content {
+        padding: 1rem;
+    }
+    .news-content h4 {
+        font-size: 1.1rem;
+    }
+    .news-content p {
+        font-size: 0.9rem;
+    }
+    .pagination {
+        gap: 0.4rem;
+        margin-top: 1.5rem;
+    }
+    .page-btn {
+        padding: 0.6rem 1rem;
+        font-size: 1rem;
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
     </style>
 </head>
 <body>
@@ -105,7 +143,7 @@
     <script>
         let allNews = [];
 let currentNewsPage = 1;
-const NEWS_PER_PAGE = 5; // 5 novic na stran
+const NEWS_PER_PAGE = 6; // 5 novic na stran
 
 async function loadNovice() {
     const grid = document.getElementById('newsGrid');

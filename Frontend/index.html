@@ -621,6 +621,7 @@
             adminPanelOpen: false,
             adminUsersPage: 1,        
             adminReservationsPage: 1,
+            adminNovicePage: 1,
             adminNovice: []
         };
 
@@ -1539,6 +1540,7 @@ async function loadAdminNovice() {
     try {
         const data = await apiCall('/novice');
         state.adminNovice = data.novice;
+        state.adminNovicePage = 1; // <-- DODANO
         renderAdminNoviceTable(state.adminNovice);
     } catch (err) {
         showToast(err.message, 'error');
@@ -1548,6 +1550,7 @@ async function loadAdminNovice() {
 function filterAdminNovice() {
     const input = (document.getElementById('adminNovicaSearchInput')?.value || '').trim().toLowerCase();
     const filtered = (state.adminNovice || []).filter(n => n.naslov.toLowerCase().includes(input));
+    state.adminNovicePage = 1; // <-- DODANO
     renderAdminNoviceTable(filtered);
 }
 
@@ -1558,9 +1561,18 @@ function renderAdminNoviceTable(novice) {
         container.innerHTML = '<p>Ni novic.</p>';
         return;
     }
+
+    const pageSize = 5; // 5 novic na stran
+    const totalPages = Math.ceil(novice.length / pageSize);
+    const currentPage = Math.min(state.adminNovicePage, totalPages) || 1;
+    state.adminNovicePage = currentPage;
+
+    const start = (currentPage - 1) * pageSize;
+    const displayNovice = novice.slice(start, start + pageSize);
+
     let html = `<table class="admin-table">
         <thead><tr><th>ID</th><th>Naslov</th><th>Datum</th><th>Dejanja</th></tr></thead><tbody>`;
-    novice.forEach(n => {
+    displayNovice.forEach(n => {
         html += `<tr>
             <td>${n.id}</td>
             <td>${escapeHtml(n.naslov)}</td>
@@ -1571,7 +1583,21 @@ function renderAdminNoviceTable(novice) {
         </tr>`;
     });
     html += '</tbody></table>';
+
+    // Dodaj paginacijo, če je več kot 1 stran
+    if (totalPages > 1) {
+        html += `<div class="pagination">`;
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToAdminNovicePage(${i})">${i}</button>`;
+        }
+        html += `</div>`;
+    }
+
     container.innerHTML = html;
+}
+function goToAdminNovicePage(page) {
+    state.adminNovicePage = page;
+    renderAdminNoviceTable(state.adminNovice);
 }
 
 window.showAddNovicaModal = function() {
