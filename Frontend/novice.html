@@ -95,44 +95,66 @@
         }
 
         function renderNovice() {
-            const grid = document.getElementById('newsGrid');
-            const pagination = document.getElementById('newsPagination');
-            
-            const totalPages = Math.ceil(allNews.length / NEWS_PER_PAGE);
-            const currentPage = Math.min(currentNewsPage, totalPages) || 1;
-            currentNewsPage = currentPage;
+    const grid = document.getElementById('newsGrid');
+    const pagination = document.getElementById('newsPagination');
+    
+    const totalPages = Math.ceil(allNews.length / NEWS_PER_PAGE);
+    const currentPage = Math.min(currentNewsPage, totalPages) || 1;
+    currentNewsPage = currentPage;
 
-            const start = (currentPage - 1) * NEWS_PER_PAGE;
-            const newsToShow = allNews.slice(start, start + NEWS_PER_PAGE);
+    const start = (currentPage - 1) * NEWS_PER_PAGE;
+    const newsToShow = allNews.slice(start, start + NEWS_PER_PAGE);
 
-            if (newsToShow.length === 0) {
-                grid.innerHTML = '<div class="news-empty">Novic še ni.</div>';
-                pagination.innerHTML = '';
-                return;
-            }
+    if (newsToShow.length === 0) {
+        grid.innerHTML = '<div class="news-empty">Novic še ni.</div>';
+        pagination.innerHTML = '';
+        return;
+    }
 
-            grid.innerHTML = newsToShow.map(n => `
-                <div class="news-card">
-                    ${n.slika_url ? `<img class="news-img" src="${n.slika_url}" alt="${n.naslov}" onerror="this.style.display='none'">` : '<div class="news-img">🎾</div>'}
-                    <div class="news-content">
-                        <h4>${n.naslov}</h4>
-                        <p>${n.vsebina}</p>
-                        <button class="read-more-btn" onclick="toggleNews(this)">Preberi več</button>
-                        <span class="news-date">${new Date(n.datum).toLocaleDateString('sl-SI')}</span>
-                    </div>
-                </div>
-            `).join('');
-
-            if (totalPages > 1) {
-                let paginationHtml = '';
-                for (let i = 1; i <= totalPages; i++) {
-                    paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changeNewsPage(${i})">${i}</button>`;
-                }
-                pagination.innerHTML = paginationHtml;
-            } else {
-                pagination.innerHTML = '';
-            }
+    grid.innerHTML = newsToShow.map(n => {
+        let slike = [];
+        if (n.slike) {
+            try { slike = JSON.parse(n.slike); } catch(e) { slike = []; }
         }
+        const hasGallery = slike.length > 0;
+        
+        return `
+        <div class="news-card">
+            ${n.slika_url ? `<img class="news-img" src="${n.slika_url}" alt="${n.naslov}" onerror="this.style.display='none'">` : '<div class="news-img">🎾</div>'}
+            <div class="news-content">
+                <h4>${n.naslov}</h4>
+                <p>${n.vsebina}</p>
+                <button class="read-more-btn" onclick="toggleNews(this)">Preberi več</button>
+                ${hasGallery ? '<button class="read-more-btn" onclick="toggleGallery(this)">Prikaži galerijo (${slike.length})</button>' : ''}
+                <div class="news-gallery" style="display:none; margin-top:0.5rem; display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap:0.5rem;">
+                    ${slike.map(s => `<img src="${s}" style="width:100%; height:100px; object-fit:cover; border-radius:8px;">`).join('')}
+                </div>
+                <span class="news-date">${new Date(n.datum).toLocaleDateString('sl-SI')}</span>
+            </div>
+        </div>`;
+    }).join('');
+
+    if (totalPages > 1) {
+        let paginationHtml = '';
+        for (let i = 1; i <= totalPages; i++) {
+            paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changeNewsPage(${i})">${i}</button>`;
+        }
+        pagination.innerHTML = paginationHtml;
+    } else {
+        pagination.innerHTML = '';
+    }
+}
+
+function toggleGallery(btn) {
+    const gallery = btn.nextElementSibling;
+    if (gallery.style.display === 'none' || gallery.style.display === '') {
+        gallery.style.display = 'grid';
+        btn.textContent = 'Skrij galerijo';
+    } else {
+        gallery.style.display = 'none';
+        btn.textContent = 'Prikaži galerijo';
+    }
+}
 
         function changeNewsPage(page) {
             currentNewsPage = page;
