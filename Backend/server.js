@@ -3,8 +3,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-const fs = require('fs');
-const multer = require('multer');
 require('dotenv').config();
 const pool = require('./db');
 const authRoutes = require('./routes/auth');
@@ -16,10 +14,8 @@ const allowedOrigin = process.env.CORS_ORIGIN || '';
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(cors({ origin(origin, cb) { if (!origin || !allowedOrigin || origin === allowedOrigin) return cb(null, true); cb(new Error('Origin ni dovoljen')); }, methods: ['GET','POST','PUT','DELETE'], allowedHeaders: ['Content-Type','Authorization'] }));
-
-// Povečamo limit za JSON (za base64 slike)
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+app.use(express.json({ limit: '50mb' })); // Povečamo za base64 slike
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(rateLimit({ windowMs: 15*60*1000, max: 500, standardHeaders: true, legacyHeaders: false, message: { message: 'Preveč zahtevkov. Poskusite kasneje.' } }));
 app.use('/api/auth/login', rateLimit({ windowMs: 15*60*1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { message: 'Preveč poskusov prijave. Poskusite čez nekaj minut.' } }));
@@ -38,15 +34,16 @@ app.get('/api/novice', async (_req, res) => {
   }
 });
 
-// Dodajanje novice (z možnostjo več slik)
+// Dodajanje novice (z glavno sliko in do 5 dodatnih slik)
 app.post('/api/admin/novice', requireAuth, requireAdmin, async (req, res) => {
-  const { naslov, vsebina, slika_url, slike } = req.body;
+  const { naslov, vsebina, glavna_slika, dodatne_slike } = req.body;
   if (!naslov || !String(naslov).trim()) return res.status(400).json({ message: 'Naslov je obvezen' });
   try {
-    const slikeJson = slike && Array.isArray(slike) ? JSON.stringify(slike) : null;
+    const slikeArray = dodatne_slike && Array.isArray(dodatne_slike) ? dodatne_slike.slice(0, 5) : [];
+    const slikeJson = JSON.stringify(slikeArray);
     const [result] = await pool.query(
       'INSERT INTO novice (naslov, vsebina, slika_url, slike) VALUES (?, ?, ?, ?)',
-      [String(naslov).trim(), String(vsebina || ''), slika_url || null, slikeJson]
+      [String(naslov).trim(), String(vsebina || ''), glavna_slika || null, slikeJson]
     );
     res.status(201).json({ message: 'Novica dodana', id: result.insertId });
   } catch (err) {
@@ -59,18 +56,19 @@ app.post('/api/admin/novice', requireAuth, requireAdmin, async (req, res) => {
 app.put('/api/admin/novice/:id', requireAuth, requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Neveljaven ID' });
-  const { naslov, vsebina, slika_url, slike } = req.body;
+  const { naslov, vsebina, glavna_slika, dodatne_slike } = req.body;
   if (!naslov || !String(naslov).trim()) return res.status(400).json({ message: 'Naslov je obvezen' });
   try {
-    const slikeJson = slike && Array.isArray(slike) ? JSON.stringify(slike) : null;
+    const slikeArray = dodatne_slike && Array.isArray(dodatne_slike) ? dodatne_slike.slice(0, 5) : [];
+    const slikeJson = JSON.stringify(slikeArray);
     await pool.query(
       'UPDATE novice SET naslov = ?, vsebina = ?, slika_url = ?, slike = ? WHERE id = ?',
-      [String(naslov).trim(), String(vsebina || ''), slika_url || null, slikeJson, id]
+      [String(naslov).trim(), String(vsebina || ''), glavna_slika || null, slikeJson, id]
     );
     res.json({ message: 'Novica posodobljena' });
   } catch (err) {
     console.error(err.message);
-    res.status(500). json({ message: 'Napaka pri posodabljanju novice' });
+    res.status(500).json({ message: 'Napaka pri posodabljanju novice' });
   }
 });
 

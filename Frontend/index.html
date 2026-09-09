@@ -1541,7 +1541,7 @@ async function loadAdminNovice() {
     try {
         const data = await apiCall('/novice');
         state.adminNovice = data.novice;
-        state.adminNovicePage = 1; // <-- DODANO
+        state.adminNovicePage = 1;
         renderAdminNoviceTable(state.adminNovice);
     } catch (err) {
         showToast(err.message, 'error');
@@ -1551,9 +1551,10 @@ async function loadAdminNovice() {
 function filterAdminNovice() {
     const input = (document.getElementById('adminNovicaSearchInput')?.value || '').trim().toLowerCase();
     const filtered = (state.adminNovice || []).filter(n => n.naslov.toLowerCase().includes(input));
-    state.adminNovicePage = 1; // <-- DODANO
+    state.adminNovicePage = 1;
     renderAdminNoviceTable(filtered);
 }
+
 
 function renderAdminNoviceTable(novice) {
     const container = document.getElementById('adminNoviceList');
@@ -1604,17 +1605,21 @@ function goToAdminNovicePage(page) {
 window.showAddNovicaModal = function() {
     modalRoot.innerHTML = `
         <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
-            <div class="modal" style="max-width:600px;">
+            <div class="modal" style="max-width:650px;">
                 <button class="modal-close" onclick="closeModal()">✕</button>
                 <h2>Dodaj novico</h2>
                 <form onsubmit="handleAddNovica(event)">
                     <div class="form-group"><label>Naslov *</label><input type="text" id="novicaNaslov" required></div>
-                    <div class="form-group"><label>Besedilo</label><textarea id="novicaVsebina" rows="5"></textarea></div>
-                    <div class="form-group"><label>Glavna slika (URL)</label><input type="text" id="novicaSlika" placeholder="https://..."></div>
+                    <div class="form-group"><label>Besedilo</label><textarea id="novicaVsebina" rows="6"></textarea></div>
                     <div class="form-group">
-                        <label>Galerija slik (naloži iz naprave)</label>
-                        <input type="file" id="novicaSlike" multiple accept="image/*" onchange="previewSlike(this)">
-                        <div id="slikePreview" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;"></div>
+                        <label>Glavna slika (naloži iz naprave)</label>
+                        <input type="file" id="novicaGlavnaSlika" accept="image/*" onchange="previewMainImage(this)">
+                        <div id="mainImagePreview" style="margin-top:0.5rem;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Dodatne slike (max 5)</label>
+                        <input type="file" id="novicaDodatneSlike" accept="image/*" multiple onchange="previewAdditionalImages(this)">
+                        <div id="additionalImagesPreview" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;"></div>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Objavi</button>
                 </form>
@@ -1623,47 +1628,88 @@ window.showAddNovicaModal = function() {
     `;
 };
 
+
 window.showEditNovicaModal = function(id) {
     const novica = state.adminNovice.find(n => n.id === id);
     if (!novica) { showToast('Novica ni najdena.', 'error'); return; }
-    const slike = novica.slike ? JSON.parse(novica.slike) : [];
+    
+    let obstojeceSlike = [];
+    if (novica.slike) {
+        try { obstojeceSlike = JSON.parse(novica.slike); } catch(e) {}
+    }
+    
     modalRoot.innerHTML = `
         <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
-            <div class="modal" style="max-width:600px;">
+            <div class="modal" style="max-width:650px;">
                 <button class="modal-close" onclick="closeModal()">✕</button>
                 <h2>Uredi novico</h2>
                 <form onsubmit="handleEditNovica(event, ${id})">
                     <div class="form-group"><label>Naslov *</label><input type="text" id="editNaslov" value="${novica.naslov}" required></div>
-                    <div class="form-group"><label>Besedilo</label><textarea id="editVsebina" rows="5">${novica.vsebina}</textarea></div>
-                    <div class="form-group"><label>Glavna slika (URL)</label><input type="text" id="editSlika" value="${novica.slika_url || ''}" placeholder="https://..."></div>
+                    <div class="form-group"><label>Besedilo</label><textarea id="editVsebina" rows="6">${novica.vsebina}</textarea></div>
                     <div class="form-group">
-                        <label>Galerija slik (naloži iz naprave)</label>
-                        <input type="file" id="editSlike" multiple accept="image/*" onchange="previewEditSlike(this)">
-                        <div id="editSlikePreview" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;"></div>
+                        <label>Glavna slika (naloži iz naprave)</label>
+                        <input type="file" id="editGlavnaSlika" accept="image/*" onchange="previewMainImage(this, true)">
+                        <div id="editMainImagePreview" style="margin-top:0.5rem;">
+                            ${novica.slika_url ? `<img src="${novica.slika_url}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;">` : ''}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Dodatne slike (max 5)</label>
+                        <input type="file" id="editDodatneSlike" accept="image/*" multiple onchange="previewAdditionalImages(this, true)">
+                        <div id="editAdditionalImagesPreview" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">
+                            ${obstojeceSlike.map(s => `<img src="${s}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;">`).join('')}
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Shrani</button>
                 </form>
             </div>
         </div>
     `;
-    // Prikaži obstoječe slike
-    const preview = document.getElementById('editSlikePreview');
-    slike.forEach(s => {
+};
+
+function previewMainImage(input, isEdit = false) {
+    const previewContainer = document.getElementById(isEdit ? 'editMainImagePreview' : 'mainImagePreview');
+    if (!previewContainer) return;
+    previewContainer.innerHTML = '';
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.style.width = '120px';
+            img.style.height = '120px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '8px';
+            previewContainer.appendChild(img);
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function previewAdditionalImages(input, isEdit = false) {
+    const previewContainer = document.getElementById(isEdit ? 'editAdditionalImagesPreview' : 'additionalImagesPreview');
+    if (!previewContainer) return;
+    
+    // Obstoječe slike ohrani
+    const existingImages = [];
+    previewContainer.querySelectorAll('img').forEach(img => existingImages.push(img.src));
+    previewContainer.innerHTML = '';
+    existingImages.forEach(src => {
         const img = document.createElement('img');
-        img.src = s;
+        img.src = src;
         img.style.width = '80px';
         img.style.height = '80px';
         img.style.objectFit = 'cover';
         img.style.borderRadius = '8px';
-        preview.appendChild(img);
+        previewContainer.appendChild(img);
     });
-};
-
-function previewSlike(input) {
-    const preview = document.getElementById('slikePreview');
-    preview.innerHTML = '';
+    
+    // Dodaj nove slike (max 5 skupaj)
     if (input.files) {
-        Array.from(input.files).forEach(file => {
+        const currentCount = existingImages.length;
+        const maxNew = Math.max(0, 5 - currentCount);
+        const filesToAdd = Array.from(input.files).slice(0, maxNew);
+        filesToAdd.forEach(file => {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = document.createElement('img');
@@ -1672,46 +1718,28 @@ function previewSlike(input) {
                 img.style.height = '80px';
                 img.style.objectFit = 'cover';
                 img.style.borderRadius = '8px';
-                preview.appendChild(img);
+                previewContainer.appendChild(img);
             };
             reader.readAsDataURL(file);
         });
     }
 }
-
-function previewEditSlike(input) {
-    const preview = document.getElementById('editSlikePreview');
-    preview.innerHTML = '';
-    if (input.files) {
-        Array.from(input.files).forEach(file => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.style.width = '80px';
-                img.style.height = '80px';
-                img.style.objectFit = 'cover';
-                img.style.borderRadius = '8px';
-                preview.appendChild(img);
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-}
-
 window.handleAddNovica = async function(e) {
     e.preventDefault();
     const naslov = document.getElementById('novicaNaslov').value.trim();
     const vsebina = document.getElementById('novicaVsebina').value.trim();
-    const slika_url = document.getElementById('novicaSlika').value.trim() || null;
     
-    // Zberi vse slike iz galerije
-    const slike = [];
-    const preview = document.getElementById('slikePreview');
-    preview.querySelectorAll('img').forEach(img => slike.push(img.src));
+    let glavnaSlika = null;
+    const mainPreview = document.getElementById('mainImagePreview');
+    const mainImg = mainPreview.querySelector('img');
+    if (mainImg) glavnaSlika = mainImg.src;
+    
+    let dodatneSlike = [];
+    const additionalPreview = document.getElementById('additionalImagesPreview');
+    additionalPreview.querySelectorAll('img').forEach(img => dodatneSlike.push(img.src));
     
     try {
-        await apiCall('/admin/novice', 'POST', { naslov, vsebina, slika_url, slike });
+        await apiCall('/admin/novice', 'POST', { naslov, vsebina, glavna_slika: glavnaSlika, dodatne_slike: dodatneSlike });
         showToast('Novica dodana.', 'success');
         closeModal();
         loadAdminNovice();
@@ -1720,19 +1748,23 @@ window.handleAddNovica = async function(e) {
     }
 };
 
+
 window.handleEditNovica = async function(e, id) {
     e.preventDefault();
     const naslov = document.getElementById('editNaslov').value.trim();
     const vsebina = document.getElementById('editVsebina').value.trim();
-    const slika_url = document.getElementById('editSlika').value.trim() || null;
     
-    // Zberi vse slike iz galerije
-    const slike = [];
-    const preview = document.getElementById('editSlikePreview');
-    preview.querySelectorAll('img').forEach(img => slike.push(img.src));
+    let glavnaSlika = null;
+    const mainPreview = document.getElementById('editMainImagePreview');
+    const mainImg = mainPreview.querySelector('img');
+    if (mainImg) glavnaSlika = mainImg.src;
+    
+    let dodatneSlike = [];
+    const additionalPreview = document.getElementById('editAdditionalImagesPreview');
+    additionalPreview.querySelectorAll('img').forEach(img => dodatneSlike.push(img.src));
     
     try {
-        await apiCall(`/admin/novice/${id}`, 'PUT', { naslov, vsebina, slika_url, slike });
+        await apiCall(`/admin/novice/${id}`, 'PUT', { naslov, vsebina, glavna_slika: glavnaSlika, dodatne_slike: dodatneSlike });
         showToast('Novica posodobljena.', 'success');
         closeModal();
         loadAdminNovice();
@@ -1741,21 +1773,6 @@ window.handleEditNovica = async function(e, id) {
     }
 };
 
-window.handleAddNovica = async function(e) {
-    e.preventDefault();
-    const naslov = document.getElementById('novicaNaslov').value.trim();
-    const vsebina = document.getElementById('novicaVsebina').value.trim();
-    const slika_url = document.getElementById('novicaSlika').value.trim() || null;
-    try {
-        await apiCall('/admin/novice', 'POST', { naslov, vsebina, slika_url });
-        showToast('Novica dodana.', 'success');
-        closeModal();
-        loadAdminNovice();
-        // Posodobi landing stran, če je odprta v istem brskalniku (neobvezno)
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
-};
 
 window.deleteNovica = async function(id) {
     if (!confirm('Ali res želite izbrisati to novico?')) return;
