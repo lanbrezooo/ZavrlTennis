@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zavrl Tennis Team - Rekreacija</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎾</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary:#1a5632; --primary-dark:#0e3a20; --accent:#fdd835; --bg:#f0f4f0; --text:#1a1a1a; --text-light:#555; --white:#fff; --shadow:0 4px 24px rgba(0,0,0,0.08); --shadow-lg:0 8px 40px rgba(0,0,0,0.12); --radius:16px; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+        .header { position:fixed; top:0; left:0; right:0; z-index:1000; background:rgba(255,255,255,0.95); backdrop-filter:blur(10px); box-shadow:0 2px 20px rgba(0,0,0,0.08); padding:1rem 2rem; display:flex; justify-content:space-between; align-items:center; }
+        .logo { display:flex; align-items:center; gap:0.8rem; text-decoration:none; color:var(--primary-dark); font-weight:800; font-size:1.3rem; }
+        .logo-icon { width:48px; height:48px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.4rem; font-weight:900; color:var(--primary-dark); }
+        .nav-links { display:flex; gap:1.5rem; align-items:center; }
+        .nav-links a { text-decoration:none; color:var(--text); font-weight:600; font-size:0.95rem; transition:color 0.3s; }
+        .nav-links a:hover { color:var(--primary); }
+        .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:var(--primary-dark); padding:0.7rem 1.8rem; border-radius:50px; font-weight:700; text-decoration:none; }
+        .menu-toggle { display:none; background:none; border:none; font-size:1.8rem; cursor:pointer; color:var(--primary-dark); }
+        .main { max-width:1200px; margin:0 auto; padding:8rem 2rem 4rem; }
+        .section-title { text-align:center; margin-bottom:3rem; }
+        .section-title h2 { font-size:2.5rem; font-weight:800; color:var(--primary-dark); }
+        .rekreacija-grid { display:grid; grid-template-columns:1fr 1fr; gap:2rem; align-items:center; }
+        .rekreacija-text h3 { font-size:1.8rem; color:var(--primary-dark); margin-bottom:1rem; }
+        .rekreacija-text p { color:var(--text-light); }
+        .feature-list { list-style:none; margin-top:1.5rem; display:grid; gap:0.8rem; }
+        .feature-list li { display:flex; align-items:center; gap:0.7rem; font-weight:600; }
+        .feature-list li::before { content:'✓'; background:var(--accent); color:var(--primary-dark); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; }
+        .footer { background:var(--primary-dark); color:white; padding:2rem; text-align:center; }
+        @media (max-width:768px) {
+            .header { padding:0.8rem 1rem; }
+            .logo { font-size:1.1rem; }
+            .logo-icon { width:40px; height:40px; font-size:1.1rem; }
+            .menu-toggle { display:block; }
+            .nav-links { display:none; position:absolute; top:100%; left:0; right:0; background:white; flex-direction:column; padding:1rem; box-shadow:0 4px 10px rgba(0,0,0,0.1); gap:1rem; align-items:flex-start; }
+            .nav-links.open { display:flex; }
+            .nav-links a { width:100%; padding:0.5rem 0; border-bottom:1px solid #eee; }
+            .rekreacija-grid { grid-template-columns:1fr; }
+            .main { padding:7rem 1rem 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo"><div class="logo-icon">ZT</div><span>Zavrl Tennis Team</span></a>
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <nav class="nav-links" id="navLinks">
+            <a href="/o-klubu">O klubu</a>
+            <a href="/rekreacija">Rekreacija</a>
+            <a href="/cenik">Cenik</a>
+            <a href="/novice">Novice</a>
+            <a href="/kontakt">Kontakt</a>
+            <a href="/app" class="btn-primary">Rezerviraj</a>
+        </nav>
+    </header>
+    <main class="main">
+        <div class="section-title"><h2>Rekreacija</h2></div>
+        <div class="rekreacija-grid">
+            <div class="rekreacija-text">
+                <h3>Aktivno preživite prosti čas</h3>
+                <p>Pridružite se naši rekreativni skupini! Organiziramo tedenske treninge, prijateljske turnirje in druženja za vse, ki želijo ostati aktivni in uživati v tenisu. Ne glede na starost ali predznanje, je prostor za vsakogar.</p>
+                <ul class="feature-list">
+                    <li>Skupinski treningi za vse generacije</li>
+                    <li>Prijateljski turnirji</li>
+                    <li>Izposoja opreme</li>
+                    <li>Družabna srečanja</li>
+                </ul>
+            </div>
+            <div style="background:var(--accent); border-radius:var(--radius); height:300px; display:flex; align-items:center; justify-content:center; font-size:5rem; color:var(--primary-dark);">🎾</div>
+        </div>
+    </main>
+    <footer class="footer"><p>&copy; 2025 Zavrl Tennis Team</p></footer>
+    <script>
+        function toggleMenu() {
+            const nav = document.getElementById('navLinks');
+            nav.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>
