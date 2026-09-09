@@ -1128,7 +1128,7 @@ function goToAdminUsersPage(page) {
                 const haystack = `${r.ime || ''} ${r.priimek || ''} ${r.email || ''} ${r.datum || ''} ${r.igrisce || ''} ${r.ura_zacetka || ''} ${r.oznaka || ''}`.toLowerCase();
                 return haystack.includes(input);
             });
-            tate.adminReservationsPage = 1;
+            state.adminReservationsPage = 1;
             renderAdminReservationsTable(filtered);
         };
 
@@ -1680,7 +1680,31 @@ function previewMainImage(input, isEdit = false) {
             img.style.height = '120px';
             img.style.objectFit = 'cover';
             img.style.borderRadius = '8px';
-            previewContainer.appendChild(img);
+            img.style.position = 'relative';
+            img.style.display = 'block';
+            
+            // Dodaj gumb za brisanje
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = '×';
+            removeBtn.style.position = 'absolute';
+            removeBtn.style.top = '5px';
+            removeBtn.style.right = '5px';
+            removeBtn.style.background = 'red';
+            removeBtn.style.color = 'white';
+            removeBtn.style.border = 'none';
+            removeBtn.style.borderRadius = '50%';
+            removeBtn.style.width = '20px';
+            removeBtn.style.height = '20px';
+            removeBtn.style.cursor = 'pointer';
+            removeBtn.onclick = function() {
+                previewContainer.innerHTML = ''; // Počisti predogled
+            };
+            
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'relative';
+            wrapper.appendChild(img);
+            wrapper.appendChild(removeBtn);
+            previewContainer.appendChild(wrapper);
         };
         reader.readAsDataURL(input.files[0]);
     }
@@ -1692,16 +1716,12 @@ function previewAdditionalImages(input, isEdit = false) {
     
     // Obstoječe slike ohrani
     const existingImages = [];
-    previewContainer.querySelectorAll('img').forEach(img => existingImages.push(img.src));
+    previewContainer.querySelectorAll('.img-wrap').forEach(wrap => existingImages.push(wrap.dataset.src));
     previewContainer.innerHTML = '';
+    
+    // Dodaj obstoječe slike z gumbom za brisanje
     existingImages.forEach(src => {
-        const img = document.createElement('img');
-        img.src = src;
-        img.style.width = '80px';
-        img.style.height = '80px';
-        img.style.objectFit = 'cover';
-        img.style.borderRadius = '8px';
-        previewContainer.appendChild(img);
+        addImageToPreview(previewContainer, src);
     });
     
     // Dodaj nove slike (max 5 skupaj)
@@ -1712,17 +1732,48 @@ function previewAdditionalImages(input, isEdit = false) {
         filesToAdd.forEach(file => {
             const reader = new FileReader();
             reader.onload = function(e) {
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.style.width = '80px';
-                img.style.height = '80px';
-                img.style.objectFit = 'cover';
-                img.style.borderRadius = '8px';
-                previewContainer.appendChild(img);
+                addImageToPreview(previewContainer, e.target.result);
             };
             reader.readAsDataURL(file);
         });
     }
+}
+
+// Pomožna funkcija za dodajanje slike z gumbom za brisanje
+function addImageToPreview(container, src) {
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.width = '80px';
+    img.style.height = '80px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '8px';
+    img.style.display = 'block';
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '×';
+    removeBtn.style.position = 'absolute';
+    removeBtn.style.top = '5px';
+    removeBtn.style.right = '5px';
+    removeBtn.style.background = 'red';
+    removeBtn.style.color = 'white';
+    removeBtn.style.border = 'none';
+    removeBtn.style.borderRadius = '50%';
+    removeBtn.style.width = '20px';
+    removeBtn.style.height = '20px';
+    removeBtn.style.cursor = 'pointer';
+    removeBtn.onclick = function() {
+        container.removeChild(wrapper);
+    };
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'img-wrap';
+    wrapper.dataset.src = src;
+    wrapper.style.position = 'relative';
+    wrapper.style.display = 'inline-block';
+    wrapper.style.margin = '4px';
+    wrapper.appendChild(img);
+    wrapper.appendChild(removeBtn);
+    container.appendChild(wrapper);
 }
 window.handleAddNovica = async function(e) {
     e.preventDefault();
@@ -1736,7 +1787,9 @@ window.handleAddNovica = async function(e) {
     
     let dodatneSlike = [];
     const additionalPreview = document.getElementById('additionalImagesPreview');
-    additionalPreview.querySelectorAll('img').forEach(img => dodatneSlike.push(img.src));
+    additionalPreview.querySelectorAll('.img-wrap').forEach(wrap => {
+        dodatneSlike.push(wrap.dataset.src);
+    });
     
     try {
         await apiCall('/admin/novice', 'POST', { naslov, vsebina, glavna_slika: glavnaSlika, dodatne_slike: dodatneSlike });
@@ -1761,7 +1814,9 @@ window.handleEditNovica = async function(e, id) {
     
     let dodatneSlike = [];
     const additionalPreview = document.getElementById('editAdditionalImagesPreview');
-    additionalPreview.querySelectorAll('img').forEach(img => dodatneSlike.push(img.src));
+    additionalPreview.querySelectorAll('.img-wrap').forEach(wrap => {
+        dodatneSlike.push(wrap.dataset.src);
+    });
     
     try {
         await apiCall(`/admin/novice/${id}`, 'PUT', { naslov, vsebina, glavna_slika: glavnaSlika, dodatne_slike: dodatneSlike });
