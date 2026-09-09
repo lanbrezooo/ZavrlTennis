@@ -99,16 +99,34 @@
         
         /* Hero */
         .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 6rem 2rem 4rem;
-            background: linear-gradient(135deg, #0e3a20 0%, #1a5632 50%, #2e7d32 100%);
-            color: white;
-            position: relative;
-        }
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+    position: relative;
+    background-image: url('Slike/Parking-in-igrisca-3_EDIT.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+}
         .hero h1 { font-size: 3.5rem; font-weight: 800; margin-bottom: 1.2rem; }
         .hero p { font-size: 1.2rem; margin-bottom: 2.5rem; opacity: 0.9; }
         .btn-hero { background: var(--accent); color: var(--primary-dark); padding: 1.1rem 2.5rem; border-radius: 50px; font-size: 1.1rem; font-weight: 700; text-decoration: none; display: inline-block; transition: 0.3s; }
