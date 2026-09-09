@@ -30,6 +30,63 @@
         .news-date { font-size:0.8rem; color:var(--text-light); margin-top:1rem; display:block; }
         .news-empty { text-align:center; color:var(--text-light); font-style:italic; padding:2rem; }
         .footer { background:var(--primary-dark); color:white; padding:2rem; text-align:center; }
+        /* Omeji besedilo na 4 vrstice */
+.news-content p {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 0.5rem;
+}
+
+/* Razširjeno stanje (ko klikneš "Preberi več") */
+.news-card.expanded .news-content p {
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+/* Gumb za preberi več */
+.read-more-btn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 0.5rem;
+}
+
+.read-more-btn:hover {
+    text-decoration: underline;
+}
+/* Paginacija za novice */
+.pagination {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.page-btn {
+    padding: 0.5rem 0.9rem;
+    border: 1px solid #e0e0e0;
+    background: white;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    transition: 0.3s;
+}
+.page-btn:hover {
+    background: #e8f5e9;
+}
+.page-btn.active {
+    background: #1a5632;
+    color: white;
+    border-color: #1a5632;
+}
         @media (max-width:768px) { .header { padding:0.8rem 1rem; } .nav-links { display:none; } .news-grid { grid-template-columns:1fr; } }
     </style>
 </head>
@@ -42,33 +99,104 @@
     <main class="main">
         <div class="section-title"><h2>Novice</h2></div>
         <div class="news-grid" id="newsGrid"></div>
+        <div class="pagination" id="newsPagination"></div>
     </main>
     <footer class="footer"><p>&copy; 2025 Zavrl Tennis Team</p></footer>
     <script>
-        async function loadNovice() {
-            const grid = document.getElementById('newsGrid');
-            try {
-                const res = await fetch('/api/novice');
-                const data = await res.json();
-                if (data.novice && data.novice.length > 0) {
-                    grid.innerHTML = data.novice.map(n => `
-                        <div class="news-card">
-                            ${n.slika_url ? `<img class="news-img" src="${n.slika_url}" alt="${n.naslov}" onerror="this.style.display='none'">` : '<div class="news-img">🎾</div>'}
-                            <div class="news-content">
-                                <h4>${n.naslov}</h4>
-                                <p>${n.vsebina}</p>
-                                <span class="news-date">${new Date(n.datum).toLocaleDateString('sl-SI')}</span>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    grid.innerHTML = '<div class="news-empty">Novic še ni.</div>';
-                }
-            } catch (e) {
-                grid.innerHTML = '<div class="news-empty">Napaka pri nalaganju novic.</div>';
-            }
+        let allNews = [];
+let currentNewsPage = 1;
+const NEWS_PER_PAGE = 5; // 5 novic na stran
+
+async function loadNovice() {
+    const grid = document.getElementById('newsGrid');
+    try {
+        const res = await fetch('/api/novice');
+        const data = await res.json();
+        if (data.novice && data.novice.length > 0) {
+            allNews = data.novice;
+            renderNovice();
+        } else {
+            grid.innerHTML = '<div class="news-empty">Novic še ni.</div>';
+            document.getElementById('newsPagination').innerHTML = '';
         }
-        loadNovice();
+    } catch (e) {
+        grid.innerHTML = '<div class="news-empty">Napaka pri nalaganju novic.</div>';
+    }
+}
+
+function renderNovice() {
+    const grid = document.getElementById('newsGrid');
+    const pagination = document.getElementById('newsPagination');
+    
+    const totalPages = Math.ceil(allNews.length / NEWS_PER_PAGE);
+    const currentPage = Math.min(currentNewsPage, totalPages) || 1;
+    currentNewsPage = currentPage;
+
+    const start = (currentPage - 1) * NEWS_PER_PAGE;
+    const newsToShow = allNews.slice(start, start + NEWS_PER_PAGE);
+
+    if (newsToShow.length === 0) {
+        grid.innerHTML = '<div class="news-empty">Novic še ni.</div>';
+        pagination.innerHTML = '';
+        return;
+    }
+
+    // Prikaz novic
+    grid.innerHTML = newsToShow.map(n => `
+        <div class="news-card">
+            ${n.slika_url ? `<img class="news-img" src="${n.slika_url}" alt="${n.naslov}" onerror="this.style.display='none'">` : '<div class="news-img">🎾</div>'}
+            <div class="news-content">
+                <h4>${n.naslov}</h4>
+                <p>${n.vsebina}</p>
+                <button class="read-more-btn" onclick="toggleNews(this)">Preberi več</button>
+                <span class="news-date">${new Date(n.datum).toLocaleDateString('sl-SI')}</span>
+            </div>
+        </div>
+    `).join('');
+
+    // Prikaz gumbov za strani
+    if (totalPages > 1) {
+        let paginationHtml = '';
+        for (let i = 1; i <= totalPages; i++) {
+            paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changeNewsPage(${i})">${i}</button>`;
+        }
+        pagination.innerHTML = paginationHtml;
+    } else {
+        pagination.innerHTML = '';
+    }
+}
+
+function changeNewsPage(page) {
+    currentNewsPage = page;
+    renderNovice();
+}
+
+// Funkcija za "Preberi več" (če je še nimaš, jo dodaj)
+function toggleNews(btn) {
+    const card = btn.closest('.news-card');
+    card.classList.toggle('expanded');
+    if (card.classList.contains('expanded')) {
+        btn.textContent = 'Strni';
+    } else {
+        btn.textContent = 'Preberi več';
+    }
+}
+
+// Ob zagonu naloži novice
+loadNovice();
+
+        // Funkcija za razširitev / strnitev novice
+function toggleNews(btn) {
+    const card = btn.closest('.news-card');
+    card.classList.toggle('expanded');
+    
+    if (card.classList.contains('expanded')) {
+        btn.textContent = 'Strni';
+    } else {
+        btn.textContent = 'Preberi več';
+    }
+}
+        
     </script>
 </body>
 </html>
