@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zavrl Tennis Team - Teniški klub Ptuj</title>
+    <title>Zavrl Tennis Team - Domov</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎾</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -23,365 +23,98 @@
             --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-        /* Header */
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: 0.3s;
-        }
-        .header.scrolled { padding: 0.6rem 2rem; box-shadow: 0 4px 30px rgba(0,0,0,0.1); }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+        /* Skupni Header */
+        .header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); box-shadow: 0 2px 20px rgba(0,0,0,0.08); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
         .logo { display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: var(--primary-dark); font-weight: 800; font-size: 1.3rem; }
-        .logo-icon { width: 48px; height: 48px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 900; color: var(--primary-dark); box-shadow: 0 4px 12px rgba(253,216,53,0.4); }
-        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .logo-icon { width: 48px; height: 48px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 900; color: var(--primary-dark); }
+        .nav-links { display: flex; gap: 1.5rem; align-items: center; }
         .nav-links a { text-decoration: none; color: var(--text); font-weight: 600; font-size: 0.95rem; transition: color 0.3s; }
         .nav-links a:hover { color: var(--primary); }
         .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: var(--primary-dark); padding: 0.7rem 1.8rem; border-radius: 50px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 15px rgba(253,216,53,0.4); transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.5rem; }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(253,216,53,0.5); }
         /* Hero */
-        .hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6rem 2rem 4rem; background: linear-gradient(135deg, #0e3a20 0%, #1a5632 50%, #2e7d32 100%); color: white; position: relative; overflow: hidden; }
-        .hero::before { content: ''; position: absolute; width: 400px; height: 400px; background: radial-gradient(circle, rgba(253,216,53,0.3), transparent 70%); top: -100px; right: -100px; border-radius: 50%; animation: float 6s ease-in-out infinite; }
-        .hero::after { content: ''; position: absolute; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 70%); bottom: -50px; left: -50px; border-radius: 50%; animation: float 8s ease-in-out infinite reverse; }
-        @keyframes float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-20px) scale(1.05); } }
-        .hero-content { max-width: 800px; z-index: 2; position: relative; }
-        .hero-badge { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 0.5rem 1.5rem; border-radius: 50px; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; display: inline-block; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.3); animation: fadeInUp 0.8s ease; }
-        .hero h1 { font-size: 3.5rem; font-weight: 800; line-height: 1.15; margin-bottom: 1.2rem; letter-spacing: -1px; animation: fadeInUp 0.8s ease 0.2s both; }
-        .hero p { font-size: 1.2rem; opacity: 0.9; margin-bottom: 2.5rem; animation: fadeInUp 0.8s ease 0.4s both; }
-        .hero-cta { display: flex; justify-content: center; animation: fadeInUp 0.8s ease 0.6s both; }
-        .btn-hero { padding: 1.1rem 2.5rem; border-radius: 50px; font-size: 1.1rem; font-weight: 700; text-decoration: none; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.7rem; background: var(--accent); color: var(--primary-dark); box-shadow: 0 10px 25px rgba(253,216,53,0.4); }
+        .hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6rem 2rem 4rem; background: linear-gradient(135deg, #0e3a20 0%, #1a5632 50%, #2e7d32 100%); color: white; position: relative; }
+        .hero h1 { font-size: 3.5rem; font-weight: 800; margin-bottom: 1.2rem; }
+        .hero p { font-size: 1.2rem; margin-bottom: 2.5rem; opacity: 0.9; }
+        .btn-hero { background: var(--accent); color: var(--primary-dark); padding: 1.1rem 2.5rem; border-radius: 50px; font-size: 1.1rem; font-weight: 700; text-decoration: none; display: inline-block; transition: 0.3s; }
         .btn-hero:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(253,216,53,0.5); }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        /* Sekcije */
-        section { padding: 5rem 2rem; max-width: 1200px; margin: 0 auto; }
-        .section-title { text-align: center; margin-bottom: 3rem; }
-        .section-title h2 { font-size: 2.5rem; font-weight: 800; color: var(--primary-dark); margin-bottom: 0.5rem; }
-        .section-title p { color: var(--text-light); font-size: 1.1rem; }
-        .stats { background: white; padding: 4rem 2rem; }
-        .stats-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; text-align: center; }
-        .stat-item { padding: 2rem; background: var(--bg); border-radius: var(--radius); transition: all 0.3s; }
-        .stat-item:hover { transform: translateY(-5px); box-shadow: var(--shadow); }
-        .stat-number { font-size: 2.5rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; }
-        .stat-label { font-size: 0.95rem; color: var(--text-light); font-weight: 600; }
-        .about-grid, .rekreacija-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
-        .about-text h3, .rekreacija-text h3 { font-size: 1.8rem; font-weight: 800; color: var(--primary-dark); margin-bottom: 1rem; }
-        .about-text p, .rekreacija-text p { color: var(--text-light); margin-bottom: 1.5rem; }
-        .feature-list { list-style: none; display: grid; gap: 0.8rem; }
-        .feature-list li { display: flex; align-items: center; gap: 0.7rem; font-weight: 600; color: var(--text); }
-        .feature-list li::before { content: '✓'; background: var(--accent); color: var(--primary-dark); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
-        /* Cenik */
-        .pricing { background: white; }
-        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; }
-        .price-card { background: var(--bg); border-radius: var(--radius); padding: 2rem; text-align: center; border: 2px solid transparent; transition: all 0.3s; }
-        .price-card:hover { border-color: var(--accent); transform: translateY(-5px); box-shadow: var(--shadow-lg); }
-        .price-card h4 { font-size: 1.1rem; color: var(--primary); margin-bottom: 1rem; text-transform: uppercase; }
-        .price { font-size: 2.5rem; font-weight: 800; color: var(--primary-dark); }
-        .price small { font-size: 1rem; font-weight: 500; color: var(--text-light); }
-        .price-card ul { list-style: none; margin-top: 1rem; display: grid; gap: 0.5rem; }
-        .price-card ul li { color: var(--text-light); }
-        .price-card.featured { border-color: var(--accent); background: white; box-shadow: var(--shadow-lg); }
-        /* Novice */
-        .news { background: var(--bg); }
-        .news-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
-        .news-card { background: white; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); transition: all 0.3s; }
-        .news-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
-        .news-img { width: 100%; height: 200px; object-fit: cover; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem; }
-        .news-content { padding: 1.5rem; }
-        .news-content h4 { font-size: 1.2rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 0.5rem; }
-        .news-content p { color: var(--text-light); font-size: 0.95rem; }
-        .news-date { font-size: 0.8rem; color: var(--text-light); margin-top: 1rem; display: block; }
-        .news-empty { text-align: center; color: var(--text-light); font-style: italic; padding: 2rem; }
-        /* Kontakt */
-        .contact { background: white; }
-        .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-        .contact-info { display: grid; gap: 1.5rem; }
-        .contact-item { display: flex; gap: 1rem; align-items: flex-start; }
-        .contact-icon { width: 50px; height: 50px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
-        .contact-item h4 { color: var(--primary-dark); font-weight: 700; margin-bottom: 0.3rem; }
-        .contact-item p { color: var(--text-light); }
-        .contact-item a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        /* Kartice za sekcije */
+        .cards { max-width: 1200px; margin: 5rem auto; padding: 0 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; }
+        .card { background: white; border-radius: var(--radius); padding: 2rem; box-shadow: var(--shadow); text-align: center; transition: 0.3s; text-decoration: none; color: var(--text); }
+        .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-bottom: 4px solid var(--accent); }
+        .card-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .card h3 { color: var(--primary-dark); margin-bottom: 0.8rem; }
+        .card p { color: var(--text-light); }
         /* Footer */
-        .footer { background: var(--primary-dark); color: white; padding: 3rem 2rem 1rem; }
-        .footer-content { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 2rem; }
-        .footer h4 { font-size: 1.1rem; margin-bottom: 1rem; }
-        .footer p, .footer a { opacity: 0.8; font-size: 0.9rem; line-height: 1.8; color: white; text-decoration: none; }
-        .footer a:hover { opacity: 1; text-decoration: underline; }
-        .footer-bottom { text-align: center; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; opacity: 0.7; }
-        /* Responsive */
+        .footer { background: var(--primary-dark); color: white; padding: 2rem; text-align: center; }
+        .footer a { color: white; text-decoration: none; }
         @media (max-width: 768px) {
             .header { padding: 0.8rem 1rem; }
             .nav-links { display: none; }
             .hero h1 { font-size: 2.5rem; }
-            .hero p { font-size: 1rem; }
-            .stats-grid { grid-template-columns: 1fr 1fr; }
-            .about-grid, .rekreacija-grid, .contact-grid { grid-template-columns: 1fr; }
-            .pricing-grid, .news-grid { grid-template-columns: 1fr; }
-            .hero-cta { flex-direction: column; align-items: center; }
-            .btn-hero { width: 100%; justify-content: center; }
-            .footer-content { grid-template-columns: 1fr; }
+            .cards { grid-template-columns: 1fr; }
         }
-        .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s ease; }
-        .reveal.visible { opacity: 1; transform: translateY(0); }
     </style>
 </head>
 <body>
     <!-- Header -->
-    <header class="header" id="header">
-        <a href="index.html" class="logo">
+    <header class="header">
+        <a href="/" class="logo">
             <div class="logo-icon">ZT</div>
             <span>Zavrl Tennis Team</span>
         </a>
         <nav class="nav-links">
-            <a href="#o-klubu">O klubu</a>
-            <a href="#rekreacija">Rekreacija</a>
-            <a href="#cenik">Cenik</a>
-            <a href="#novice">Novice</a>
-            <a href="#kontakt">Kontakt</a>
+            <a href="/o-klubu">O klubu</a>
+            <a href="/rekreacija">Rekreacija</a>
+            <a href="/cenik">Cenik</a>
+            <a href="/novice">Novice</a>
+            <a href="/kontakt">Kontakt</a>
         </nav>
+        <a href="/app" class="btn-primary">Rezerviraj</a>
     </header>
 
     <!-- Hero -->
     <section class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">🎾 Teniški klub Ptuj</div>
-            <h1>Rezervirajte igrišče<br>v nekaj sekundah</h1>
-            <p>9 vrhunskih igrišč, odprtih vsak dan od 8.00 do 22.00. Uporabite letno karto ali kredite za enostavno rezervacijo.</p>
-            <div class="hero-cta">
-                <a href="index.html" class="btn-hero">Rezerviraj zdaj →</a>
-            </div>
+        <div>
+            <h1>Teniški klub v srcu Ptuja</h1>
+            <p>9 igrišč, odprtih vsak dan od 8.00 do 22.00.</p>
+            <a href="/app" class="btn-hero">Rezerviraj igrišče →</a>
         </div>
     </section>
 
-    <!-- Statistika -->
-    <section class="stats">
-        <div class="stats-grid">
-            <div class="stat-item reveal">
-                <div class="stat-number">9</div>
-                <div class="stat-label">Teniških igrišč</div>
-            </div>
-            <div class="stat-item reveal">
-                <div class="stat-number">14</div>
-                <div class="stat-label">Ur na dan odprto</div>
-            </div>
-            <div class="stat-item reveal">
-                <div class="stat-number">100+</div>
-                <div class="stat-label">Zadovoljnih igralcev</div>
-            </div>
-            <div class="stat-item reveal">
-                <div class="stat-number">24/7</div>
-                <div class="stat-label">Dostop do rezervacij</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- O klubu -->
-    <section id="o-klubu">
-        <div class="section-title reveal">
-            <h2>O klubu</h2>
-            <p>Tradicija, strast in vrhunski pogoji za tenis</p>
-        </div>
-        <div class="about-grid">
-            <div class="about-text reveal">
-                <h3>Več kot le tenis</h3>
-                <p>Zavrl Tennis Team je teniški klub s tradicijo v srcu Ptuja. Ponujamo 9 vrhunsko urejenih igrišč (od tega eno s trdo podlago), ki so na voljo tako rekreativcem kot tekmovalcem. Naša vizija je spodbujati tenis med vsemi generacijami.</p>
-                <ul class="feature-list">
-                    <li>9 profesionalno urejenih igrišč</li>
-                    <li>Letna karta in kreditni sistem</li>
-                    <li>Online rezervacije 24/7</li>
-                    <li>Primerno za rekreativce in tekmovalce</li>
-                </ul>
-            </div>
-            <div class="reveal" style="background:var(--primary); border-radius:var(--radius); height:300px; display:flex; align-items:center; justify-content:center; color:white; font-size:5rem;">🏟️</div>
-        </div>
-    </section>
-
-    <!-- Rekreacija -->
-    <section id="rekreacija">
-        <div class="section-title reveal">
-            <h2>Rekreacija</h2>
-            <p>Pridružite se naši rekreativni skupini</p>
-        </div>
-        <div class="rekreacija-grid">
-            <div class="reveal" style="background:var(--accent); border-radius:var(--radius); height:300px; display:flex; align-items:center; justify-content:center; font-size:5rem; color:var(--primary-dark);">🎾</div>
-            <div class="rekreacija-text reveal">
-                <h3>Aktivno preživite prosti čas</h3>
-                <p>Pridružite se naši rekreativni skupini! Organiziramo tedenske treninge, prijateljske turnirje in druženja za vse, ki želijo ostati aktivni in uživati v tenisu. Ne glede na starost ali predznanje, je prostor za vsakogar.</p>
-                <ul class="feature-list">
-                    <li>Skupinski treningi za vse generacije</li>
-                    <li>Prijateljski turnirji</li>
-                    <li>Izposoja opreme</li>
-                    <li>Družabna srečanja</li>
-                </ul>
-            </div>
-        </div>
-    </section>
-
-    <!-- Cenik -->
-    <section class="pricing" id="cenik">
-        <div class="section-title reveal">
-            <h2>Cenik</h2>
-            <p>Enostaven in pregleden sistem rezervacij</p>
-        </div>
-        <div class="pricing-grid">
-            <div class="price-card reveal">
-                <h4>Dopoldne</h4>
-                <div class="price">1 <small>kredit / uro</small></div>
-                <ul>
-                    <li>08:00 – 12:00</li>
-                    <li>Vsa igrišča</li>
-                    <li>Online rezervacija</li>
-                </ul>
-            </div>
-            <div class="price-card featured reveal">
-                <h4>Popoldne</h4>
-                <div class="price">2 <small>kredita / uro</small></div>
-                <ul>
-                    <li>12:00 – 22:00</li>
-                    <li>Vsa igrišča</li>
-                    <li>Online rezervacija</li>
-                    <li>Prednostna rezervacija</li>
-                </ul>
-            </div>
-            <div class="price-card reveal">
-                <h4>Letna karta</h4>
-                <div class="price">Neomejeno</div>
-                <ul>
-                    <li>Vse ure</li>
-                    <li>Brez porabe kreditov</li>
-                    <li>Prioriteta pri rezervaciji</li>
-                </ul>
-            </div>
-        </div>
-    </section>
-
-    <!-- Novice -->
-    <section class="news" id="novice">
-        <div class="section-title reveal">
-            <h2>Novice</h2>
-            <p>Spremljajte dogajanje v klubu</p>
-        </div>
-        <div class="news-grid" id="newsGrid">
-            <div class="news-empty">Nalagam novice...</div>
-        </div>
-    </section>
-
-    <!-- Kontakt -->
-    <section class="contact" id="kontakt">
-        <div class="section-title reveal">
-            <h2>Kontakt</h2>
-            <p>Stopite v stik z nami</p>
-        </div>
-        <div class="contact-grid">
-            <div class="contact-info reveal">
-                <div class="contact-item">
-                    <div class="contact-icon">📍</div>
-                    <div>
-                        <h4>Naslov</h4>
-                        <p>Pot v Toplice 10, 2250 Ptuj</p>
-                    </div>
-                </div>
-                <div class="contact-item">
-                    <div class="contact-icon">📞</div>
-                    <div>
-                        <h4>Telefon</h4>
-                        <p><a href="tel:+38640233089">+386 40 233 089</a></p>
-                    </div>
-                </div>
-                <div class="contact-item">
-                    <div class="contact-icon">✉️</div>
-                    <div>
-                        <h4>Email</h4>
-                        <p><a href="mailto:zavrl.samo@gmail.com">zavrl.samo@gmail.com</a></p>
-                    </div>
-                </div>
-            </div>
-            <div class="reveal" style="background:var(--bg); border-radius:var(--radius); padding:2rem; text-align:center; display:flex; flex-direction:column; justify-content:center;">
-                <h3 style="color:var(--primary-dark); margin-bottom:1rem;">Delovni čas</h3>
-                <p style="font-size:1.2rem; font-weight:600;">Pon – Ned: 08:00 – 22:00</p>
-            </div>
-        </div>
-    </section>
+    <!-- Kartice do sekcij -->
+    <div class="cards">
+        <a href="/o-klubu" class="card">
+            <div class="card-icon">🏆</div>
+            <h3>O klubu</h3>
+            <p>Spoznajte našo tradicijo, ekipo in vizijo.</p>
+        </a>
+        <a href="/rekreacija" class="card">
+            <div class="card-icon">🎾</div>
+            <h3>Rekreacija</h3>
+            <p>Pridružite se rekreativnim skupinam in turnirjem.</p>
+        </a>
+        <a href="/cenik" class="card">
+            <div class="card-icon">💰</div>
+            <h3>Cenik</h3>
+            <p>Pregleden sistem kreditov in letnih kart.</p>
+        </a>
+        <a href="/novice" class="card">
+            <div class="card-icon">📰</div>
+            <h3>Novice</h3>
+            <p>Spremljajte zadnje dogodke in tekmovanja.</p>
+        </a>
+        <a href="/kontakt" class="card">
+            <div class="card-icon">📞</div>
+            <h3>Kontakt</h3>
+            <p>Naslov, telefon, email in delovni čas.</p>
+        </a>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
-        <div class="footer-content">
-            <div>
-                <h4>Zavrl Tennis Team</h4>
-                <p>Rezervacije teniških igrišč za člane in goste. Enostavno, hitro in pregledno.</p>
-            </div>
-            <div>
-                <h4>Kontakt</h4>
-                <p>📞 <a href="tel:+38640233089">+386 40 233 089</a><br>
-                ✉️ <a href="mailto:zavrl.samo@gmail.com">zavrl.samo@gmail.com</a><br>
-                📍 Pot v Toplice 10, 2250 Ptuj</p>
-            </div>
-            <div>
-                <h4>Delovni čas</h4>
-                <p>Pon–Ned: 08:00–22:00</p>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            &copy; 2025 Zavrl Tennis Team · Vse pravice pridržane
-        </div>
+        <p>&copy; 2025 Zavrl Tennis Team · <a href="mailto:zavrl.samo@gmail.com">zavrl.samo@gmail.com</a></p>
     </footer>
-
-    <script>
-        // Header scroll učinek
-        const header = document.getElementById('header');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) header.classList.add('scrolled');
-            else header.classList.remove('scrolled');
-        });
-
-        // Animacije ob drsenju
-        const revealElements = document.querySelectorAll('.reveal');
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) entry.target.classList.add('visible');
-            });
-        }, { threshold: 0.2 });
-        revealElements.forEach(el => observer.observe(el));
-
-        // Nalaganje novic iz baze
-        async function loadNovice() {
-            const grid = document.getElementById('newsGrid');
-            try {
-                const res = await fetch('/api/novice');
-                const data = await res.json();
-                if (data.novice && data.novice.length > 0) {
-                    grid.innerHTML = data.novice.map(n => `
-                        <div class="news-card reveal">
-                            ${n.slika_url ? `<img class="news-img" src="${n.slika_url}" alt="${n.naslov}" onerror="this.style.display='none'">` : '<div class="news-img">🎾</div>'}
-                            <div class="news-content">
-                                <h4>${n.naslov}</h4>
-                                <p>${n.vsebina}</p>
-                                <span class="news-date">${new Date(n.datum).toLocaleDateString('sl-SI')}</span>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    grid.innerHTML = '<div class="news-empty">Novic še ni.</div>';
-                }
-            } catch (e) {
-                grid.innerHTML = '<div class="news-empty">Napaka pri nalaganju novic.</div>';
-            }
-        }
-        loadNovice();
-    </script>
 </body>
 </html>

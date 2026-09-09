@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zavrl Tennis Team - Novice</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎾</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary:#1a5632; --primary-dark:#0e3a20; --accent:#fdd835; --bg:#f0f4f0; --text:#1a1a1a; --text-light:#555; --white:#fff; --shadow:0 4px 24px rgba(0,0,0,0.08); --shadow-lg:0 8px 40px rgba(0,0,0,0.12); --radius:16px; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+        .header { position:fixed; top:0; left:0; right:0; z-index:1000; background:rgba(255,255,255,0.95); backdrop-filter:blur(10px); box-shadow:0 2px 20px rgba(0,0,0,0.08); padding:1rem 2rem; display:flex; justify-content:space-between; align-items:center; }
+        .logo { display:flex; align-items:center; gap:0.8rem; text-decoration:none; color:var(--primary-dark); font-weight:800; font-size:1.3rem; }
+        .logo-icon { width:48px; height:48px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.4rem; font-weight:900; color:var(--primary-dark); }
+        .nav-links { display:flex; gap:1.5rem; align-items:center; }
+        .nav-links a { text-decoration:none; color:var(--text); font-weight:600; font-size:0.95rem; transition:color 0.3s; }
+        .nav-links a:hover { color:var(--primary); }
+        .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:var(--primary-dark); padding:0.7rem 1.8rem; border-radius:50px; font-weight:700; text-decoration:none; }
+        .main { max-width:1200px; margin:0 auto; padding:8rem 2rem 4rem; }
+        .section-title { text-align:center; margin-bottom:3rem; }
+        .section-title h2 { font-size:2.5rem; font-weight:800; color:var(--primary-dark); }
+        .news-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:2rem; }
+        .news-card { background:var(--white); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); transition:0.3s; }
+        .news-card:hover { transform:translateY(-5px); box-shadow:var(--shadow-lg); }
+        .news-img { width:100%; height:200px; object-fit:cover; background:var(--primary); display:flex; align-items:center; justify-content:center; color:white; font-size:3rem; }
+        .news-content { padding:1.5rem; }
+        .news-content h4 { font-size:1.2rem; font-weight:700; color:var(--primary-dark); margin-bottom:0.5rem; }
+        .news-content p { color:var(--text-light); font-size:0.95rem; }
+        .news-date { font-size:0.8rem; color:var(--text-light); margin-top:1rem; display:block; }
+        .news-empty { text-align:center; color:var(--text-light); font-style:italic; padding:2rem; }
+        .footer { background:var(--primary-dark); color:white; padding:2rem; text-align:center; }
+        @media (max-width:768px) { .header { padding:0.8rem 1rem; } .nav-links { display:none; } .news-grid { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo"><div class="logo-icon">ZT</div><span>Zavrl Tennis Team</span></a>
+        <nav class="nav-links"><a href="/o-klubu">O klubu</a><a href="/rekreacija">Rekreacija</a><a href="/cenik">Cenik</a><a href="/novice">Novice</a><a href="/kontakt">Kontakt</a></nav>
+        <a href="/app" class="btn-primary">Rezerviraj</a>
+    </header>
+    <main class="main">
+        <div class="section-title"><h2>Novice</h2></div>
+        <div class="news-grid" id="newsGrid"></div>
+    </main>
+    <footer class="footer"><p>&copy; 2025 Zavrl Tennis Team</p></footer>
+    <script>
+        async function loadNovice() {
+            const grid = document.getElementById('newsGrid');
+            try {
+                const res = await fetch('/api/novice');
+                const data = await res.json();
+                if (data.novice && data.novice.length > 0) {
+                    grid.innerHTML = data.novice.map(n => `
+                        <div class="news-card">
+                            ${n.slika_url ? `<img class="news-img" src="${n.slika_url}" alt="${n.naslov}" onerror="this.style.display='none'">` : '<div class="news-img">🎾</div>'}
+                            <div class="news-content">
+                                <h4>${n.naslov}</h4>
+                                <p>${n.vsebina}</p>
+                                <span class="news-date">${new Date(n.datum).toLocaleDateString('sl-SI')}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    grid.innerHTML = '<div class="news-empty">Novic še ni.</div>';
+                }
+            } catch (e) {
+                grid.innerHTML = '<div class="news-empty">Napaka pri nalaganju novic.</div>';
+            }
+        }
+        loadNovice();
+    </script>
+</body>
+</html>

@@ -99,6 +99,11 @@ app.use('/api', (_req,res)=>res.status(404).json({message:'API pot ne obstaja'})
 
 const frontendPath = path.join(__dirname, '..', 'Frontend');
 app.get('/', (_req,res)=>res.sendFile(path.join(frontendPath,'landing.html')));
+app.get('/o-klubu', (_req,res)=>res.sendFile(path.join(frontendPath,'o-klubu.html')));
+app.get('/rekreacija', (_req,res)=>res.sendFile(path.join(frontendPath,'rekreacija.html')));
+app.get('/cenik', (_req,res)=>res.sendFile(path.join(frontendPath,'cenik.html')));
+app.get('/novice', (_req,res)=>res.sendFile(path.join(frontendPath,'novice.html')));
+app.get('/kontakt', (_req,res)=>res.sendFile(path.join(frontendPath,'kontakt.html')));
 app.get('/app', (_req,res)=>res.sendFile(path.join(frontendPath,'index.html')));
 app.use(express.static(frontendPath,{ index:false, maxAge:'1h' }));
 app.get('*', (_req,res)=>res.sendFile(path.join(frontendPath,'landing.html')));

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zavrl Tennis Team - Cenik</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎾</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary:#1a5632; --primary-dark:#0e3a20; --accent:#fdd835; --bg:#f0f4f0; --text:#1a1a1a; --text-light:#555; --white:#fff; --shadow:0 4px 24px rgba(0,0,0,0.08); --shadow-lg:0 8px 40px rgba(0,0,0,0.12); --radius:16px; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+        .header { position:fixed; top:0; left:0; right:0; z-index:1000; background:rgba(255,255,255,0.95); backdrop-filter:blur(10px); box-shadow:0 2px 20px rgba(0,0,0,0.08); padding:1rem 2rem; display:flex; justify-content:space-between; align-items:center; }
+        .logo { display:flex; align-items:center; gap:0.8rem; text-decoration:none; color:var(--primary-dark); font-weight:800; font-size:1.3rem; }
+        .logo-icon { width:48px; height:48px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.4rem; font-weight:900; color:var(--primary-dark); }
+        .nav-links { display:flex; gap:1.5rem; align-items:center; }
+        .nav-links a { text-decoration:none; color:var(--text); font-weight:600; font-size:0.95rem; transition:color 0.3s; }
+        .nav-links a:hover { color:var(--primary); }
+        .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:var(--primary-dark); padding:0.7rem 1.8rem; border-radius:50px; font-weight:700; text-decoration:none; }
+        .main { max-width:1200px; margin:0 auto; padding:8rem 2rem 4rem; }
+        .section-title { text-align:center; margin-bottom:3rem; }
+        .section-title h2 { font-size:2.5rem; font-weight:800; color:var(--primary-dark); }
+        .pricing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:2rem; }
+        .price-card { background:var(--white); border-radius:var(--radius); padding:2rem; text-align:center; box-shadow:var(--shadow); border:2px solid transparent; transition:0.3s; }
+        .price-card:hover { transform:translateY(-5px); box-shadow:var(--shadow-lg); border-color:var(--accent); }
+        .price-card h4 { font-size:1.1rem; color:var(--primary); margin-bottom:1rem; }
+        .price { font-size:2.5rem; font-weight:800; color:var(--primary-dark); }
+        .price small { font-size:1rem; color:var(--text-light); }
+        .price-card ul { list-style:none; margin-top:1rem; display:grid; gap:0.5rem; }
+        .price-card ul li { color:var(--text-light); }
+        .price-card.featured { border-color:var(--accent); background:var(--white); box-shadow:var(--shadow-lg); }
+        .footer { background:var(--primary-dark); color:white; padding:2rem; text-align:center; }
+        @media (max-width:768px) { .header { padding:0.8rem 1rem; } .nav-links { display:none; } .pricing-grid { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo"><div class="logo-icon">ZT</div><span>Zavrl Tennis Team</span></a>
+        <nav class="nav-links"><a href="/o-klubu">O klubu</a><a href="/rekreacija">Rekreacija</a><a href="/cenik">Cenik</a><a href="/novice">Novice</a><a href="/kontakt">Kontakt</a></nav>
+        <a href="/app" class="btn-primary">Rezerviraj</a>
+    </header>
+    <main class="main">
+        <div class="section-title"><h2>Cenik</h2></div>
+        <div class="pricing-grid">
+            <div class="price-card"><h4>Dopoldne</h4><div class="price">1 <small>kredit / uro</small></div><ul><li>08:00 – 12:00</li><li>Vsa igrišča</li><li>Online rezervacija</li></ul></div>
+            <div class="price-card featured"><h4>Popoldne</h4><div class="price">2 <small>kredita / uro</small></div><ul><li>12:00 – 22:00</li><li>Vsa igrišča</li><li>Prednostna rezervacija</li></ul></div>
+            <div class="price-card"><h4>Letna karta</h4><div class="price">Neomejeno</div><ul><li>Vse ure</li><li>Brez porabe kreditov</li><li>Prioriteta pri rezervaciji</li></ul></div>
+        </div>
+    </main>
+    <footer class="footer"><p>&copy; 2025 Zavrl Tennis Team</p></footer>
+</body>
+</html>
