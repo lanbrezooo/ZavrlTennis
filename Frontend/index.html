@@ -626,6 +626,8 @@
             adminNovice: []
         };
 
+        let editNoviceSlike = []; // Za shranjevanje obstoječih slik pri urejanju
+        let editNoviceGlavnaSlika = null; // Za glavno sliko pri urejanju
         const headerActions = document.getElementById('headerActions');
         const dateDisplay = document.getElementById('dateDisplay');
         const prevDayBtn = document.getElementById('prevDayBtn');
@@ -1633,10 +1635,12 @@ window.showEditNovicaModal = function(id) {
     const novica = state.adminNovice.find(n => n.id === id);
     if (!novica) { showToast('Novica ni najdena.', 'error'); return; }
     
-    let obstojeceSlike = [];
+    // Shrani obstoječe slike v globalno spremenljivko
+    editNoviceSlike = [];
     if (novica.slike) {
-        try { obstojeceSlike = JSON.parse(novica.slike); } catch(e) {}
+        try { editNoviceSlike = JSON.parse(novica.slike); } catch(e) { editNoviceSlike = []; }
     }
+    editNoviceGlavnaSlika = novica.slika_url || null;
     
     modalRoot.innerHTML = `
         <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
@@ -1650,14 +1654,14 @@ window.showEditNovicaModal = function(id) {
                         <label>Glavna slika (naloži iz naprave)</label>
                         <input type="file" id="editGlavnaSlika" accept="image/*" onchange="previewMainImage(this, true)">
                         <div id="editMainImagePreview" style="margin-top:0.5rem;">
-                            ${novica.slika_url ? `<img src="${novica.slika_url}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;">` : ''}
+                            ${editNoviceGlavnaSlika ? `<img src="${editNoviceGlavnaSlika}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;">` : ''}
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Dodatne slike (max 5)</label>
                         <input type="file" id="editDodatneSlike" accept="image/*" multiple onchange="previewAdditionalImages(this, true)">
                         <div id="editAdditionalImagesPreview" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">
-                            ${obstojeceSlike.map(s => `<img src="${s}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;">`).join('')}
+                            ${editNoviceSlike.map(s => `<img src="${s}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;">`).join('')}
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Shrani</button>
@@ -1680,10 +1684,9 @@ function previewMainImage(input, isEdit = false) {
             img.style.height = '120px';
             img.style.objectFit = 'cover';
             img.style.borderRadius = '8px';
-            img.style.position = 'relative';
             img.style.display = 'block';
             
-            // Dodaj gumb za brisanje
+            // Gumb za brisanje
             const removeBtn = document.createElement('button');
             removeBtn.textContent = '×';
             removeBtn.style.position = 'absolute';
@@ -1697,11 +1700,13 @@ function previewMainImage(input, isEdit = false) {
             removeBtn.style.height = '20px';
             removeBtn.style.cursor = 'pointer';
             removeBtn.onclick = function() {
-                previewContainer.innerHTML = ''; // Počisti predogled
+                previewContainer.innerHTML = '';
+                if (isEdit) editNoviceGlavnaSlika = null;
             };
             
             const wrapper = document.createElement('div');
             wrapper.style.position = 'relative';
+            wrapper.style.display = 'inline-block';
             wrapper.appendChild(img);
             wrapper.appendChild(removeBtn);
             previewContainer.appendChild(wrapper);
@@ -1714,29 +1719,67 @@ function previewAdditionalImages(input, isEdit = false) {
     const previewContainer = document.getElementById(isEdit ? 'editAdditionalImagesPreview' : 'additionalImagesPreview');
     if (!previewContainer) return;
     
-    // Obstoječe slike ohrani
-    const existingImages = [];
-    previewContainer.querySelectorAll('.img-wrap').forEach(wrap => existingImages.push(wrap.dataset.src));
-    previewContainer.innerHTML = '';
-    
-    // Dodaj obstoječe slike z gumbom za brisanje
-    existingImages.forEach(src => {
-        addImageToPreview(previewContainer, src);
-    });
+    // Obstoječe slike ohrani (iz globalne spremenljivke)
+    let allImages = isEdit ? [...editNoviceSlike] : [];
     
     // Dodaj nove slike (max 5 skupaj)
     if (input.files) {
-        const currentCount = existingImages.length;
-        const maxNew = Math.max(0, 5 - currentCount);
+        const maxNew = Math.max(0, 5 - allImages.length);
         const filesToAdd = Array.from(input.files).slice(0, maxNew);
         filesToAdd.forEach(file => {
             const reader = new FileReader();
             reader.onload = function(e) {
-                addImageToPreview(previewContainer, e.target.result);
+                allImages.push(e.target.result);
+                if (isEdit) editNoviceSlike = allImages; // Posodobi globalno spremenljivko
+                renderImagePreview(previewContainer, allImages);
             };
             reader.readAsDataURL(file);
         });
+    } else {
+        renderImagePreview(previewContainer, allImages);
     }
+}
+
+// Pomožna funkcija za prikaz slik (z gumbom za brisanje)
+function renderImagePreview(container, images) {
+    container.innerHTML = '';
+    images.forEach((src, index) => {
+        const img = document.createElement('img');
+        img.src = src;
+        img.style.width = '80px';
+        img.style.height = '80px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '8px';
+        img.style.display = 'block';
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '×';
+        removeBtn.style.position = 'absolute';
+        removeBtn.style.top = '5px';
+        removeBtn.style.right = '5px';
+        removeBtn.style.background = 'red';
+        removeBtn.style.color = 'white';
+        removeBtn.style.border = 'none';
+        removeBtn.style.borderRadius = '50%';
+        removeBtn.style.width = '20px';
+        removeBtn.style.height = '20px';
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.onclick = function() {
+            // Odstrani sliko iz globalne spremenljivke in ponovno nariši
+            if (typeof editNoviceSlike !== 'undefined') {
+                editNoviceSlike.splice(index, 1);
+            }
+            renderImagePreview(container, editNoviceSlike);
+        };
+        
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'inline-block';
+        wrapper.style.margin = '4px';
+        wrapper.appendChild(img);
+        wrapper.appendChild(removeBtn);
+        container.appendChild(wrapper);
+    });
 }
 
 // Pomožna funkcija za dodajanje slike z gumbom za brisanje
@@ -1807,15 +1850,21 @@ window.handleEditNovica = async function(e, id) {
     const naslov = document.getElementById('editNaslov').value.trim();
     const vsebina = document.getElementById('editVsebina').value.trim();
     
-    let glavnaSlika = null;
+    // Glavna slika: če je nova, jo preberi iz DOM-a, drugače ohrani staro
+    let glavnaSlika = editNoviceGlavnaSlika;
     const mainPreview = document.getElementById('editMainImagePreview');
     const mainImg = mainPreview.querySelector('img');
     if (mainImg) glavnaSlika = mainImg.src;
     
-    let dodatneSlike = [];
+    // Dodatne slike: uporabi globalno spremenljivko (ki vsebuje stare + nove)
+    let dodatneSlike = [...editNoviceSlike];
+    
+    // Če so v DOM-u še kakšne slike, ki niso v globalni spremenljivki (npr. nove), jih dodaj
     const additionalPreview = document.getElementById('editAdditionalImagesPreview');
     additionalPreview.querySelectorAll('.img-wrap').forEach(wrap => {
-        dodatneSlike.push(wrap.dataset.src);
+        if (!dodatneSlike.includes(wrap.dataset.src)) {
+            dodatneSlike.push(wrap.dataset.src);
+        }
     });
     
     try {
@@ -1827,7 +1876,6 @@ window.handleEditNovica = async function(e, id) {
         showToast(err.message, 'error');
     }
 };
-
 
 window.deleteNovica = async function(id) {
     if (!confirm('Ali res želite izbrisati to novico?')) return;
