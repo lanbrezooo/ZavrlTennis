@@ -21,7 +21,45 @@ app.use('/api/auth/register', rateLimit({ windowMs: 60*60*1000, max: 20, standar
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);
 
-// ===== NOVA POT: Javni podatki uporabnika (za prikaz ob kliku na rezervacijo) =====
+// ===== NOVE POTI ZA NOVICE =====
+app.get('/api/novice', async (_req, res) => {
+  try {
+    const [novice] = await pool.query('SELECT * FROM novice ORDER BY datum DESC');
+    res.json({ novice });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Napaka pri pridobivanju novic' });
+  }
+});
+
+app.post('/api/admin/novice', requireAuth, requireAdmin, async (req, res) => {
+  const { naslov, vsebina, slika_url } = req.body;
+  if (!naslov || !String(naslov).trim()) return res.status(400).json({ message: 'Naslov je obvezen' });
+  try {
+    const [result] = await pool.query(
+      'INSERT INTO novice (naslov, vsebina, slika_url) VALUES (?, ?, ?)',
+      [String(naslov).trim(), String(vsebina || ''), slika_url || null]
+    );
+    res.status(201).json({ message: 'Novica dodana', id: result.insertId });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Napaka pri dodajanju novice' });
+  }
+});
+
+app.delete('/api/admin/novice/:id', requireAuth, requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Neveljaven ID' });
+  try {
+    await pool.query('DELETE FROM novice WHERE id = ?', [id]);
+    res.json({ message: 'Novica izbrisana' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Napaka pri brisanju novice' });
+  }
+});
+
+// ===== JAVNI UPORABNIK =====
 app.get('/api/auth/user/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Neveljaven ID' });
@@ -32,7 +70,6 @@ app.get('/api/auth/user/:id', async (req, res) => {
     );
     if (!rows.length) return res.status(404).json({ message: 'Uporabnik ne obstaja' });
     const user = rows[0];
-    // Če uporabnik ni dovolil prikaza telefona, ga izbrišemo iz odgovora
     if (!user.prikazi_telefon) delete user.telefon;
     res.json({ user });
   } catch (e) {

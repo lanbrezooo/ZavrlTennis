@@ -304,6 +304,8 @@
     color: white;
     border-color: var(--primary);
 }
+.btn-primary.btn-sm { padding: 0.4rem 1rem; font-size: 0.8rem; }
+.admin-section h4 { margin-bottom: 0.5rem; }
        @media (max-width: 768px) {
     /* Header – manjši in kompaktnejši */
     .header-inner {
@@ -568,6 +570,13 @@
                 <div class="admin-table-wrap"><div id="adminReservationsList"></div></div>
                 <button class="btn btn-danger btn-sm" style="margin-top:1rem;" onclick="deleteAllReservations()">Izbriši vse rezervacije</button>
             </div>
+            <h4>Novice</h4>
+    <div class="admin-toolbar">
+        <button class="btn btn-primary btn-sm" onclick="showAddNovicaModal()">+ Dodaj novico</button>
+        <input type="search" id="adminNovicaSearchInput" class="search-input" oninput="filterAdminNovice()" placeholder="Išči po naslovu...">
+    </div>
+    <div class="admin-table-wrap"><div id="adminNoviceList"></div></div>
+</div>
         </div>
 
         <footer class="site-footer">
@@ -609,7 +618,8 @@
             adminReservations: [],
             adminPanelOpen: false,
             adminUsersPage: 1,        
-            adminReservationsPage: 1
+            adminReservationsPage: 1,
+            adminNovice: []
         };
 
         const headerActions = document.getElementById('headerActions');
@@ -932,7 +942,7 @@
             const panel = document.getElementById('adminPanel');
             state.adminPanelOpen = !state.adminPanelOpen;
             panel.style.display = state.adminPanelOpen ? 'block' : 'none';
-            if (state.adminPanelOpen) { loadAdminUsers(); loadAdminReservations(); }
+            if (state.adminPanelOpen) { loadAdminUsers(); loadAdminReservations();  loadAdminNovice(); }
         };
 
         async function loadAdminUsers() {
@@ -1522,6 +1532,92 @@ function goToAdminReservationsPage(page) {
             renderHeader();
             await refreshView();
         });
+        // ===== NOVICE (ADMIN) =====
+async function loadAdminNovice() {
+    try {
+        const data = await apiCall('/novice');
+        state.adminNovice = data.novice;
+        renderAdminNoviceTable(state.adminNovice);
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+function filterAdminNovice() {
+    const input = (document.getElementById('adminNovicaSearchInput')?.value || '').trim().toLowerCase();
+    const filtered = (state.adminNovice || []).filter(n => n.naslov.toLowerCase().includes(input));
+    renderAdminNoviceTable(filtered);
+}
+
+function renderAdminNoviceTable(novice) {
+    const container = document.getElementById('adminNoviceList');
+    if (!container) return;
+    if (novice.length === 0) {
+        container.innerHTML = '<p>Ni novic.</p>';
+        return;
+    }
+    let html = `<table class="admin-table">
+        <thead><tr><th>ID</th><th>Naslov</th><th>Datum</th><th>Dejanja</th></tr></thead><tbody>`;
+    novice.forEach(n => {
+        html += `<tr>
+            <td>${n.id}</td>
+            <td>${escapeHtml(n.naslov)}</td>
+            <td>${new Date(n.datum).toLocaleDateString('sl-SI')}</td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="deleteNovica(${n.id})">Izbriši</button>
+            </td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+window.showAddNovicaModal = function() {
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2>Dodaj novico</h2>
+                <form onsubmit="handleAddNovica(event)">
+                    <div class="form-group"><label>Naslov *</label><input type="text" id="novicaNaslov" required></div>
+                    <div class="form-group"><label>Besedilo</label><textarea id="novicaVsebina" rows="4"></textarea></div>
+                    <div class="form-group"><label>URL slike (neobvezno)</label><input type="text" id="novicaSlika" placeholder="https://..."></div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Objavi</button>
+                </form>
+            </div>
+        </div>
+    `;
+};
+
+window.handleAddNovica = async function(e) {
+    e.preventDefault();
+    const naslov = document.getElementById('novicaNaslov').value.trim();
+    const vsebina = document.getElementById('novicaVsebina').value.trim();
+    const slika_url = document.getElementById('novicaSlika').value.trim() || null;
+    try {
+        await apiCall('/admin/novice', 'POST', { naslov, vsebina, slika_url });
+        showToast('Novica dodana.', 'success');
+        closeModal();
+        loadAdminNovice();
+        // Posodobi landing stran, če je odprta v istem brskalniku (neobvezno)
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+};
+
+window.deleteNovica = async function(id) {
+    if (!confirm('Ali res želite izbrisati to novico?')) return;
+    try {
+        await apiCall(`/admin/novice/${id}`, 'DELETE');
+        showToast('Novica izbrisana.', 'success');
+        loadAdminNovice();
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+};
+
+// Ob inicializaciji admin panela naloži tudi novice
+// V funkciji toggleAdminPanel dodaj klic loadAdminNovice();
     </script>
 </body>
 </html>
