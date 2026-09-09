@@ -278,6 +278,32 @@
         .admin-table .btn { margin: 0.1rem; }
         .search-input { width: 100%; padding: 0.6rem 1rem; border: 2px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 0.9rem; margin-bottom: 1rem; }
 
+/* Paginacija */
+.pagination {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.page-btn {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    font-family: var(--font);
+    transition: var(--transition);
+}
+.page-btn:hover {
+    background: var(--hover);
+}
+.page-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
        @media (max-width: 768px) {
     /* Header – manjši in kompaktnejši */
     .header-inner {
@@ -286,6 +312,21 @@
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
+    }
+        /* Paginacija na telefonu - večji gumbi za lažji dotik */
+    .pagination {
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    .page-btn {
+        padding: 0.6rem 0.9rem;
+        font-size: 0.95rem;
+        min-width: 42px;
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
     }
     .logo-section {
         justify-content: flex-start;
@@ -566,7 +607,9 @@
             reservations: [],
             adminUsers: [],
             adminReservations: [],
-            adminPanelOpen: false
+            adminPanelOpen: false,
+            adminUsersPage: 1,        
+            adminReservationsPage: 1
         };
 
         const headerActions = document.getElementById('headerActions');
@@ -896,6 +939,7 @@
             try {
                 const data = await apiCall('/admin/users');
                 state.adminUsers = data.users;
+                state.adminUsersPage = 1; // <-- DODANO
                 document.getElementById('adminSearchInput').value = '';
                 renderAdminUsersTable(state.adminUsers);
             } catch (err) {
@@ -911,41 +955,61 @@
                 (u.priimek && u.priimek.toLowerCase().includes(input)) ||
                 (u.email && u.email.toLowerCase().includes(input))
             );
+            state.adminUsersPage = 1
             renderAdminUsersTable(filtered);
         };
 
         function renderAdminUsersTable(users) {
-            const container = document.getElementById('adminUsersList');
-            if (!container) return;
-            if (users.length === 0) {
-                container.innerHTML = '<p>Ni najdenih uporabnikov.</p>';
-                return;
-            }
-            const displayUsers = users.slice(0, 20);
-            let html = `<table class="admin-table">
-                <thead><tr><th>ID</th><th>Ime</th><th>Priimek</th><th>Email</th><th>Telefon</th><th>Letna karta</th><th>Krediti</th><th>Admin</th><th>Dejanja</th></tr></thead><tbody>`;
-            displayUsers.forEach(u => {
-                html += `<tr>
-                    <td>${u.id}</td>
-                    <td>${escapeHtml(u.ime)}</td>
-                    <td>${escapeHtml(u.priimek)}</td>
-                    <td>${escapeHtml(u.email)}</td>
-                    <td>${u.telefon || ''}</td>
-                    <td>${u.letna_karta ? 'Da' : 'Ne'}</td>
-                    <td>${u.krediti}</td>
-                    <td>${u.admin ? 'Da' : 'Ne'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline" style="color:black;" onclick="editUser(${u.id})">Uredi</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Izbriši</button>
-                    </td>
-                </tr>`;
-            });
-            html += '</tbody></table>';
-            if (users.length > 20) {
-                html += `<p style="margin-top:0.5rem;color:var(--text-light);">Prikazanih prvih 20 zadetkov. Uporabite iskalnik za ožji izbor.</p>`;
-            }
-            container.innerHTML = html;
+    const container = document.getElementById('adminUsersList');
+    if (!container) return;
+    if (users.length === 0) {
+        container.innerHTML = '<p>Ni najdenih uporabnikov.</p>';
+        return;
+    }
+
+    const pageSize = 5; // 5 uporabnikov na stran
+    const totalPages = Math.ceil(users.length / pageSize);
+    const currentPage = Math.min(state.adminUsersPage, totalPages) || 1;
+    state.adminUsersPage = currentPage;
+
+    const start = (currentPage - 1) * pageSize;
+    const displayUsers = users.slice(start, start + pageSize);
+
+    let html = `<table class="admin-table">
+        <thead><tr><th>ID</th><th>Ime</th><th>Priimek</th><th>Email</th><th>Telefon</th><th>Letna karta</th><th>Krediti</th><th>Admin</th><th>Dejanja</th></tr></thead><tbody>`;
+    displayUsers.forEach(u => {
+        html += `<tr>
+            <td>${u.id}</td>
+            <td>${escapeHtml(u.ime)}</td>
+            <td>${escapeHtml(u.priimek)}</td>
+            <td>${escapeHtml(u.email)}</td>
+            <td>${u.telefon || ''}</td>
+            <td>${u.letna_karta ? 'Da' : 'Ne'}</td>
+            <td>${u.krediti}</td>
+            <td>${u.admin ? 'Da' : 'Ne'}</td>
+            <td>
+                <button class="btn btn-sm btn-outline" style="color:black;" onclick="editUser(${u.id})">Uredi</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Izbriši</button>
+            </td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+
+    // Dodaj paginacijo, če je več kot ena stran
+    if (totalPages > 1) {
+        html += `<div class="pagination">`;
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToAdminUsersPage(${i})">${i}</button>`;
         }
+        html += `</div>`;
+    }
+
+    container.innerHTML = html;
+}
+function goToAdminUsersPage(page) {
+    state.adminUsersPage = page;
+    renderAdminUsersTable(state.adminUsers);
+}
 
         window.editUser = function(id) {
             const user = state.adminUsers.find(u => u.id === id);
@@ -1037,6 +1101,7 @@
             try {
                 const data = await apiCall('/admin/reservations');
                 state.adminReservations = data.reservations;
+                state.adminReservationsPage = 1;
                 renderAdminReservationsTable(state.adminReservations);
             } catch (err) {
                 showToast(err.message, 'error');
@@ -1049,49 +1114,59 @@
                 const haystack = `${r.ime || ''} ${r.priimek || ''} ${r.email || ''} ${r.datum || ''} ${r.igrisce || ''} ${r.ura_zacetka || ''} ${r.oznaka || ''}`.toLowerCase();
                 return haystack.includes(input);
             });
+            tate.adminReservationsPage = 1;
             renderAdminReservationsTable(filtered);
         };
 
-        function renderAdminReservationsTable(reservations) {
-            const container = document.getElementById('adminReservationsList');
-            if (!container) return;
-            if (reservations.length === 0) {
-                container.innerHTML = '<p>Ni rezervacij.</p>';
-                return;
-            }
-            const displayRes = reservations.slice(0, 100);
-            let html = `<table class="admin-table">
-                <thead><tr><th>ID</th><th>Uporabnik</th><th>Igrišče</th><th>Datum</th><th>Ura</th><th>Trajanje</th><th>Oznaka</th><th>Dejanja</th></tr></thead><tbody>`;
-            displayRes.forEach(r => {
-                html += `<tr>
-                    <td>${r.id}</td>
-                    <td>${escapeHtml(r.ime)} ${escapeHtml(r.priimek)}</td>
-                    <td>${r.igrisce}</td>
-                    <td>${r.datum}</td>
-                    <td>${r.ura_zacetka}:00</td>
-                    <td>${r.trajanje}h</td>
-                    <td>${escapeHtml(r.oznaka || '')}</td>
-                    <td>
-                        <button class="btn btn-sm btn-danger" onclick="deleteAdminReservation(${r.id})">Izbriši</button>
-                    </td>
-                </tr>`;
-            });
-            html += '</tbody></table>';
-            if (reservations.length > 100) { html += `<p style="margin-top:.5rem;color:var(--text-light);">Prikazanih prvih 100 zadetkov.</p>`; }
-            container.innerHTML = html;
-        }
+       function renderAdminReservationsTable(reservations) {
+    const container = document.getElementById('adminReservationsList');
+    if (!container) return;
+    if (reservations.length === 0) {
+        container.innerHTML = '<p>Ni rezervacij.</p>';
+        return;
+    }
 
-        window.deleteAdminReservation = async function(id) {
-            if (!confirm('Ali res želite izbrisati to rezervacijo?')) return;
-            try {
-                await apiCall(`/admin/reservations/${id}`, 'DELETE');
-                showToast('Rezervacija izbrisana.', 'success');
-                loadAdminReservations();
-                await refreshView();
-            } catch (e) {
-                showToast(e.message, 'error');
-            }
-        };
+    const pageSize = 10; // 10 rezervacij na stran
+    const totalPages = Math.ceil(reservations.length / pageSize);
+    const currentPage = Math.min(state.adminReservationsPage, totalPages) || 1;
+    state.adminReservationsPage = currentPage;
+
+    const start = (currentPage - 1) * pageSize;
+    const displayRes = reservations.slice(start, start + pageSize);
+
+    let html = `<table class="admin-table">
+        <thead><tr><th>ID</th><th>Uporabnik</th><th>Igrišče</th><th>Datum</th><th>Ura</th><th>Trajanje</th><th>Oznaka</th><th>Dejanja</th></tr></thead><tbody>`;
+    displayRes.forEach(r => {
+        html += `<tr>
+            <td>${r.id}</td>
+            <td>${escapeHtml(r.ime)} ${escapeHtml(r.priimek)}</td>
+            <td>${r.igrisce}</td>
+            <td>${r.datum}</td>
+            <td>${r.ura_zacetka}:00</td>
+            <td>${r.trajanje}h</td>
+            <td>${escapeHtml(r.oznaka || '')}</td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="deleteAdminReservation(${r.id})">Izbriši</button>
+            </td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+
+    // Dodaj paginacijo, če je več kot ena stran
+    if (totalPages > 1) {
+        html += `<div class="pagination">`;
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToAdminReservationsPage(${i})">${i}</button>`;
+        }
+        html += `</div>`;
+    }
+
+    container.innerHTML = html;
+}
+function goToAdminReservationsPage(page) {
+    state.adminReservationsPage = page;
+    renderAdminReservationsTable(state.adminReservations);
+}
 
         window.deleteAllReservations = async function() {
             if (!confirm('Ali res želite izbrisati VSE rezervacije?')) return;
