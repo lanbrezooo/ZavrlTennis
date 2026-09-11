@@ -126,9 +126,15 @@ app.post('/api/admin/block', requireAuth, requireAdmin, async (req, res) => {
   const trajanje = Number(req.body.trajanje);
   const datum = String(req.body.datum || '');
   const oznaka = String(req.body.oznaka || 'Izredni dogodek').trim().slice(0, 100);
+  const vseIgrisca = req.body.vse_igrisca === true;
 
-  if (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > 9 ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(datum) ||
+  // Seznam igrišč: vsa (1-9) ali samo eno
+  const igriscaSeznam = vseIgrisca ? [1,2,3,4,5,6,7,8,9] : [igrisce];
+
+  if (!vseIgrisca && (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > 9)) {
+    return res.status(400).json({ message: 'Neveljavno igrišče' });
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datum) ||
       !Number.isInteger(ura) || ura < 8 || ura >= 22 ||
       !Number.isInteger(trajanje) || trajanje < 1 || ura + trajanje > 22) {
     return res.status(400).json({ message: 'Neveljaven termin blokade' });
@@ -138,52 +144,54 @@ app.post('/api/admin/block', requireAuth, requireAdmin, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // Poišči obstoječe rezervacije v tem terminu
-    const [existing] = await conn.query(
-      `SELECT id, user_id, krediti_porabili FROM rezervacije
-       WHERE igrisce = ? AND datum = ? 
-       AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
-       FOR UPDATE`,
-      [igrisce, datum, ura + trajanje, ura]
-    );
+    let totalRefunded = 0;
+    let totalRefundedCount = 0;
 
-    let refundedTotal = 0;
-    let refundedCount = 0;
-
-    // Vrni kredite (samo tistim, ki so jih porabili – letna karta se ne vrača)
-    for (const r of existing) {
-      const refund = Number(r.krediti_porabili || 0);
-      if (refund > 0) {
-        await conn.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?', [refund, r.user_id]);
-        refundedTotal += refund;
-        refundedCount++;
-      }
-    }
-
-    // Izbriši obstoječe rezervacije
-    if (existing.length > 0) {
-      await conn.query(
-        `DELETE FROM rezervacije 
+    for (const ig of igriscaSeznam) {
+      // Poišči obstoječe rezervacije v tem terminu
+      const [existing] = await conn.query(
+        `SELECT id, user_id, krediti_porabili FROM rezervacije
          WHERE igrisce = ? AND datum = ? 
-         AND ura_zacetka < ? AND ura_zacetka + trajanje > ?`,
-        [igrisce, datum, ura + trajanje, ura]
+         AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
+         FOR UPDATE`,
+        [ig, datum, ura + trajanje, ura]
+      );
+
+      // Vrni kredite (letna karta se ne vrača)
+      for (const r of existing) {
+        const refund = Number(r.krediti_porabili || 0);
+        if (refund > 0) {
+          await conn.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?', [refund, r.user_id]);
+          totalRefunded += refund;
+          totalRefundedCount++;
+        }
+      }
+
+      // Izbriši obstoječe rezervacije
+      if (existing.length > 0) {
+        await conn.query(
+          `DELETE FROM rezervacije 
+           WHERE igrisce = ? AND datum = ? 
+           AND ura_zacetka < ? AND ura_zacetka + trajanje > ?`,
+          [ig, datum, ura + trajanje, ura]
+        );
+      }
+
+      // Ustvari novo blokado
+      await conn.query(
+        `INSERT INTO rezervacije 
+         (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka, blokada)
+         VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1)`,
+        [req.user.id, ig, datum, ura, trajanje, oznaka]
       );
     }
-
-    // Ustvari novo blokado
-    const [result] = await conn.query(
-      `INSERT INTO rezervacije 
-       (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka, blokada)
-       VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1)`,
-      [req.user.id, igrisce, datum, ura, trajanje, oznaka]
-    );
 
     await conn.commit();
     res.json({
       message: 'Blokada ustvarjena',
-      id: result.insertId,
-      refundedCount,
-      refundedTotal
+      blocksCreated: igriscaSeznam.length,
+      refundedCount: totalRefundedCount,
+      refundedTotal: totalRefunded
     });
   } catch (err) {
     await conn.rollback();

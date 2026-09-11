@@ -1914,6 +1914,19 @@ window.deleteNovica = async function(id) {
         showToast(e.message, 'error');
     }
 };
+window.toggleAllCourts = function(checkbox) {
+    const igrisceSelect = document.getElementById('blockIgrisce');
+    if (!igrisceSelect) return;
+    if (checkbox.checked) {
+        igrisceSelect.disabled = true;
+        igrisceSelect.style.opacity = '0.5';
+        igrisceSelect.style.background = '#f0f0f0';
+    } else {
+        igrisceSelect.disabled = false;
+        igrisceSelect.style.opacity = '1';
+        igrisceSelect.style.background = '';
+    }
+};
 // ===== ADMIN: IZREDNI DOGODEK (BLOKADA) =====
 window.showBlockModal = function() {
     const dateStr = formatDate(state.selectedDate);
@@ -1932,9 +1945,13 @@ window.showBlockModal = function() {
                     S to funkcijo prekriješ obstoječe rezervacije. Uporabnikom se vrnejo krediti (razen tistim z letno karto).
                 </p>
                 <form onsubmit="handleBlock(event)">
-                    <div class="form-group">
+                                       <div class="form-group">
                         <label>Datum</label>
                         <input type="date" id="blockDatum" value="${dateStr}" required>
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem; background:#fff3f3; border:2px solid #ef5350; border-radius:8px;">
+                        <input type="checkbox" id="blockVseIgrisca" style="width:auto; margin:0; cursor:pointer;" onchange="toggleAllCourts(this)">
+                        <label for="blockVseIgrisca" style="margin:0; cursor:pointer; font-weight:600; color:#b71c1c;">Uporabi za VSA igrišča (1–9)</label>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -1972,7 +1989,8 @@ window.showBlockModal = function() {
 
 window.handleBlock = async function(e) {
     e.preventDefault();
-    const igrisce = parseInt(document.getElementById('blockIgrisce').value);
+    const vseIgrisca = document.getElementById('blockVseIgrisca').checked;
+    const igrisce = vseIgrisca ? 1 : parseInt(document.getElementById('blockIgrisce').value);
     const ura_zacetka = parseInt(document.getElementById('blockUra').value);
     const trajanje = parseInt(document.getElementById('blockTrajanje').value);
     const datum = document.getElementById('blockDatum').value;
@@ -1986,8 +2004,8 @@ window.handleBlock = async function(e) {
     }
 
     try {
-        const data = await apiCall('/admin/block', 'POST', { igrisce, datum, ura_zacetka, trajanje, oznaka });
-        let msg = 'Blokada ustvarjena!';
+        const data = await apiCall('/admin/block', 'POST', { igrisce, datum, ura_zacetka, trajanje, oznaka, vse_igrisca: vseIgrisca });
+        let msg = vseIgrisca ? `Blokada ustvarjena za VSAH 9 igrišč!` : 'Blokada ustvarjena!';
         if (data.refundedCount > 0) {
             msg += ` Vrnjenih kreditov: ${data.refundedTotal} (${data.refundedCount} uporabnikom).`;
         } else {
@@ -1995,7 +2013,6 @@ window.handleBlock = async function(e) {
         }
         showToast(msg, 'success');
         closeModal();
-        // Osveži prikaz
         state.selectedDate = new Date(datum + 'T00:00:00');
         await refreshView();
         loadAdminReservations();
