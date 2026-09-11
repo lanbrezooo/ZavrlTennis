@@ -11,7 +11,7 @@ const { requireAuth, requireAdmin } = require('./middleware');
 const app = express();
 const allowedOrigin = process.env.CORS_ORIGIN || '';
 
-app.disable('x-powered-by');
+app.disable('x-powered-by',1);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(cors({ origin(origin, cb) { if (!origin || !allowedOrigin || origin === allowedOrigin) return cb(null, true); cb(new Error('Origin ni dovoljen')); }, methods: ['GET','POST','PUT','DELETE'], allowedHeaders: ['Content-Type','Authorization'] }));
 app.use(express.json({ limit: '50mb' })); // Povečamo za base64 slike
