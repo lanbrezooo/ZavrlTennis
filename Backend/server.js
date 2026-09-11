@@ -119,6 +119,80 @@ admin.delete('/reservations', async (_req,res)=>{
   const conn=await pool.getConnection();
   try { await conn.beginTransaction(); const [reservations]=await conn.query('SELECT user_id, krediti_porabili FROM rezervacije FOR UPDATE'); const refunds=new Map(); for(const row of reservations) refunds.set(row.user_id,(refunds.get(row.user_id)||0)+Number(row.krediti_porabili||0)); for(const [userId,refund] of refunds){ if(refund>0) await conn.query('UPDATE uporabniki SET krediti=krediti+? WHERE id=?',[refund,userId]); } await conn.query('DELETE FROM rezervacije'); await conn.commit(); res.json({message:'Vse rezervacije izbrisane'}); } catch(e){await conn.rollback();console.error(e.message);res.status(500).json({message:'Napaka pri brisanju rezervacij'});} finally {conn.release();}
 });
+// ===== ADMIN: BLOKADA / IZREDNI DOGODEK =====
+app.post('/api/admin/block', requireAuth, requireAdmin, async (req, res) => {
+  const igrisce = Number(req.body.igrisce);
+  const ura = Number(req.body.ura_zacetka);
+  const trajanje = Number(req.body.trajanje);
+  const datum = String(req.body.datum || '');
+  const oznaka = String(req.body.oznaka || 'Izredni dogodek').trim().slice(0, 100);
+
+  if (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > 9 ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(datum) ||
+      !Number.isInteger(ura) || ura < 8 || ura >= 22 ||
+      !Number.isInteger(trajanje) || trajanje < 1 || ura + trajanje > 22) {
+    return res.status(400).json({ message: 'Neveljaven termin blokade' });
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Poišči obstoječe rezervacije v tem terminu
+    const [existing] = await conn.query(
+      `SELECT id, user_id, krediti_porabili FROM rezervacije
+       WHERE igrisce = ? AND datum = ? 
+       AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
+       FOR UPDATE`,
+      [igrisce, datum, ura + trajanje, ura]
+    );
+
+    let refundedTotal = 0;
+    let refundedCount = 0;
+
+    // Vrni kredite (samo tistim, ki so jih porabili – letna karta se ne vrača)
+    for (const r of existing) {
+      const refund = Number(r.krediti_porabili || 0);
+      if (refund > 0) {
+        await conn.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?', [refund, r.user_id]);
+        refundedTotal += refund;
+        refundedCount++;
+      }
+    }
+
+    // Izbriši obstoječe rezervacije
+    if (existing.length > 0) {
+      await conn.query(
+        `DELETE FROM rezervacije 
+         WHERE igrisce = ? AND datum = ? 
+         AND ura_zacetka < ? AND ura_zacetka + trajanje > ?`,
+        [igrisce, datum, ura + trajanje, ura]
+      );
+    }
+
+    // Ustvari novo blokado
+    const [result] = await conn.query(
+      `INSERT INTO rezervacije 
+       (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka, blokada)
+       VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1)`,
+      [req.user.id, igrisce, datum, ura, trajanje, oznaka]
+    );
+
+    await conn.commit();
+    res.json({
+      message: 'Blokada ustvarjena',
+      id: result.insertId,
+      refundedCount,
+      refundedTotal
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error('block', err.message);
+    res.status(500).json({ message: 'Napaka pri ustvarjanju blokade' });
+  } finally {
+    conn.release();
+  }
+});
 app.use('/api/admin', admin);
 app.use('/api', (_req,res)=>res.status(404).json({message:'API pot ne obstaja'}));
 

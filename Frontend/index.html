@@ -158,6 +158,21 @@
             display: none;
         }
         .calendar-cell.booked-own:hover { background: #bfdbfe; transform: scale(1.02); z-index: 2; box-shadow: inset 0 0 0 3px #1d4ed8; }
+        .calendar-cell.blocked {
+    background: #ef5350 !important;
+    color: white !important;
+    cursor: not-allowed;
+    font-weight: 700;
+    text-align: center;
+    border: 2px solid #b71c1c;
+}
+.calendar-cell.blocked .res-name {
+    color: white !important;
+}
+.calendar-cell.blocked .res-duration {
+    color: white !important;
+    opacity: 0.9;
+}
         .calendar-cell.past { background: #f5f5f5; cursor: not-allowed; opacity: 0.7; }
         .res-name {
     font-size: 0.75rem;
@@ -570,7 +585,10 @@
                     <input type="search" id="adminReservationSearchInput" class="search-input" oninput="filterAdminReservations()" placeholder="Išči po imenu, priimku, datumu ali igrišču...">
                 </div>
                 <div class="admin-table-wrap"><div id="adminReservationsList"></div></div>
-                <button class="btn btn-danger btn-sm" style="margin-top:1rem;" onclick="deleteAllReservations()">Izbriši vse rezervacije</button>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:1rem;">
+    <button class="btn btn-danger btn-sm" onclick="deleteAllReservations()">Izbriši vse rezervacije</button>
+    <button class="btn btn-primary btn-sm" style="background:#ef5350; color:white;" onclick="showBlockModal()">🚨 Izredni dogodek (blokada)</button>
+</div>
             </div>
             <<div class="admin-section">
     <h4>Novice</h4>
@@ -820,32 +838,39 @@
                     let cellContent = '';
 
                     if (reservation) {
-                        const isOwn = state.user && Number(reservation.user_id) === Number(state.user.id);
-                        cellClass = isOwn ? 'booked-own' : 'booked';
+    const isOwn = state.user && Number(reservation.user_id) === Number(state.user.id);
+    const isBlock = Number(reservation.blokada) === 1;
+    cellClass = isOwn ? 'booked-own' : 'booked';
 
-                        // ✅ Pretekle rezervacije prikažemo sivo, ampak z imenom
-                        if (isPastSlot) {
-                            cellClass = 'past';
-                        }
+    // Blokada (izredni dogodek) – rdeča
+    if (isBlock) {
+        cellClass = 'blocked';
+    }
 
-                        let displayName = '';
-                        if (reservation.oznaka) {
-                            displayName = reservation.oznaka;
-                        } else if (reservation.ime && reservation.priimek) {
-                            displayName = `${reservation.ime} ${reservation.priimek}`;
-                        } else if (isOwn && state.user) {
-                            displayName = getFullName(state.user);
-                        } else {
-                            displayName = 'Zasedeno';
-                        }
-                        cellContent = `<span class="res-name">${escapeHtml(displayName)}</span><span class="res-duration">${reservation.trajanje}h</span>`;
-                    } else if (isPastSlot) {
-                        cellClass = 'past';
-                    }
+    // Pretekle rezervacije prikažemo sivo
+    if (isPastSlot && !isBlock) {
+        cellClass = 'past';
+    }
 
-                    const clickable = !isPastSlot;
-                    html += `<div class="calendar-cell ${cellClass}" data-igrisce="${c}" data-ura="${h}" ${clickable ? 'style="cursor:pointer;"' : ''}>${cellContent}</div>`;
-                }
+    let displayName = '';
+    if (reservation.oznaka) {
+        displayName = reservation.oznaka;
+    } else if (reservation.ime && reservation.priimek) {
+        displayName = `${reservation.ime} ${reservation.priimek}`;
+    } else if (isOwn && state.user) {
+        displayName = getFullName(state.user);
+    } else {
+        displayName = 'Zasedeno';
+    }
+    cellContent = `<span class="res-name">${escapeHtml(displayName)}</span><span class="res-duration">${reservation.trajanje}h</span>`;
+} else if (isPastSlot) {
+    cellClass = 'past';
+}
+
+// Blokada ni klikljiva za navadne uporabnike
+const isBlockCell = reservation && Number(reservation.blokada) === 1;
+const clickable = !isPastSlot && !isBlockCell;
+html += `<div class="calendar-cell ${cellClass}" data-igrisce="${c}" data-ura="${h}" ${clickable ? 'style="cursor:pointer;"' : ''}>${cellContent}</div>`;
             }
 
             calendarGrid.innerHTML = html;
@@ -1885,6 +1910,95 @@ window.deleteNovica = async function(id) {
         loadAdminNovice();
     } catch (e) {
         showToast(e.message, 'error');
+    }
+};
+// ===== ADMIN: IZREDNI DOGODEK (BLOKADA) =====
+window.showBlockModal = function() {
+    const dateStr = formatDate(state.selectedDate);
+    // Prikaži vse ure 8:00 do 21:00 (zadnja ura, ko se še lahko začne)
+    let hourOptions = '';
+    for (let h = 8; h < 22; h++) {
+        hourOptions += `<option value="${h}">${String(h).padStart(2, '0')}:00</option>`;
+    }
+
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal" style="max-width:500px;">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2 style="color:#ef5350;">🚨 Izredni dogodek</h2>
+                <p style="text-align:center; color:var(--text-light); margin-bottom:1rem; font-size:0.9rem;">
+                    S to funkcijo prekriješ obstoječe rezervacije. Uporabnikom se vrnejo krediti (razen tistim z letno karto).
+                </p>
+                <form onsubmit="handleBlock(event)">
+                    <div class="form-group">
+                        <label>Datum</label>
+                        <input type="date" id="blockDatum" value="${dateStr}" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Igrišče</label>
+                            <select id="blockIgrisce">
+                                ${Array.from({length:9}, (_,i) => `<option value="${i+1}">Igrišče ${i+1}${i===8?' (hard)':''}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Začetna ura</label>
+                            <select id="blockUra">${hourOptions}</select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Trajanje (ure)</label>
+                            <select id="blockTrajanje">
+                                ${[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(d => `<option value="${d}">${d} ${d===1?'ura':'ur'}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Ime dogodka</label>
+                            <input type="text" id="blockOznaka" placeholder="npr. TURNIR, ZAPRTO" value="Izredni dogodek" required maxlength="100">
+                        </div>
+                    </div>
+                    <div class="form-error" id="blockError"></div>
+                    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; background:#ef5350;">
+                        Ustvari blokado
+                    </button>
+                </form>
+            </div>
+        </div>
+    `;
+};
+
+window.handleBlock = async function(e) {
+    e.preventDefault();
+    const igrisce = parseInt(document.getElementById('blockIgrisce').value);
+    const ura_zacetka = parseInt(document.getElementById('blockUra').value);
+    const trajanje = parseInt(document.getElementById('blockTrajanje').value);
+    const datum = document.getElementById('blockDatum').value;
+    const oznaka = document.getElementById('blockOznaka').value.trim();
+    const errorEl = document.getElementById('blockError');
+    errorEl.textContent = '';
+
+    if (ura_zacetka + trajanje > 22) {
+        errorEl.textContent = 'Termin ne sme presegati 22:00.';
+        return;
+    }
+
+    try {
+        const data = await apiCall('/admin/block', 'POST', { igrisce, datum, ura_zacetka, trajanje, oznaka });
+        let msg = 'Blokada ustvarjena!';
+        if (data.refundedCount > 0) {
+            msg += ` Vrnjenih kreditov: ${data.refundedTotal} (${data.refundedCount} uporabnikom).`;
+        } else {
+            msg += ' Ni bilo obstoječih rezervacij.';
+        }
+        showToast(msg, 'success');
+        closeModal();
+        // Osveži prikaz
+        state.selectedDate = new Date(datum + 'T00:00:00');
+        await refreshView();
+        loadAdminReservations();
+    } catch (err) {
+        errorEl.textContent = err.message;
     }
 };
 
