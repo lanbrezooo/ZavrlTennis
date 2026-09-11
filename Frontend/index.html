@@ -590,7 +590,7 @@
     <button class="btn btn-primary btn-sm" style="background:#ef5350; color:white;" onclick="showBlockModal()">🚨 Izredni dogodek (blokada)</button>
 </div>
             </div>
-            <<div class="admin-section">
+            <div class="admin-section">
     <h4>Novice</h4>
     <div class="admin-toolbar">
         <button class="btn btn-primary btn-sm" onclick="showAddNovicaModal()">+ Dodaj novico</button>
@@ -870,12 +870,14 @@
 // Blokada ni klikljiva za navadne uporabnike
 const isBlockCell = reservation && Number(reservation.blokada) === 1;
 const clickable = !isPastSlot && !isBlockCell;
-html += `<div class="calendar-cell ${cellClass}" data-igrisce="${c}" data-ura="${h}" ${clickable ? 'style="cursor:pointer;"' : ''}>${cellContent}</div>`;
-            }
+                    html += `<div class="calendar-cell ${cellClass}" data-igrisce="${c}" data-ura="${h}" ${clickable ? 'style="cursor:pointer;"' : ''}>${cellContent}</div>`;
+                }
+            }  // <- ZAPRE for (let c) zanko
+            }  // <- DODANO: ZAPRE for (let h) zanko
 
             calendarGrid.innerHTML = html;
             renderMyReservations();
-        }
+        
 
         function renderMyReservations() {
             if (!state.user) {
