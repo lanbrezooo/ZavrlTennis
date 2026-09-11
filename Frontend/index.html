@@ -871,13 +871,13 @@
 const isBlockCell = reservation && Number(reservation.blokada) === 1;
 const clickable = !isPastSlot && !isBlockCell;
                     html += `<div class="calendar-cell ${cellClass}" data-igrisce="${c}" data-ura="${h}" ${clickable ? 'style="cursor:pointer;"' : ''}>${cellContent}</div>`;
-                }
+                
             }  // <- ZAPRE for (let c) zanko
             }  // <- DODANO: ZAPRE for (let h) zanko
 
             calendarGrid.innerHTML = html;
             renderMyReservations();
-        
+        }
 
         function renderMyReservations() {
             if (!state.user) {
