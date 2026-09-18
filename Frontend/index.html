@@ -475,8 +475,8 @@
        @media (max-width: 768px) {
     /* Header – manjši in kompaktnejši */
     .header-inner {
-        padding: 0.5rem 0.75rem;
-        gap: 0.5rem;
+         padding: 0.5rem 0.6rem;
+        gap: 0.4rem;
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
@@ -488,12 +488,12 @@
         margin-top: 1rem;
     }
      .header-whatsapp {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
     }
     .header-whatsapp svg {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
     }
     .page-btn {
         padding: 0.6rem 0.9rem;
@@ -506,24 +506,28 @@
         border-radius: 8px;
     }
     .logo-section {
-        justify-content: flex-start;
-        gap: 0.5rem;
+        gap: 0.4rem;
+        flex-shrink: 1;
+        min-width: 0;
     }
     .logo-icon {
         width: 32px;
         height: 32px;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
     .logo-text h1 {
-        font-size: 1rem;
+        font-size: 0.9rem;
         line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .logo-text p {
         font-size: 0.55rem;
     }
     .header-actions {
-        gap: 0.3rem;
-        flex-wrap: nowrap;      /* ⬅ gumbi ostanejo v eni vrstici */
+        gap: 0.25rem;
+        flex-wrap: nowrap;
         justify-content: flex-end;
         flex-shrink: 0;
     }
@@ -533,9 +537,35 @@
         font-size: 0.75rem;
     }
     .user-badge {
-        padding: 0.3rem 0.6rem;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+        gap: 0.3rem;
+        border-radius: 50px;
+    }
+    .user-badge > span:not(.avatar) {
+        display: none;
+    }
+    .user-badge > span[title="Letna karta"],
+    .user-badge > span[title="Krediti"] {
+        display: inline;
+    }
+    .header-actions .btn {
+        padding: 0.3rem 0.55rem;
+        font-size: 0.7rem;
+        border-radius: 50px;
+    }
+    .header-actions .btn-sm {
+        padding: 0.28rem 0.5rem;
+        font-size: 0.68rem;
+    }
+    .header-actions .btn-outline.btn-sm {
+        min-width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         font-size: 0.75rem;
-        gap: 0.4rem;
     }
     .user-badge .avatar {
         width: 26px;
