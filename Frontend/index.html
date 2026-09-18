@@ -892,13 +892,21 @@ const clickable = !isPastSlot && !isBlockCell;
             }
             myReservationsEl.style.display = 'block';
             resListEl.innerHTML = myRes.map(r => {
-                const endHour = Number(r.ura_zacetka) + Number(r.trajanje);
-                const timeStr = `${String(Number(r.ura_zacetka)).padStart(2, '0')}:00 - ${String(endHour).padStart(2, '0')}:00`;
-                return `<div class="res-card">
-                    <div class="res-info">Igrišče ${r.igrisce}<small>${formatDateShort(r.datum)} · ${timeStr} · ${r.trajanje}h</small></div>
-                    <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">Prekliči</button>
-                </div>`;
-            }).join('');
+    const endHour = Number(r.ura_zacetka) + Number(r.trajanje);
+    const timeStr = `${String(Number(r.ura_zacetka)).padStart(2, '0')}:00 - ${String(endHour).padStart(2, '0')}:00`;
+
+    
+    const canCancel = canUserCancelReservation(r);
+
+    const buttonHtml = canCancel
+        ? `<button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">Prekliči</button>`
+        : `<button class="btn btn-outline btn-sm" style="color:black; border-color:var(--border); cursor:not-allowed; opacity:0.5;" disabled title="Preklic ni več mogoč">Preklic ni mogoč</button>`;
+
+    return `<div class="res-card">
+        <div class="res-info">Igrišče ${r.igrisce}<small>${formatDateShort(r.datum)} · ${timeStr} · ${r.trajanje}h</small></div>
+        ${buttonHtml}
+    </div>`;
+}).join('');
         }
 
         // KLIK NA KOLEDAR – EVENT DELEGATION
@@ -1442,15 +1450,20 @@ function goToAdminReservationsPage(page) {
         };
 
         async function cancelReservation(id) {
-            if (!confirm('Ali res želite preklicati to rezervacijo?')) return;
-            try {
-                await deleteReservation(id);
-                showToast('Rezervacija preklicana.', 'success');
-                await refreshView();
-            } catch (e) {
-                showToast(e.message, 'error');
-            }
-        }
+    const r = state.reservations.find(x => x.id === id);
+    if (r && !canUserCancelReservation(r)) {
+        showToast('Rezervacijo lahko prekličete le do polnoči dan pred rezervacijo.', 'error');
+        return;
+    }
+    if (!confirm('Ali res želite preklicati to rezervacijo?')) return;
+    try {
+        await deleteReservation(id);
+        showToast('Rezervacija preklicana.', 'success');
+        await refreshView();
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
 
         // PROFILE MODAL
         window.showProfileModal = function() {
@@ -2134,6 +2147,16 @@ async function doAdminCancel(reservationId, refund) {
     } catch (err) {
         showToast(err.message, 'error');
     }
+}
+// ===== Pravilo za preklic: navadni uporabnik do polnoči dan pred rezervacijo =====
+function canUserCancelReservation(reservation) {
+    // Admin lahko vedno prekliče (ampak to itak ni v myReservations)
+    if (state.user?.admin) return true;
+
+    // Rezervacija je na dan X, preklic dovoljen do 23:59 dan prej
+    const now = new Date();
+    const rezervacijaDate = new Date(reservation.datum + 'T00:00:00');
+    return now < rezervacijaDate;
 }
 
 // Ob inicializaciji admin panela naloži tudi novice

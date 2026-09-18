@@ -134,7 +134,29 @@ router.delete('/:id', requireAuth, async (req, res) => {
     const [rows] = await conn.query('SELECT * FROM rezervacije WHERE id=? FOR UPDATE', [id]);
     if (!rows.length) { await conn.rollback(); return res.status(404).json({ message: 'Rezervacija ne obstaja' }); }
     const reservation = rows[0];
-    if (reservation.user_id !== req.user.id && !req.user.admin) { await conn.rollback(); return res.status(403).json({ message: 'Nimate dovoljenja' }); }
+
+    const isOwner = reservation.user_id === req.user.id;
+    const isAdmin = req.user.admin === 1;
+
+    // Dovoljenje
+    if (!isOwner && !isAdmin) {
+      await conn.rollback();
+      return res.status(403).json({ message: 'Nimate dovoljenja' });
+    }
+
+    // ⬇️ NOVO: Navadni uporabnik lahko prekliče samo do polnoči dan pred rezervacijo
+    if (isOwner && !isAdmin) {
+      const now = new Date();
+      const rezervacijaDate = new Date(reservation.datum + 'T00:00:00');
+      // Rezervacija se lahko prekliče, dokler je NOW < začetek dneva rezervacije (00:00)
+      if (now >= rezervacijaDate) {
+        await conn.rollback();
+        return res.status(403).json({
+          message: 'Rezervacijo lahko prekličete le do polnoči dan pred rezervacijo.'
+        });
+      }
+    }
+
     const refund = Number(reservation.krediti_porabili || 0);
     if (refund > 0) await conn.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id=?', [refund, reservation.user_id]);
     await conn.query('DELETE FROM rezervacije WHERE id=?', [id]);
