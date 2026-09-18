@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
   await deleteOldReservations();
   try {
     const [rows] = await pool.query(
-      `SELECT r.id, r.user_id, r.igrisce, r.datum, r.ura_zacetka, r.trajanje, r.oznaka, r.blokada, u.ime, u.priimek, u.prikazi_telefon
+      `SELECT r.id, r.user_id, r.igrisce, DATE_FORMAT(r.datum, '%Y-%m-%d') AS datum, r.ura_zacetka, r.trajanje, r.oznaka, r.blokada, u.ime, u.priimek, u.prikazi_telefon
        FROM rezervacije r
        JOIN uporabniki u ON u.id = r.user_id
        WHERE r.datum = ?

@@ -2158,12 +2158,19 @@ async function doAdminCancel(reservationId, refund) {
 }
 // ===== Pravilo za preklic: navadni uporabnik do polnoči dan pred rezervacijo =====
 function canUserCancelReservation(reservation) {
-    // Admin lahko vedno prekliče (ampak to itak ni v myReservations)
     if (state.user?.admin) return true;
 
-    // Rezervacija je na dan X, preklic dovoljen do 23:59 dan prej
+    // Vzemi samo prvih 10 znakov datuma (YYYY-MM-DD), ne glede na format
+    let datumStr = String(reservation.datum).slice(0, 10);
+
+    // Če je datum v formatu "2026-09-19", uporabi T00:00:00 (lokalni čas)
+    const rezervacijaDate = new Date(datumStr + 'T00:00:00');
+
+    // Če parsing spodleti, raje dovoli (varnostno)
+    if (isNaN(rezervacijaDate.getTime())) return true;
+
     const now = new Date();
-    const rezervacijaDate = new Date(reservation.datum + 'T00:00:00');
+    // Preklic je dovoljen, dokler je NOW < začetek dneva rezervacije (00:00)
     return now < rezervacijaDate;
 }
 
