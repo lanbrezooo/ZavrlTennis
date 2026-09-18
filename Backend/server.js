@@ -201,6 +201,61 @@ app.post('/api/admin/block', requireAuth, requireAdmin, async (req, res) => {
     conn.release();
   }
 });
+// ===== ADMIN: Podrobnosti rezervacije (z podatki uporabnika) =====
+admin.get('/reservations/:id/details', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Neveljaven ID' });
+  try {
+    const [rows] = await pool.query(
+      `SELECT r.id, r.user_id, r.igrisce, r.datum, r.ura_zacetka, r.trajanje, r.oznaka,
+              r.krediti_porabili, r.letna_karta_uporabljena, r.blokada,
+              u.ime, u.priimek, u.email, u.telefon, u.nivo, u.opis, u.letna_karta
+       FROM rezervacije r
+       JOIN uporabniki u ON u.id = r.user_id
+       WHERE r.id = ?`,
+      [id]
+    );
+    if (!rows.length) return res.status(404).json({ message: 'Rezervacija ne obstaja' });
+    res.json({ reservation: rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Napaka pri pridobivanju podatkov' });
+  }
+});
+
+// ===== ADMIN: Prekliči rezervacijo z izbiro vračila kreditov =====
+admin.post('/reservations/:id/cancel', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Neveljaven ID' });
+  const refund = req.body.refund === true;
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [rows] = await conn.query(
+      'SELECT user_id, krediti_porabili FROM rezervacije WHERE id=? FOR UPDATE',
+      [id]
+    );
+    if (!rows.length) { await conn.rollback(); return res.status(404).json({ message: 'Rezervacija ne obstaja' }); }
+
+    const krediti = Number(rows[0].krediti_porabili || 0);
+    let refundedCredits = 0;
+    if (refund && krediti > 0) {
+      await conn.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id=?', [krediti, rows[0].user_id]);
+      refundedCredits = krediti;
+    }
+
+    await conn.query('DELETE FROM rezervacije WHERE id=?', [id]);
+    await conn.commit();
+    res.json({ message: 'Rezervacija preklicana', refundedCredits });
+  } catch (e) {
+    await conn.rollback();
+    console.error(e.message);
+    res.status(500).json({ message: 'Napaka pri preklicu rezervacije' });
+  } finally {
+    conn.release();
+  }
+});
 app.use('/api/admin', admin);
 app.use('/api', (_req,res)=>res.status(404).json({message:'API pot ne obstaja'}));
 

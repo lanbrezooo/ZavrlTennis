@@ -930,14 +930,17 @@ const clickable = !isPastSlot && !isBlockCell;
                 return Number(r.igrisce) === igrisce && start <= uraZacetka && uraZacetka < end;
             });
 
-            if (existing) {
+                        if (existing) {
                 const isOwn = Number(existing.user_id) === Number(state.user.id);
                 if (isOwn) {
                     showDeleteModal(existing);
+                } else if (state.user.admin) {
+                    showAdminReservationDetails(existing.id);
                 } else {
                     showUserDetails(existing.user_id);
                 }
                 return;
+            
             }
             showBookingModal(igrisce, uraZacetka);
         }
@@ -2020,6 +2023,118 @@ window.handleBlock = async function(e) {
         errorEl.textContent = err.message;
     }
 };
+
+// ===== ADMIN: Podrobnosti tuje rezervacije =====
+async function showAdminReservationDetails(reservationId) {
+    try {
+        const data = await apiCall(`/admin/reservations/${reservationId}/details`);
+        const r = data.reservation;
+        const endHour = Number(r.ura_zacetka) + Number(r.trajanje);
+        const timeStr = `${String(r.ura_zacetka).padStart(2, '0')}:00 – ${String(endHour).padStart(2, '0')}:00`;
+        const dateStr = formatDateShort(r.datum);
+
+        const krediti = Number(r.krediti_porabili || 0);
+        const letnaKarta = Number(r.letna_karta_uporabljena) === 1;
+
+        let creditInfoHtml = '';
+        if (letnaKarta) {
+            creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>🎫 Letna karta (brez kreditov)</span></div>`;
+        } else if (krediti > 0) {
+            creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>💰 ${krediti} ${krediti === 1 ? 'kredit' : 'krediti'}</span></div>`;
+        } else {
+            creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>—</span></div>`;
+        }
+
+        const telefonHtml = r.telefon
+            ? `<div class="detail-row"><strong>Telefon</strong><span>${escapeHtml(r.telefon)}</span></div>`
+            : `<div class="detail-row"><strong>Telefon</strong><span style="opacity:0.5;">Skrit</span></div>`;
+
+        modalRoot.innerHTML = `
+            <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+                <div class="modal" style="max-width:520px;">
+                    <button class="modal-close" onclick="closeModal()">✕</button>
+                    <h2>${escapeHtml(r.ime)} ${escapeHtml(r.priimek)}</h2>
+
+                    <div class="booking-summary" style="margin-bottom:1rem;">
+                        <div class="court-num">Igrišče ${r.igrisce}</div>
+                        <div class="time-range">${timeStr}</div>
+                        <div class="date-info">${dateStr}</div>
+                    </div>
+
+                    <div class="user-details">
+                        <div class="detail-row"><strong>Ime</strong><span>${escapeHtml(r.ime)}</span></div>
+                        <div class="detail-row"><strong>Priimek</strong><span>${escapeHtml(r.priimek)}</span></div>
+                        <div class="detail-row"><strong>Email</strong><span>${escapeHtml(r.email)}</span></div>
+                        ${telefonHtml}
+                        <div class="detail-row"><strong>Nivo</strong><span>${escapeHtml(r.nivo || '—')}</span></div>
+                        ${r.opis ? `<div class="detail-row" style="flex-direction:column; align-items:flex-start; gap:0.4rem;"><strong>Opis</strong><span style="text-align:left; font-weight:400; color:var(--text-light);">${escapeHtml(r.opis)}</span></div>` : ''}
+                        ${creditInfoHtml}
+                    </div>
+
+                    <div style="display:flex; gap:0.75rem; margin-top:1.5rem;">
+                        <button class="btn btn-outline" style="flex:1; color:black; border-color:var(--border);" onclick="closeModal()">Zapri</button>
+                        <button class="btn btn-danger" style="flex:1; justify-content:center;" onclick="adminCancelReservation(${r.id}, ${krediti}, ${letnaKarta ? 1 : 0})">
+                            Izbriši rezervacijo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// ===== ADMIN: Prekliči tujo rezervacijo (z izbiro vračila) =====
+async function adminCancelReservation(reservationId, kreditiPorabili, uporabilLetnoKarto) {
+    // Če je bila uporabljena letna karta → ni vračila
+    if (uporabilLetnoKarto === 1) {
+        if (!confirm('Ta rezervacija je bila opravljena z letno karto. Uporabnik ne bo prejel vračila. Ali želite nadaljevati?')) return;
+        await doAdminCancel(reservationId, false);
+        return;
+    }
+    // Če ni bilo kreditov → tudi ni vračila
+    if (kreditiPorabili === 0) {
+        if (!confirm('Ta rezervacija ni porabila kreditov. Ali želite nadaljevati?')) return;
+        await doAdminCancel(reservationId, false);
+        return;
+    }
+    // Uporabnik je porabil kredite → vprašamo, ali naj jih vrnemo
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal" style="max-width:420px;">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2>Vračilo kreditov?</h2>
+                <p style="text-align:center; color:var(--text-light); margin-bottom:1.5rem;">
+                    Uporabnik je za to rezervacijo porabil <strong>${kreditiPorabili} ${kreditiPorabili === 1 ? 'kredit' : 'kredite'}</strong>. Ali mu jih želite vrniti?
+                </p>
+                <div style="display:flex; gap:0.75rem;">
+                    <button class="btn btn-outline" style="flex:1; color:black; border-color:var(--border);" onclick="doAdminCancel(${reservationId}, false)">
+                        Ne vrni
+                    </button>
+                    <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="doAdminCancel(${reservationId}, true)">
+                        Vrni ${kreditiPorabili} ${kreditiPorabili === 1 ? 'kredit' : 'kredite'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function doAdminCancel(reservationId, refund) {
+    try {
+        const data = await apiCall(`/admin/reservations/${reservationId}/cancel`, 'POST', { refund });
+        let msg = 'Rezervacija izbrisana.';
+        if (data.refundedCredits > 0) msg += ` Vrnjenih kreditov: ${data.refundedCredits}.`;
+        showToast(msg, 'success');
+        closeModal();
+        await refreshView();
+        // Osveži tudi admin tabelo, če je odprta
+        if (state.adminPanelOpen) loadAdminReservations();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
 
 // Ob inicializaciji admin panela naloži tudi novice
 // V funkciji toggleAdminPanel dodaj klic loadAdminNovice();
