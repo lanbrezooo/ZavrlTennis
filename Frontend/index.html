@@ -1619,9 +1619,16 @@ const hasAnnualCard = Boolean(state.user?.letna_karta) && (state.sezona !== 'zim
                                 <select name="trajanje" onchange="updateBookingCost(${uraZacetka}, ${igrisce})">${durationOptions}</select>
                             </div>
                             ${oznakaField}
-                            <div class="annual-option ${hasAnnualCard ? '' : 'locked'}">
-                                <label><input type="checkbox" name="useAnnualCard" ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+', '+igrisce+')"' : 'disabled'}>
-                            </div>
+                            // Poiščite ta del v showBookingModal in ga zamenjajte:
+<div class="annual-option ${hasAnnualCard ? '' : 'locked'}">
+    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; margin:0;">
+        <input type="checkbox" name="useAnnualCard" 
+            ${hasAnnualCard ? 'checked' : ''} 
+            ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+', '+igrisce+')"' : 'disabled'}
+            style="width:auto; margin:0; accent-color:var(--primary);">
+        <span>Uporabi sezonsko karto</span>
+    </label>
+</div>
                             <div class="booking-cost"><span id="bookingCostLabel">Cena rezervacije</span><strong id="bookingCostValue">—</strong></div>
                             <div class="form-error" id="bookingError"></div>
                             <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Potrdi rezervacijo</button>
