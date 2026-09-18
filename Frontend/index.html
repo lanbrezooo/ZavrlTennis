@@ -1015,7 +1015,7 @@
 
     let html = '<h4>🎾 Cena rezervacije</h4>';
 
-    if (isWinter) {
+    if (isWinter()) {
         html += `
             <div class="price-row" style="background:#e3f2fd;padding:0.5rem;border-radius:6px;font-weight:600;color:#1565c0;border-top:none;">
                 ❄️ Zimska sezona
@@ -1071,6 +1071,13 @@ for (let h = START_HOUR; h < END_HOUR; h++) {
 
     for (let c = 1; c <= COURTS; c++) {
         const isPastSlot = isPast || (isTodaySelected && h <= nowHour) || isAfterClosing;
+
+        const reservation = state.reservations.find(r => {
+            const startHour = Number(r.ura_zacetka);
+            const duration = Number(r.trajanje);
+            const endHour = startHour + duration;
+            return Number(r.igrisce) === Number(c) && startHour <= h && endHour > h;
+        });
 
                     let cellClass = 'available';
                     let cellContent = '';
