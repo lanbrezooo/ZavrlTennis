@@ -587,6 +587,7 @@
                 <div class="admin-table-wrap"><div id="adminReservationsList"></div></div>
                 <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:1rem;">
     <button class="btn btn-primary btn-sm" onclick="showReportModal()">📊 Poročilo</button>
+    <button class="btn btn-primary btn-sm" style="background:#1565c0; color:white;" onclick="showFixedReservationModal()">🔁 Fiksni termini</button>
     <button class="btn btn-primary btn-sm" style="background:#ef5350; color:white;" onclick="showBlockModal()">🚨 Izredni dogodek</button>
     <button class="btn btn-danger btn-sm" onclick="deleteAllReservations()">Prekliči vse rezervacije</button>
 </div>
@@ -2343,6 +2344,202 @@ window.downloadReportCSV = function() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 };
+// ===== ADMIN: FIKSNI TERMINI =====
+window.showFixedReservationModal = async function() {
+    let users = [];
+    try {
+        const data = await apiCall('/admin/users');
+        users = data.users;
+    } catch (err) {
+        showToast('Napaka pri nalaganju uporabnikov', 'error');
+        return;
+    }
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal" style="max-width:620px;">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2 style="color:#1565c0;">🔁 Fiksni termini</h2>
+                <p style="text-align:center; color:var(--text-light); margin-bottom:1rem; font-size:0.9rem;">
+                    Ustvari ponavljajoče se rezervacije za uporabnika.<br>
+                    <strong style="color:#1565c0;">Fiksni termini ne porabljajo kreditov.</strong>
+                </p>
+                <form onsubmit="previewFixedReservations(event)">
+                    <div class="form-group">
+                        <label>Uporabnik</label>
+                        <select id="fixedUser" required>
+                            <option value="">— Izberi uporabnika —</option>
+                            ${users.map(u => `<option value="${u.id}">${escapeHtml(u.ime)} ${escapeHtml(u.priimek)} (${escapeHtml(u.email)})</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Igrišče</label>
+                            <select id="fixedIgrisce">
+                                ${Array.from({length:9}, (_,i) => `<option value="${i+1}">Igrišče ${i+1}${i===8?' (hard)':''}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Dan v tednu</label>
+                            <select id="fixedDan">
+                                <option value="1">Ponedeljek</option>
+                                <option value="2">Torek</option>
+                                <option value="3">Sreda</option>
+                                <option value="4">Četrtek</option>
+                                <option value="5">Petek</option>
+                                <option value="6" selected>Sobota</option>
+                                <option value="0">Nedelja</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Začetna ura</label>
+                            <select id="fixedUra">
+                                ${Array.from({length:14}, (_,i) => `<option value="${i+8}" ${i+8===16?'selected':''}>${String(i+8).padStart(2,'0')}:00</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Trajanje (ure)</label>
+                            <select id="fixedTrajanje">
+                                ${[1,2,3,4,5,6].map(d => `<option value="${d}" ${d===2?'selected':''}>${d} ${d===1?'ura':'uri'}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Datum od</label>
+                            <input type="date" id="fixedOd" value="${todayStr}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Datum do</label>
+                            <input type="date" id="fixedDo" value="${today.getFullYear()+1}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Interval</label>
+                            <select id="fixedInterval">
+                                <option value="1" selected>Vsak teden</option>
+                                <option value="2">Vsak drugi teden</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Oznaka (neobvezno)</label>
+                            <input type="text" id="fixedOznaka" placeholder="npr. TRENING" maxlength="100" value="Fiksni termin">
+                        </div>
+                    </div>
+                    <div id="fixedPreview" style="margin-top:0.5rem;"></div>
+                    <div class="form-error" id="fixedError"></div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center; background:#1565c0;">
+                        Preveri in ustvari
+                    </button>
+                </form>
+            </div>
+        </div>
+    `;
+};
+
+let fixedPreviewData = null;
+
+window.previewFixedReservations = async function(e) {
+    e.preventDefault();
+    const errorEl = document.getElementById('fixedError');
+    errorEl.textContent = '';
+
+    const payload = {
+        user_id: Number(document.getElementById('fixedUser').value),
+        igrisce: Number(document.getElementById('fixedIgrisce').value),
+        dan_v_tednu: Number(document.getElementById('fixedDan').value),
+        ura_zacetka: Number(document.getElementById('fixedUra').value),
+        trajanje: Number(document.getElementById('fixedTrajanje').value),
+        datum_od: document.getElementById('fixedOd').value,
+        datum_do: document.getElementById('fixedDo').value,
+        interval_tednov: Number(document.getElementById('fixedInterval').value),
+        oznaka: document.getElementById('fixedOznaka').value.trim() || 'Fiksni termin'
+    };
+
+    if (!payload.user_id) { errorEl.textContent = 'Izberite uporabnika.'; return; }
+
+    const previewEl = document.getElementById('fixedPreview');
+    previewEl.innerHTML = '<p style="text-align:center;color:var(--text-light);">⏳ Preverjam...</p>';
+
+    try {
+        const data = await apiCall('/admin/fixed-reservations/preview', 'POST', payload);
+        fixedPreviewData = payload;
+
+        if (data.total === 0) {
+            previewEl.innerHTML = `<p style="color:var(--danger); text-align:center;">V tem obsegu ni nobenega datuma.</p>`;
+            return;
+        }
+
+        let warningHtml = '';
+
+        if (data.conflictCount > 0) {
+            warningHtml += `<div style="background:#fff3f3; border:1px solid #ef5350; border-radius:8px; padding:0.6rem; margin-bottom:0.5rem; font-size:0.85rem;">
+                ⚠️ <strong>${data.conflictCount}</strong> ${data.conflictCount === 1 ? 'datum je že zaseden' : 'datumov je že zasedenih'} – ti bodo izpuščeni.
+            </div>`;
+        }
+
+        const firstDates = data.freeDates.slice(0, 5);
+        const previewList = firstDates.map(d => `<li>${formatDateShort(d)}</li>`).join('');
+        const moreText = data.freeDates.length > 5 ? `<li style="opacity:0.6;">... in še ${data.freeDates.length - 5}</li>` : '';
+
+        previewEl.innerHTML = `
+            ${warningHtml}
+            <div style="background:#f0f4f0; border-radius:8px; padding:0.8rem;">
+                <div style="font-weight:600; color:var(--primary); margin-bottom:0.5rem;">
+                    Skupaj: <strong>${data.total}</strong> terminov (${data.freeCount} prostih, ${data.conflictCount} zasedenih)
+                </div>
+                <div style="background:#e3f2fd; padding:0.5rem; border-radius:6px; font-size:0.85rem; color:#1565c0; margin-bottom:0.5rem;">
+                    ℹ️ Fiksni termini ne porabljajo kreditov.
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-light); margin-bottom:0.3rem;">Prvih nekaj datumov:</div>
+                <ul style="font-size:0.85rem; margin-left:1rem;">${previewList}${moreText}</ul>
+            </div>
+        `;
+
+        const form = previewEl.closest('form');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.textContent = '✅ Potrdi in ustvari rezervacije';
+        submitBtn.style.background = '#2e7d32';
+    } catch (err) {
+        previewEl.innerHTML = `<p style="color:var(--danger); text-align:center;">${escapeHtml(err.message)}</p>`;
+    }
+};
+
+// Prestrezi submit za potrditev
+document.addEventListener('submit', async function(e) {
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (!submitBtn || !submitBtn.textContent.startsWith('✅')) return;
+    if (!form.querySelector('#fixedUser')) return;
+
+    e.preventDefault();
+    if (!fixedPreviewData) return;
+
+    const errorEl = document.getElementById('fixedError');
+    errorEl.textContent = '';
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Ustvarjam...';
+
+    try {
+        const data = await apiCall('/admin/fixed-reservations', 'POST', fixedPreviewData);
+        let msg = `Ustvarjenih: ${data.created}`;
+        if (data.skipped > 0) msg += `, izpuščenih: ${data.skipped}`;
+        showToast(msg, 'success');
+        closeModal();
+        await refreshView();
+        if (state.adminPanelOpen) loadAdminReservations();
+    } catch (err) {
+        errorEl.textContent = err.message;
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✅ Potrdi in ustvari rezervacije';
+    }
+});
 
 // Ob inicializaciji admin panela naloži tudi novice
 // V funkciji toggleAdminPanel dodaj klic loadAdminNovice();

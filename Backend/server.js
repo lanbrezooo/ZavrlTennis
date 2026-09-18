@@ -404,6 +404,153 @@ app.get('/api/admin/report', requireAuth, requireAdmin, async (req, res) => {
     res.status(500).json({ message: 'Napaka pri generiranju poročila' });
   }
 });
+// ===== ADMIN: FIKSNI (PONAVLJAJOČI) TERMINI =====
+
+// Pomožna funkcija: vrne vse datume v obsegu z določenim dnevom in intervalom
+function getFixedDates(fromStr, toStr, dayOfWeek, intervalWeeks) {
+  const dates = [];
+  const fromDate = new Date(fromStr + 'T00:00:00');
+  const toDate = new Date(toStr + 'T00:00:00');
+  let current = new Date(fromDate);
+  const diff = (dayOfWeek - current.getDay() + 7) % 7;
+  current.setDate(current.getDate() + diff);
+  while (current <= toDate) {
+    const y = current.getFullYear();
+    const m = String(current.getMonth() + 1).padStart(2, '0');
+    const d = String(current.getDate()).padStart(2, '0');
+    dates.push(`${y}-${m}-${d}`);
+    current.setDate(current.getDate() + 7 * intervalWeeks);
+  }
+  return dates;
+}
+
+// Predogled fiksnih terminov (BREZ preverjanja kreditov)
+app.post('/api/admin/fixed-reservations/preview', requireAuth, requireAdmin, async (req, res) => {
+  const userId = Number(req.body.user_id);
+  const igrisce = Number(req.body.igrisce);
+  const danVTednu = Number(req.body.dan_v_tednu);
+  const uraZacetka = Number(req.body.ura_zacetka);
+  const trajanje = Number(req.body.trajanje);
+  const datumOd = String(req.body.datum_od || '');
+  const datumDo = String(req.body.datum_do || '');
+  const interval = Number(req.body.interval_tednov) === 2 ? 2 : 1;
+
+  if (!Number.isInteger(userId) || userId < 1) return res.status(400).json({ message: 'Neveljaven uporabnik' });
+  if (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > 9) return res.status(400).json({ message: 'Neveljavno igrišče' });
+  if (!Number.isInteger(danVTednu) || danVTednu < 0 || danVTednu > 6) return res.status(400).json({ message: 'Neveljaven dan v tednu' });
+  if (!Number.isInteger(uraZacetka) || uraZacetka < 8 || uraZacetka >= 22) return res.status(400).json({ message: 'Neveljavna ura' });
+  if (!Number.isInteger(trajanje) || trajanje < 1 || uraZacetka + trajanje > 22) return res.status(400).json({ message: 'Neveljavno trajanje' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datumOd) || !/^\d{4}-\d{2}-\d{2}$/.test(datumDo)) return res.status(400).json({ message: 'Neveljavna datuma' });
+  if (datumOd > datumDo) return res.status(400).json({ message: 'Datum "od" mora biti pred datumom "do"' });
+
+  try {
+    const [userRows] = await pool.query('SELECT id, ime, priimek FROM uporabniki WHERE id=?', [userId]);
+    if (!userRows.length) return res.status(404).json({ message: 'Uporabnik ne obstaja' });
+    const user = userRows[0];
+
+    const dates = getFixedDates(datumOd, datumDo, danVTednu, interval);
+    if (dates.length === 0) return res.json({ dates: [], freeDates: [], conflictDates: [], user, total: 0, freeCount: 0, conflictCount: 0 });
+
+    const [existing] = await pool.query(
+      `SELECT DATE_FORMAT(datum, '%Y-%m-%d') AS datum FROM rezervacije
+       WHERE igrisce=? AND preklicano=0 AND datum BETWEEN ? AND ?
+       AND ura_zacetka < ? AND ura_zacetka + trajanje > ?`,
+      [igrisce, datumOd, datumDo, uraZacetka + trajanje, uraZacetka]
+    );
+    const takenDates = new Set(existing.map(r => r.datum));
+
+    const freeDates = dates.filter(d => !takenDates.has(d));
+    const conflictDates = dates.filter(d => takenDates.has(d));
+
+    res.json({
+      dates,
+      freeDates,
+      conflictDates,
+      user: { id: user.id, ime: user.ime, priimek: user.priimek },
+      total: dates.length,
+      freeCount: freeDates.length,
+      conflictCount: conflictDates.length
+    });
+  } catch (err) {
+    console.error('fixed preview', err.message);
+    res.status(500).json({ message: 'Napaka pri predogledu' });
+  }
+});
+
+// Ustvari fiksne termine (BREZ porabe kreditov)
+app.post('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (req, res) => {
+  const userId = Number(req.body.user_id);
+  const igrisce = Number(req.body.igrisce);
+  const danVTednu = Number(req.body.dan_v_tednu);
+  const uraZacetka = Number(req.body.ura_zacetka);
+  const trajanje = Number(req.body.trajanje);
+  const datumOd = String(req.body.datum_od || '');
+  const datumDo = String(req.body.datum_do || '');
+  const interval = Number(req.body.interval_tednov) === 2 ? 2 : 1;
+  const oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : 'Fiksni termin';
+
+  try {
+    const [userRows] = await pool.query('SELECT id FROM uporabniki WHERE id=?', [userId]);
+    if (!userRows.length) return res.status(404).json({ message: 'Uporabnik ne obstaja' });
+
+    const dates = getFixedDates(datumOd, datumDo, danVTednu, interval);
+    if (dates.length === 0) return res.status(400).json({ message: 'Ni datumov v izbranem obsegu' });
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      let created = 0;
+      let skipped = 0;
+      const createdDates = [];
+      const skippedDates = [];
+
+      for (const d of dates) {
+        const [conflict] = await conn.query(
+          `SELECT id FROM rezervacije
+           WHERE igrisce=? AND datum=? AND preklicano=0
+           AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
+           FOR UPDATE`,
+          [igrisce, d, uraZacetka + trajanje, uraZacetka]
+        );
+        if (conflict.length) {
+          skipped++;
+          skippedDates.push(d);
+          continue;
+        }
+
+        // Ustvari rezervacijo BREZ porabe kreditov
+        await conn.query(
+          `INSERT INTO rezervacije
+           (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka)
+           VALUES (?, ?, ?, ?, ?, 0, 0, ?)`,
+          [userId, igrisce, d, uraZacetka, trajanje, oznaka]
+        );
+
+        created++;
+        createdDates.push(d);
+      }
+
+      await conn.commit();
+      res.json({
+        message: 'Fiksni termini ustvarjeni',
+        created,
+        skipped,
+        createdDates,
+        skippedDates
+      });
+    } catch (e) {
+      await conn.rollback();
+      console.error('fixed create', e.message);
+      res.status(500).json({ message: 'Napaka pri ustvarjanju fiksnih terminov' });
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    console.error('fixed create outer', err.message);
+    res.status(500).json({ message: 'Napaka' });
+  }
+});
 app.use('/api/admin', admin);
 app.use('/api', (_req,res)=>res.status(404).json({message:'API pot ne obstaja'}));
 
