@@ -452,11 +452,12 @@
        @media (max-width: 768px) {
     /* Header – manjši in kompaktnejši */
     .header-inner {
-        padding: 0.5rem;
+        padding: 0.5rem 0.75rem;
         gap: 0.5rem;
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
+        flex-wrap: nowrap;      
     }
         /* Paginacija na telefonu - večji gumbi za lažji dotik */
     .pagination {
@@ -491,8 +492,9 @@
     }
     .header-actions {
         gap: 0.3rem;
-        flex-wrap: nowrap;
+        flex-wrap: nowrap;      /* ⬅ gumbi ostanejo v eni vrstici */
         justify-content: flex-end;
+        flex-shrink: 0;
     }
     .header-whatsapp {
     display: inline-flex;
@@ -708,7 +710,7 @@
             </div>
         </a>
                 <div class="header-actions" id="headerActions">
-            <a href="https://chat.whatsapp.com/TVOJA-POVEZAVA"
+            <a href="https://chat.whatsapp.com/Ia9aduZrZOb6IgCspk6Uad?mode=gi_t"
                target="_blank"
                rel="noopener noreferrer"
                class="header-whatsapp"
@@ -1004,9 +1006,9 @@
         function renderHeader() {
     if (!state.user?.admin) { state.adminPanelOpen = false; const p=document.getElementById('adminPanel'); if(p) p.style.display='none'; }
 
-    // WhatsApp ikona (skupna za vse)
+    // WhatsApp ikona (skupna za vse uporabnike)
     const whatsappIcon = `
-        <a href="https://chat.whatsapp.com/TVOJA-POVEZAVA"
+        <a href="https://chat.whatsapp.com/Ia9aduZrZOb6IgCspk6Uad?mode=gi_t"
            target="_blank"
            rel="noopener noreferrer"
            class="header-whatsapp"
@@ -1038,6 +1040,7 @@
             <button class="btn btn-primary" onclick="showRegisterModal()">Registracija</button>
         `;
     }
+
 }
         function renderCreditsLegend() {
     // 1) Stanje kreditov
