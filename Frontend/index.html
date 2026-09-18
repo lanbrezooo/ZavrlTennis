@@ -987,7 +987,7 @@
     else courtName = `Igrišče ${c}`;
     html += `<div class="calendar-cell header-cell">${courtName}</div>`;
 }
-}
+
 
             for (let h = START_HOUR; h < END_HOUR; h++) {
                 const timeLabel = `${String(h).padStart(2, '0')}:00`;
@@ -1045,6 +1045,7 @@ const clickable = !isPastSlot && !isBlockCell;
 
             calendarGrid.innerHTML = html;
             renderMyReservations();
+        }
         
 
         function renderMyReservations() {
