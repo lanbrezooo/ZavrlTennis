@@ -571,6 +571,97 @@ app.get('/api/nastavitve', async (_req, res) => {
     res.status(500).json({ message: 'Napaka' });
   }
 });
+// ===== ADMIN: ZAPRTJE OBDOBJA (od/do, ura od/do) =====
+app.post('/api/admin/period-block', requireAuth, requireAdmin, async (req, res) => {
+  const datumOd = String(req.body.datum_od || '');
+  const datumDo = String(req.body.datum_do || '');
+  const uraZacetka = Number(req.body.ura_zacetka);
+  const uraKonca = Number(req.body.ura_konca);
+  const igriscaInput = Array.isArray(req.body.igrisca) && req.body.igrisca.length
+    ? req.body.igrisca.map(Number)
+    : [1,2,3,4,5,6,7,8,9];
+  const oznaka = String(req.body.oznaka || 'Zaprto').trim().slice(0, 100);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datumOd) || !/^\d{4}-\d{2}-\d{2}$/.test(datumDo))
+    return res.status(400).json({ message: 'Neveljavna datuma' });
+  if (new Date(datumOd + 'T00:00:00') > new Date(datumDo + 'T00:00:00'))
+    return res.status(400).json({ message: 'Datum "od" mora biti pred "do"' });
+  if (!Number.isInteger(uraZacetka) || uraZacetka < 8 || uraZacetka >= 22 ||
+      !Number.isInteger(uraKonca) || uraKonca <= uraZacetka || uraKonca > 22)
+    return res.status(400).json({ message: 'Neveljaven časovni obseg' });
+
+  const daysDiff = Math.floor((new Date(datumDo + 'T00:00:00') - new Date(datumOd + 'T00:00:00')) / 86400000);
+  if (daysDiff > 90) return res.status(400).json({ message: 'Obdobje je predolgo (max 90 dni)' });
+
+  const trajanje = uraKonca - uraZacetka;
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    let totalRefunded = 0, totalRefundedCount = 0, totalBlocks = 0;
+
+    let current = new Date(datumOd + 'T00:00:00');
+    const end = new Date(datumDo + 'T00:00:00');
+
+    while (current <= end) {
+      const y = current.getFullYear();
+      const m = String(current.getMonth() + 1).padStart(2, '0');
+      const d = String(current.getDate()).padStart(2, '0');
+      const datumStr = `${y}-${m}-${d}`;
+
+      for (const ig of igriscaInput) {
+        if (ig < 1 || ig > 9) continue;
+
+        const [existing] = await conn.query(
+          `SELECT id, user_id, krediti_porabili FROM rezervacije
+           WHERE igrisce=? AND datum=? AND preklicano=0
+           AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
+           FOR UPDATE`,
+          [ig, datumStr, uraKonca, uraZacetka]
+        );
+        for (const r of existing) {
+          const refund = Number(r.krediti_porabili || 0);
+          if (refund > 0) {
+            await conn.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id=?', [refund, r.user_id]);
+            totalRefunded += refund;
+            totalRefundedCount++;
+          }
+        }
+        if (existing.length > 0) {
+          await conn.query(
+            `UPDATE rezervacije SET preklicano=1, datum_preklica=NOW()
+             WHERE igrisce=? AND datum=? AND preklicano=0
+             AND ura_zacetka < ? AND ura_zacetka + trajanje > ?`,
+            [ig, datumStr, uraKonca, uraZacetka]
+          );
+        }
+
+        await conn.query(
+          `INSERT INTO rezervacije 
+           (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka, blokada)
+           VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1)`,
+          [req.user.id, ig, datumStr, uraZacetka, trajanje, oznaka]
+        );
+        totalBlocks++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
+    await conn.commit();
+    res.json({
+      message: 'Obdobje zaprto',
+      blocksCreated: totalBlocks,
+      daysCount: daysDiff + 1,
+      refundedCount: totalRefundedCount,
+      refundedTotal: totalRefunded
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error('period block', err.message);
+    res.status(500).json({ message: 'Napaka pri ustvarjanju zaprtja' });
+  } finally {
+    conn.release();
+  }
+});
 
 // Admin – spremeni sezono
 app.put('/api/admin/nastavitve/:kljuc', requireAuth, requireAdmin, async (req, res) => {

@@ -5,7 +5,20 @@ const router = express.Router();
 
 const START_HOUR = 8;
 const MORNING_END_HOUR = 12;
-const END_HOUR = 22;
+const DEFAULT_END_HOUR = 22;
+
+// Prebere zapiralno uro iz nastavitev
+async function getEndHour(conn = pool) {
+  try {
+    const [rows] = await conn.query(
+      'SELECT vrednost FROM nastavitve WHERE kljuc = "zapiralna_ura"'
+    );
+    const val = rows.length ? Number(rows[0].vrednost) : DEFAULT_END_HOUR;
+    return Number.isInteger(val) && val >= 10 && val <= 24 ? val : DEFAULT_END_HOUR;
+  } catch (e) {
+    return DEFAULT_END_HOUR;
+  }
+}
 const COURTS = 9; // ✅ 9 igrišč
 const MAX_DAYS = 365;
 const MAX_DAYS_BACK = 3; // ✅ POPRAVLJENO: 3 dni nazaj (ne 30)
@@ -23,7 +36,6 @@ function withinWindow(date) {
   return d >= min && d <= max;
 }
 function calculateCredits(startHour, duration, igrisce, sezona) {
-  // Neobčutljivo na velike/male črke in presledke
   const isWinter = String(sezona || '').toLowerCase().trim() === 'zima';
   if (isWinter && (Number(igrisce) === 7 || Number(igrisce) === 8)) {
     return 2.5 * duration;
@@ -72,7 +84,8 @@ router.post('/', requireAuth, async (req, res) => {
   const useAnnualCard = req.body.useAnnualCard === true;
   const oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : null;
 
-  const maxDuration = req.user.admin ? (END_HOUR - ura) : 3;
+  const END_HOUR = await getEndHour();
+const maxDuration = req.user.admin ? (END_HOUR - ura) : 3;
 
   if (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > COURTS ||
       !validDate(datum) || !withinWindow(datum) ||
@@ -105,6 +118,7 @@ router.post('/', requireAuth, async (req, res) => {
         // Preberi sezono
     const [sezRows] = await conn.query('SELECT vrednost FROM nastavitve WHERE kljuc = "sezona"');
     const sezona = sezRows.length ? sezRows[0].vrednost : 'poletje';
+    const isWinter = String(sezona || '').toLowerCase().trim() === 'zima';
 
     // V zimski sezoni navadni uporabniki ne morejo uporabiti letne karte
     if (useAnnualCard && sezona === 'zima' && !req.user.admin) {

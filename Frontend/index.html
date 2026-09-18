@@ -292,6 +292,7 @@
     opacity: 0.9;
 }
         .calendar-cell.past { background: #f5f5f5; cursor: not-allowed; opacity: 0.7; }
+        .calendar-cell.past-time { background: #f5f5f5 !important; color: #bbb !important; cursor: not-allowed !important; }
         .res-name {
     font-size: 0.75rem;
     font-weight: 600;
@@ -742,6 +743,8 @@
                     <button class="btn btn-primary btn-sm" onclick="showReportModal()">📊 Poročilo</button>
                     <button class="btn btn-primary btn-sm" style="background:#1565c0; color:white;" onclick="showFixedReservationModal()">🔁 Fiksni termini</button>
                     <button class="btn btn-primary btn-sm" style="background:#ef5350; color:white;" onclick="showBlockModal()">🚨 Izredni dogodek</button>
+                    <button class="btn btn-primary btn-sm" style="background:#00838f; color:white;" onclick="showPeriodBlockModal()">📅 Obdobje zaprtja</button>
+                    <button class="btn btn-primary btn-sm" style="background:#00838f; color:white;" onclick="showEndHourModal()">🕐 Zapiralna ura</button>
                     <button class="btn btn-danger btn-sm" onclick="deleteAllReservations()">Prekliči vse rezervacije</button>
                 </div>
                 <!-- Tabela za izpis rezervacij -->
@@ -803,7 +806,8 @@
             adminNovicePage: 1,
             dayStripStart: null,
             adminNovice: [],
-            sezona: 'poletje'
+            sezona: 'poletje',
+            zapiralnaUra: 22
         };
 
         let editNoviceSlike = []; // Za shranjevanje obstoječih slik pri urejanju
@@ -905,6 +909,9 @@
 }
         
         function getUserInitials(user) { return (user?.ime?.[0] || '') + (user?.priimek?.[0] || ''); }
+        function isWinter() {
+    return String(state.sezona || '').toLowerCase().trim() === 'zima';
+}
         function getFullName(user) { return user ? `${user.ime} ${user.priimek}`.trim() : ''; }
 
         // AUTH FUNKCIJE
@@ -985,13 +992,12 @@
     }
 
     // 2) Status letne karte
-    const annualEl = document.getElementById('annualCardStatus');
+        const annualEl = document.getElementById('annualCardStatus');
     if (annualEl) {
         if (!state.user) {
             annualEl.textContent = '—';
         } else if (state.user.letna_karta) {
-            const isWinter = String(state.sezona || '').toLowerCase().trim() === 'zima';
-            annualEl.textContent = (isWinter && !state.user.admin) ? 'Aktivna (pozimi neveljavna)' : 'Aktivna ✓';
+            annualEl.textContent = (isWinter() && !state.user.admin) ? 'Aktivna (pozimi neveljavna)' : 'Aktivna ✓';
         } else {
             annualEl.textContent = 'Neaktivna';
         }
@@ -1007,7 +1013,6 @@
     const priceCard = document.querySelector('.price-card');
     if (!priceCard) return;
 
-    const isWinter = String(state.sezona || '').toLowerCase().trim() === 'zima';
     let html = '<h4>🎾 Cena rezervacije</h4>';
 
     if (isWinter) {
@@ -1056,18 +1061,16 @@
 }
 
 
-            for (let h = START_HOUR; h < END_HOUR; h++) {
-                const timeLabel = `${String(h).padStart(2, '0')}:00`;
-                html += `<div class="calendar-cell time-cell">${timeLabel}</div>`;
+            const endHour = Number(state.zapiralnaUra) || 22;
 
-                for (let c = 1; c <= COURTS; c++) {
-                    const isPastSlot = isPast || (isTodaySelected && h <= nowHour);
-                    const reservation = state.reservations.find(r => {
-                        const startHour = Number(r.ura_zacetka);
-                        const duration = Number(r.trajanje);
-                        const endHour = startHour + duration;
-                        return Number(r.igrisce) === Number(c) && startHour <= h && endHour > h;
-                    });
+for (let h = START_HOUR; h < END_HOUR; h++) {
+    const timeLabel = `${String(h).padStart(2, '0')}:00`;
+    const isAfterClosing = h >= endHour;
+    const timeCellClass = isAfterClosing ? 'time-cell past-time' : 'time-cell';
+    html += `<div class="calendar-cell ${timeCellClass}">${timeLabel}</div>`;
+
+    for (let c = 1; c <= COURTS; c++) {
+        const isPastSlot = isPast || (isTodaySelected && h <= nowHour) || isAfterClosing;
 
                     let cellClass = 'available';
                     let cellContent = '';
@@ -1584,7 +1587,7 @@ function goToAdminReservationsPage(page) {
         function showBookingModal(igrisce, uraZacetka) {
             const dateStr = formatDate(state.selectedDate);
             const dateDisplayStr = formatDateShort(dateStr);
-            const endHour = END_HOUR;
+            const endHour = Number(state.zapiralnaUra) || 22;
             const maxDuration = endHour - uraZacetka;
             const isAdmin = state.user?.admin === true;
             const maxSelectableDuration = isAdmin ? maxDuration : Math.min(maxDuration, 3);
@@ -1599,7 +1602,7 @@ function goToAdminReservationsPage(page) {
             const durationOptions = availableDurations.map(d => `<option value="${d}">${d} ${d === 1 ? 'ura' : 'uri'} (${String(uraZacetka).padStart(2, '0')}:00 - ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`).join('');
 
             // Pozimi letna karta ni na voljo navadnim uporabnikom
-const hasAnnualCard = Boolean(state.user?.letna_karta) && (state.sezona !== 'zima' || state.user?.admin);
+const hasAnnualCard = Boolean(state.user?.letna_karta) && (!isWinter() || state.user?.admin);
             
             const oznakaField = isAdmin ? `
                 <div class="form-group">
@@ -1957,11 +1960,12 @@ window.shiftDaysStrip = function(direction) {
             await fetchCurrentUser();
             renderHeader();
                 try {
-        const sData = await apiCall('/nastavitve');
-        state.sezona = sData.settings?.sezona || 'poletje';
-    } catch (e) {
-        console.warn('Sezona ni bila naložena');
-    }       renderSeasonButton();
+    const sData = await apiCall('/nastavitve');
+    state.sezona = sData.settings?.sezona || 'poletje';
+    state.zapiralnaUra = Number(sData.settings?.zapiralna_ura) || 22;
+} catch (e) {
+    console.warn('Nastavitve niso bile naložene');
+}    renderSeasonButton();
             await refreshView();
         });
         // ===== NOVICE (ADMIN) =====
@@ -2930,6 +2934,167 @@ window.toggleSeason = async function() {
         showToast(`Sezona: ${novaSezona}`, 'success');
     } catch (err) {
         showToast(err.message, 'error');
+    }
+};
+// ===== ADMIN: ZAPIRALNA URA =====
+window.showEndHourModal = function() {
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal" style="max-width:440px;">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2>🕐 Zapiralna ura igrišč</h2>
+                <p style="text-align:center; color:var(--text-light); margin-bottom:1rem; font-size:0.9rem;">
+                    Ure po zapiralni bodo prikazane sivo in neklikljive.<br>
+                    Obstoječe rezervacije ostanejo nespremenjene.
+                </p>
+                <form onsubmit="handleEndHourUpdate(event)">
+                    <div class="form-group">
+                        <label>Zapiralna ura</label>
+                        <select id="endHourSelect">
+                            ${[16,17,18,19,20,21,22,23,24].map(h => 
+                                `<option value="${h}" ${Number(state.zapiralnaUra) === h ? 'selected' : ''}>${String(h).padStart(2,'0')}:00</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="form-error" id="endHourError"></div>
+                    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; background:#00838f;">Shrani</button>
+                </form>
+            </div>
+        </div>
+    `;
+};
+
+window.handleEndHourUpdate = async function(e) {
+    e.preventDefault();
+    const vrednost = Number(document.getElementById('endHourSelect').value);
+    const errorEl = document.getElementById('endHourError');
+    errorEl.textContent = '';
+    try {
+        await apiCall('/admin/nastavitve/zapiralna_ura', 'PUT', { vrednost: String(vrednost) });
+        state.zapiralnaUra = vrednost;
+        closeModal();
+        showToast(`Zapiralna ura nastavljena na ${vrednost}:00.`, 'success');
+        await refreshView();
+    } catch (err) {
+        errorEl.textContent = err.message;
+    }
+};
+
+// ===== ADMIN: OBDOBJE ZAPRTJA =====
+window.showPeriodBlockModal = function() {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const plus14 = new Date(today); plus14.setDate(plus14.getDate() + 14);
+    const plus14Str = plus14.toISOString().split('T')[0];
+
+    let hourOptions = '';
+    for (let h = 8; h <= 22; h++) {
+        hourOptions += `<option value="${h}">${String(h).padStart(2, '0')}:00</option>`;
+    }
+
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal" style="max-width:560px;">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2 style="color:#00838f;">📅 Obdobje zaprtja</h2>
+                <p style="text-align:center; color:var(--text-light); margin-bottom:1rem; font-size:0.9rem;">
+                    Zaprite igrišča za daljše obdobje.<br>
+                    Uporabnikom z obstoječimi rezervacijami se vrnejo krediti.
+                </p>
+                <form onsubmit="handlePeriodBlock(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Datum od</label>
+                            <input type="date" id="pbDatumOd" value="${todayStr}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Datum do</label>
+                            <input type="date" id="pbDatumDo" value="${plus14Str}" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ura od</label>
+                            <select id="pbUraOd">${hourOptions}</select>
+                        </div>
+                        <div class="form-group">
+                            <label>Ura do</label>
+                            <select id="pbUraDo">${hourOptions}</select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem; background:#e0f7fa; border:2px solid #00838f; border-radius:8px;">
+                        <input type="checkbox" id="pbVseIgrisca" checked onchange="togglePeriodCourts(this)" style="width:auto; margin:0; cursor:pointer;">
+                        <label for="pbVseIgrisca" style="margin:0; cursor:pointer; font-weight:600; color:#006064;">Vsa igrišča (1–9)</label>
+                    </div>
+                    <div class="form-group" id="pbIgriscaWrap" style="display:none;">
+                        <label>Izberi igrišča</label>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            ${[1,2,3,4,5,6,7,8,9].map(i => `
+                                <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; background:#fafafa; padding:0.4rem 0.7rem; border-radius:8px; border:1px solid var(--border); cursor:pointer;">
+                                    <input type="checkbox" class="pbCourt" value="${i}" checked style="width:auto;"> Igrišče ${i}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Oznaka dogodka</label>
+                        <input type="text" id="pbOznaka" placeholder="npr. JUTRANJE VZDRŽEVANJE" value="Zaprto" required maxlength="100">
+                    </div>
+                    <div class="form-error" id="pbError"></div>
+                    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; background:#00838f;">
+                        Ustvari zaprtje
+                    </button>
+                </form>
+            </div>
+        </div>
+    `;
+    document.getElementById('pbUraOd').value = '8';
+    document.getElementById('pbUraDo').value = '12';
+};
+
+window.togglePeriodCourts = function(cb) {
+    const wrap = document.getElementById('pbIgriscaWrap');
+    if (wrap) wrap.style.display = cb.checked ? 'none' : 'block';
+};
+
+window.handlePeriodBlock = async function(e) {
+    e.preventDefault();
+    const errEl = document.getElementById('pbError');
+    errEl.textContent = '';
+
+    const datumOd = document.getElementById('pbDatumOd').value;
+    const datumDo = document.getElementById('pbDatumDo').value;
+    const uraZacetka = Number(document.getElementById('pbUraOd').value);
+    const uraKonca = Number(document.getElementById('pbUraDo').value);
+    const vseIgrisca = document.getElementById('pbVseIgrisca').checked;
+    const oznaka = document.getElementById('pbOznaka').value.trim();
+
+    let igrisca = [1,2,3,4,5,6,7,8,9];
+    if (!vseIgrisca) {
+        igrisca = Array.from(document.querySelectorAll('.pbCourt:checked')).map(el => Number(el.value));
+        if (!igrisca.length) { errEl.textContent = 'Izberite vsaj eno igrišče.'; return; }
+    }
+
+    if (uraKonca <= uraZacetka) { errEl.textContent = 'Ura "do" mora biti za uro "od".'; return; }
+    if (datumOd > datumDo) { errEl.textContent = 'Datum "od" mora biti pred datumom "do".'; return; }
+
+    const days = Math.floor((new Date(datumDo + 'T00:00:00') - new Date(datumOd + 'T00:00:00')) / 86400000) + 1;
+    if (!confirm(`Ustvarim zaprtje za ${days} dni × ${igrisca.length} igrišč?\nObstoječe rezervacije v tem terminu bodo preklicane in krediti vrnjeni.`)) return;
+
+    try {
+        const data = await apiCall('/admin/period-block', 'POST', {
+            datum_od: datumOd, datum_do: datumDo,
+            ura_zacetka: uraZacetka, ura_konca: uraKonca,
+            igrisca, oznaka
+        });
+        let msg = `Ustvarjenih blokad: ${data.blocksCreated} (${data.daysCount} dni).`;
+        if (data.refundedCount > 0) msg += ` Vrnjenih kreditov: ${data.refundedTotal} (${data.refundedCount} rezervacij).`;
+        showToast(msg, 'success');
+        closeModal();
+        await refreshView();
+        if (state.adminPanelOpen) loadAdminReservations();
+    } catch (err) {
+        errEl.textContent = err.message;
     }
 };
 
