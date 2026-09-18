@@ -782,7 +782,7 @@
                     <div class="price-row"><span>08:00–12:00</span><strong>1 kredit / uro</strong></div>
                     <div class="price-row"><span>12:00–21:00</span><strong>2 kredita / uro</strong></div>
                 </div>
-                <p class="credit-note">Cena se izračuna glede na izbrani termin. Z aktivno letno karto lahko izberete rezervacijo brez porabe kreditov.</p>
+                <p class="credit-note">Cena se izračuna glede na izbrani termin. Z aktivno sezonsko karto lahko izberete rezervacijo brez porabe kreditov.</p>
             </aside>
         </div>
 
@@ -1753,7 +1753,7 @@ const hasAnnualCard = Boolean(state.user?.letna_karta) && (!isWinter() || state.
     const formattedCost = cost % 1 === 0 ? cost.toFixed(0) : cost.toFixed(1);
 
     value.textContent = annual ? '0 kreditov' : `${formattedCost} ${cost === 1 ? 'kredit' : 'kreditov'}`;
-    label.textContent = annual ? 'Letna karta uporabljena' : 'Cena rezervacije';
+    label.textContent = annual ? 'Sezonska karta uporabljena' : 'Cena rezervacije';
 
     const errorEl = document.getElementById('bookingError');
     if (!annual && state.user && Number(state.user.krediti || 0) < cost) {
