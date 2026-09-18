@@ -23,7 +23,9 @@ function withinWindow(date) {
   return d >= min && d <= max;
 }
 function calculateCredits(startHour, duration, igrisce, sezona) {
-  if (sezona === 'zima' && (Number(igrisce) === 7 || Number(igrisce) === 8)) {
+  // Neobčutljivo na velike/male črke in presledke
+  const isWinter = String(sezona || '').toLowerCase().trim() === 'zima';
+  if (isWinter && (Number(igrisce) === 7 || Number(igrisce) === 8)) {
     return 2.5 * duration;
   }
   let total = 0;
