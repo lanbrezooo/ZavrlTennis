@@ -737,8 +737,8 @@
                     <button class="btn btn-outline" style="color:black; border-color:var(--primary);" onclick="loadAdminReservations()">↻ Osveži rezervacije</button>
                     <input type="search" id="adminReservationSearchInput" class="search-input" oninput="filterAdminReservations()" placeholder="Išči po imenu, priimku, datumu ali igrišču...">
                 </div>
-                <div class="admin-table-wrap"><div id="adminReservationsList"></div></div>
                 <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:1rem;">
+    <button class="btn btn-primary btn-sm" style="background:#6a1b9a; color:white;" onclick="toggleSeason()" id="seasonBtn">☀️ Sezona: —</button>
     <button class="btn btn-primary btn-sm" onclick="showReportModal()">📊 Poročilo</button>
     <button class="btn btn-primary btn-sm" style="background:#1565c0; color:white;" onclick="showFixedReservationModal()">🔁 Fiksni termini</button>
     <button class="btn btn-primary btn-sm" style="background:#ef5350; color:white;" onclick="showBlockModal()">🚨 Izredni dogodek</button>
@@ -797,7 +797,8 @@
             adminReservationsPage: 1,
             adminNovicePage: 1,
             dayStripStart: null,
-            adminNovice: []
+            adminNovice: [],
+            sezona: 'poletje'
         };
 
         let editNoviceSlike = []; // Za shranjevanje obstoječih slik pri urejanju
@@ -887,6 +888,13 @@
         }
         function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
         function calculateReservationCredits(startHour, duration) { let total=0; for(let hour=startHour; hour<startHour+duration; hour++) total += hour < MORNING_END_HOUR ? MORNING_CREDITS_PER_HOUR : AFTERNOON_CREDITS_PER_HOUR; return total; }
+        function calculateReservationCreditsSeason(startHour, duration, igrisce) {
+    // Balon v zimski sezoni
+    if (state.sezona === 'zima' && (igrisce === 7 || igrisce === 8)) {
+        return 2.5 * duration;
+    }
+    return calculateReservationCredits(startHour, duration);
+}
         function renderCreditsLegend() { const credits=document.getElementById('creditsBalance'); const annual=document.getElementById('annualCardStatus'); const date=document.getElementById('creditsDate'); if(!credits||!annual||!date)return; credits.textContent=state.user ? `${state.user.krediti ?? 0} kreditov` : 'Prijavite se'; annual.textContent=state.user ? (state.user.letna_karta ? 'Aktivna ✓' : 'Ni aktivna') : '—'; date.textContent=formatDateShort(formatDate(state.selectedDate)); }
         function getUserInitials(user) { return (user?.ime?.[0] || '') + (user?.priimek?.[0] || ''); }
         function getFullName(user) { return user ? `${user.ime} ${user.priimek}`.trim() : ''; }
@@ -972,9 +980,13 @@
 
             html += `<div class="calendar-cell header-cell">Ura</div>`;
             for (let c = 1; c <= COURTS; c++) {
-    // Dodamo oznako "hard" pod 9. igriščem
-    const courtLabel = c === 9 ? 'Igrišče 9<small style="display:block;font-size:0.65rem;font-weight:400;opacity:0.9;">hard</small>' : `Igrišče ${c}`;
-    html += `<div class="calendar-cell header-cell">${courtLabel}</div>`;
+    let courtName;
+    if (state.sezona === 'zima' && c === 7) courtName = 'Balon 1';
+    else if (state.sezona === 'zima' && c === 8) courtName = 'Balon 2';
+    else if (c === 9) courtName = 'Igrišče 9<small style="display:block;font-size:0.65rem;font-weight:400;opacity:0.9;">hard</small>';
+    else courtName = `Igrišče ${c}`;
+    html += `<div class="calendar-cell header-cell">${courtName}</div>`;
+}
 }
 
             for (let h = START_HOUR; h < END_HOUR; h++) {
@@ -1033,7 +1045,7 @@ const clickable = !isPastSlot && !isBlockCell;
 
             calendarGrid.innerHTML = html;
             renderMyReservations();
-        }
+        
 
         function renderMyReservations() {
             if (!state.user) {
@@ -1518,7 +1530,8 @@ function goToAdminReservationsPage(page) {
 
             const durationOptions = availableDurations.map(d => `<option value="${d}">${d} ${d === 1 ? 'ura' : 'uri'} (${String(uraZacetka).padStart(2, '0')}:00 - ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`).join('');
 
-            const hasAnnualCard = Boolean(state.user?.letna_karta);
+            // Pozimi letna karta ni na voljo navadnim uporabnikom
+const hasAnnualCard = Boolean(state.user?.letna_karta) && (state.sezona !== 'zima' || state.user?.admin);
             
             const oznakaField = isAdmin ? `
                 <div class="form-group">
@@ -1556,11 +1569,11 @@ function goToAdminReservationsPage(page) {
             updateBookingCost(uraZacetka);
         }
 
-        window.updateBookingCost = function(uraZacetka) {
-            const form = document.getElementById('bookingForm'); if (!form) return;
-            const duration = Number(form.elements.trajanje.value);
-            const annual = Boolean(form.elements.useAnnualCard?.checked);
-            const cost = annual ? 0 : calculateReservationCredits(uraZacetka, duration);
+        window.updateBookingCost = function(uraZacetka, igrisce) {
+    const form = document.getElementById('bookingForm'); if (!form) return;
+    const duration = Number(form.elements.trajanje.value);
+    const annual = Boolean(form.elements.useAnnualCard?.checked);
+    const cost = annual ? 0 : calculateReservationCreditsSeason(uraZacetka, duration, igrisce);
             const value = document.getElementById('bookingCostValue');
             const label = document.getElementById('bookingCostLabel');
             value.textContent = annual ? '0 kreditov' : `${cost} ${cost === 1 ? 'kredit' : 'kreditov'}`;
@@ -1860,6 +1873,12 @@ window.shiftDaysStrip = function(direction) {
         document.addEventListener('DOMContentLoaded', async () => {
             await fetchCurrentUser();
             renderHeader();
+                try {
+        const sData = await apiCall('/nastavitve');
+        state.sezona = sData.settings?.sezona || 'poletje';
+    } catch (e) {
+        console.warn('Sezona ni bila naložena');
+    }
             await refreshView();
         });
         // ===== NOVICE (ADMIN) =====
@@ -2809,6 +2828,27 @@ document.addEventListener('submit', async function(e) {
         submitBtn.textContent = '✅ Potrdi in ustvari rezervacije';
     }
 });
+// ===== ADMIN: PREKLOP SEZONE =====
+function renderSeasonButton() {
+    const btn = document.getElementById('seasonBtn');
+    if (!btn) return;
+    btn.textContent = state.sezona === 'zima' ? '❄️ Sezona: Zima' : '☀️ Sezona: Poletje';
+}
+
+window.toggleSeason = async function() {
+    if (!state.user?.admin) return;
+    const novaSezona = state.sezona === 'zima' ? 'poletje' : 'zima';
+    if (!confirm(`Preklopim na sezono "${novaSezona}"?`)) return;
+    try {
+        await apiCall(`/admin/nastavitve/sezona`, 'PUT', { vrednost: novaSezona });
+        state.sezona = novaSezona;
+        renderSeasonButton();
+        await refreshView();
+        showToast(`Sezona: ${novaSezona}`, 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+};
 
 // Ob inicializaciji admin panela naloži tudi novice
 // V funkciji toggleAdminPanel dodaj klic loadAdminNovice();

@@ -557,6 +557,36 @@ app.post('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (req,
     res.status(500).json({ message: 'Napaka' });
   }
 });
+// ===== NASTAVITVE (SEZONA) =====
+
+// Javno branje sezone (uporabljajo vsi uporabniki)
+app.get('/api/nastavitve', async (_req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT kljuc, vrednost FROM nastavitve');
+    const settings = {};
+    rows.forEach(r => { settings[r.kljuc] = r.vrednost; });
+    res.json({ settings });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Napaka pri branju nastavitev' });
+  }
+});
+
+// Admin – spremeni sezono
+app.put('/api/admin/nastavitve/:kljuc', requireAuth, requireAdmin, async (req, res) => {
+  const kljuc = String(req.params.kljuc).slice(0, 50);
+  const vrednost = String(req.body.vrednost || '').slice(0, 255);
+  try {
+    await pool.query(
+      'INSERT INTO nastavitve (kljuc, vrednost) VALUES (?, ?) ON DUPLICATE KEY UPDATE vrednost = ?',
+      [kljuc, vrednost, vrednost]
+    );
+    res.json({ message: 'Nastavitev shranjena' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Napaka pri shranjevanju' });
+  }
+});
 app.use('/api/admin', admin);
 app.use('/api', (_req,res)=>res.status(404).json({message:'API pot ne obstaja'}));
 
