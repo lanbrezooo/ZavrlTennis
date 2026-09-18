@@ -586,8 +586,9 @@
                 </div>
                 <div class="admin-table-wrap"><div id="adminReservationsList"></div></div>
                 <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:1rem;">
-    <button class="btn btn-danger btn-sm" onclick="deleteAllReservations()">Izbriši vse rezervacije</button>
+    <button class="btn btn-primary btn-sm" onclick="showReportModal()">📊 Poročilo</button>
     <button class="btn btn-primary btn-sm" style="background:#ef5350; color:white;" onclick="showBlockModal()">🚨 Izredni dogodek</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteAllReservations()">Prekliči vse rezervacije</button>
 </div>
             </div>
             <div class="admin-section">
@@ -2175,6 +2176,173 @@ function canUserCancelReservation(reservation) {
     // Preklic je dovoljen, dokler je NOW < začetek dneva rezervacije (00:00)
     return now < rezervacijaDate;
 }
+// ===== ADMIN: POROČILO =====
+let currentReportData = null;
+
+window.showReportModal = function() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    // Ustvari seznam let (zadnjih 5 + trenutno)
+    const years = [];
+    for (let y = currentYear; y >= currentYear - 5; y--) years.push(y);
+
+    const monthNames = ['', 'Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'];
+
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal" style="max-width:500px;">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2>📊 Mesečno / Letno poročilo</h2>
+                <form onsubmit="generateReport(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Leto</label>
+                            <select id="reportYear">
+                                ${years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Mesec</label>
+                            <select id="reportMonth">
+                                <option value="">📅 Celo leto</option>
+                                ${monthNames.slice(1).map((m, i) => `<option value="${i+1}" ${i+1 === currentMonth ? 'selected' : ''}>${m}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+                        Generiraj poročilo
+                    </button>
+                </form>
+                <div id="reportResult" style="margin-top:1rem;"></div>
+            </div>
+        </div>
+    `;
+};
+
+window.generateReport = async function(e) {
+    e.preventDefault();
+    const year = parseInt(document.getElementById('reportYear').value);
+    const monthVal = document.getElementById('reportMonth').value;
+    const month = monthVal ? parseInt(monthVal) : null;
+
+    const resultEl = document.getElementById('reportResult');
+    resultEl.innerHTML = '<p style="text-align:center;color:var(--text-light);">⏳ Generiram poročilo...</p>';
+
+    try {
+        const url = `/admin/report?year=${year}${month ? '&month=' + month : ''}`;
+        const data = await apiCall(url);
+        currentReportData = data;
+        renderReport(data);
+    } catch (err) {
+        resultEl.innerHTML = `<p style="color:var(--danger);text-align:center;">${escapeHtml(err.message)}</p>`;
+    }
+};
+
+function renderReport(data) {
+    const s = data.stats;
+    const resultEl = document.getElementById('reportResult');
+
+    resultEl.innerHTML = `
+        <div style="background:#f0f4f0; border-radius:12px; padding:1rem; margin-bottom:1rem; text-align:center;">
+            <div style="font-size:0.85rem; color:var(--text-light); text-transform:uppercase; letter-spacing:1px;">Poročilo</div>
+            <div style="font-size:1.3rem; font-weight:700; color:var(--primary);">${escapeHtml(data.label)}</div>
+            <div style="font-size:0.8rem; color:var(--text-light);">${data.dateFrom} – ${data.dateTo}</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem;">
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Vse rezervacije</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">${s.totalReservations}</div>
+            </div>
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Aktivne</div>
+                <div style="font-size:1.5rem; font-weight:700; color:#2e7d32;">${s.activeReservations}</div>
+            </div>
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Preklicane</div>
+                <div style="font-size:1.5rem; font-weight:700; color:#ef5350;">${s.cancelledReservations}</div>
+            </div>
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Izredni dogodki</div>
+                <div style="font-size:1.5rem; font-weight:700; color:#ef5350;">${s.blocks}</div>
+            </div>
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Porabljeni krediti</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--accent-dark);">${s.totalCreditsUsed}</div>
+            </div>
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Letna karta</div>
+                <div style="font-size:1.5rem; font-weight:700; color:#1565c0;">${s.annualCardReservations}</div>
+            </div>
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Različni uporabniki</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">${s.uniqueUsers}</div>
+            </div>
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Skupaj ur</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">${s.totalHours}h</div>
+            </div>
+        </div>
+
+        <div style="background:#fafafa; border:1px solid var(--border); border-radius:10px; padding:0.8rem; margin-top:0.8rem; font-size:0.85rem;">
+            <div style="margin-bottom:0.4rem;"><strong>🏆 Najbolj zasedeno:</strong> ${escapeHtml(s.topCourt)}</div>
+            <div style="margin-bottom:0.4rem;"><strong>⭐ Najbolj aktivni:</strong> ${escapeHtml(s.topUser)}</div>
+            <div><strong>🕐 Najbolj priljubljena ura:</strong> ${escapeHtml(s.topHour)}</div>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:1rem;" onclick="downloadReportCSV()">
+            📥 Prenesi CSV
+        </button>
+    `;
+}
+
+window.downloadReportCSV = function() {
+    if (!currentReportData) return;
+    const data = currentReportData;
+    const s = data.stats;
+
+    // Povzetek
+    let csv = '\uFEFF'; // BOM za Excel
+    csv += `POROČILO;${data.label}\n`;
+    csv += `Obdobje;${data.dateFrom} – ${data.dateTo}\n\n`;
+
+    csv += 'POVZETEK\n';
+    csv += `Vse rezervacije;${s.totalReservations}\n`;
+    csv += `Aktivne rezervacije;${s.activeReservations}\n`;
+    csv += `Preklicane rezervacije;${s.cancelledReservations}\n`;
+    csv += `Izredni dogodki;${s.blocks}\n`;
+    csv += `Porabljeni krediti;${s.totalCreditsUsed}\n`;
+    csv += `Rezervacije z letno karto;${s.annualCardReservations}\n`;
+    csv += `Različni uporabniki;${s.uniqueUsers}\n`;
+    csv += `Skupaj ur;${s.totalHours}\n`;
+    csv += `Najbolj zasedeno igrišče;${s.topCourt}\n`;
+    csv += `Najbolj aktivni uporabnik;${s.topUser}\n`;
+    csv += `Najbolj priljubljena ura;${s.topHour}\n\n`;
+
+    // Dnevna statistika
+    csv += 'DNEVNA STATISTIKA\n';
+    csv += 'Datum;Vse rezervacije;Aktivne;Preklicane;Porabljeni krediti\n';
+    if (data.daily && data.daily.length > 0) {
+        data.daily.forEach(d => {
+            csv += `${d.dan};${d.rezervacije};${d.aktivne};${d.preklicane};${d.krediti}\n`;
+        });
+    } else {
+        csv += 'Ni podatkov za to obdobje\n';
+    }
+
+    // Prenesi
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `porocilo-${data.label.replace(/\s+/g, '-')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
 
 // Ob inicializaciji admin panela naloži tudi novice
 // V funkciji toggleAdminPanel dodaj klic loadAdminNovice();
