@@ -191,10 +191,12 @@
     border-color: var(--primary-light);
     background: var(--hover);
 }
-.day-btn.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
+.day-btn.active,
+.day-btn.active:hover,
+.day-btn.active:focus {
+    background: var(--primary) !important;
+    color: white !important;
+    border-color: var(--primary) !important;
     box-shadow: 0 4px 12px rgba(26,86,50,0.3);
 }
 .day-btn:disabled {
