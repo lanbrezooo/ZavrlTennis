@@ -1192,20 +1192,22 @@ function goToAdminUsersPage(page) {
     const displayRes = reservations.slice(start, start + pageSize);
 
     let html = `<table class="admin-table">
-        <thead><tr><th>ID</th><th>Uporabnik</th><th>Igrišče</th><th>Datum</th><th>Ura</th><th>Trajanje</th><th>Oznaka</th><th>Dejanja</th></tr></thead><tbody>`;
+    <thead><tr><th>ID</th><th>Uporabnik</th><th>Igrišče</th><th>Datum</th><th>Ura</th><th>Trajanje</th><th>Oznaka</th><th>Status</th><th>Dejanja</th></tr></thead><tbody>`;
     displayRes.forEach(r => {
-        html += `<tr>
-            <td>${r.id}</td>
-            <td>${escapeHtml(r.ime)} ${escapeHtml(r.priimek)}</td>
-            <td>${r.igrisce}</td>
-            <td>${r.datum}</td>
-            <td>${r.ura_zacetka}:00</td>
-            <td>${r.trajanje}h</td>
-            <td>${escapeHtml(r.oznaka || '')}</td>
-            <td>
-                <button class="btn btn-sm btn-danger" onclick="deleteAdminReservation(${r.id})">Izbriši</button>
-            </td>
-        </tr>`;
+        const isCancelled = Number(r.preklicano) === 1;
+html += `<tr style="${isCancelled ? 'opacity:0.5; background:#f9f9f9;' : ''}">
+    <td>${r.id}</td>
+    <td>${escapeHtml(r.ime)} ${escapeHtml(r.priimek)}</td>
+    <td>${r.igrisce}</td>
+    <td>${r.datum}</td>
+    <td>${r.ura_zacetka}:00</td>
+    <td>${r.trajanje}h</td>
+    <td>${escapeHtml(r.oznaka || '')}</td>
+    <td>${isCancelled ? '<span style="color:#ef5350; font-weight:600;">✗ Preklicana</span>' : '<span style="color:#2e7d32; font-weight:600;">✓ Aktivna</span>'}</td>
+    <td>
+        ${isCancelled ? '—' : `<button class="btn btn-sm btn-danger" onclick="deleteAdminReservation(${r.id})">Prekliči</button>`}
+    </td>
+</tr>`;
     });
     html += '</tbody></table>';
 

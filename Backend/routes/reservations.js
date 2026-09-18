@@ -44,13 +44,12 @@ async function deleteOldReservations() {
 router.get('/', async (req, res) => {
   const date = String(req.query.date || '');
   if (!validDate(date)) return res.status(400).json({ message: 'Neveljaven datum' });
-  await deleteOldReservations();
   try {
     const [rows] = await pool.query(
       `SELECT r.id, r.user_id, r.igrisce, DATE_FORMAT(r.datum, '%Y-%m-%d') AS datum, r.ura_zacetka, r.trajanje, r.oznaka, r.blokada, u.ime, u.priimek, u.prikazi_telefon
        FROM rezervacije r
        JOIN uporabniki u ON u.id = r.user_id
-       WHERE r.datum = ?
+       WHERE r.datum = ? AND r.preklicano = 0
        ORDER BY r.igrisce, r.ura_zacetka`,
       [date]
     );
@@ -60,7 +59,6 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: 'Napaka pri pridobivanju rezervacij' });
   }
 });
-
 router.post('/', requireAuth, async (req, res) => {
   const igrisce = Number(req.body.igrisce);
   const ura = Number(req.body.ura_zacetka);
@@ -90,9 +88,10 @@ router.post('/', requireAuth, async (req, res) => {
     const user = users[0];
     if (useAnnualCard && !user.letna_karta) { await conn.rollback(); return res.status(403).json({ message: 'Letna karta za vaš račun ni aktivna' }); }
 
-    const [conflicts] = await conn.query(
+        const [conflicts] = await conn.query(
       `SELECT id FROM rezervacije
        WHERE igrisce=? AND datum=? AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
+       AND preklicano = 0
        FOR UPDATE`,
       [igrisce, datum, ura + trajanje, ura]
     );
@@ -131,24 +130,22 @@ router.delete('/:id', requireAuth, async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [rows] = await conn.query('SELECT * FROM rezervacije WHERE id=? FOR UPDATE', [id]);
+    const [rows] = await conn.query('SELECT * FROM rezervacije WHERE id=? AND preklicano = 0 FOR UPDATE', [id]);
     if (!rows.length) { await conn.rollback(); return res.status(404).json({ message: 'Rezervacija ne obstaja' }); }
     const reservation = rows[0];
 
     const isOwner = reservation.user_id === req.user.id;
     const isAdmin = req.user.admin === 1;
 
-    // Dovoljenje
     if (!isOwner && !isAdmin) {
       await conn.rollback();
       return res.status(403).json({ message: 'Nimate dovoljenja' });
     }
 
-    // ⬇️ NOVO: Navadni uporabnik lahko prekliče samo do polnoči dan pred rezervacijo
+    // Pravilo: navadni uporabnik do polnoči dan pred rezervacijo
     if (isOwner && !isAdmin) {
       const now = new Date();
       const rezervacijaDate = new Date(reservation.datum + 'T00:00:00');
-      // Rezervacija se lahko prekliče, dokler je NOW < začetek dneva rezervacije (00:00)
       if (now >= rezervacijaDate) {
         await conn.rollback();
         return res.status(403).json({
@@ -157,15 +154,16 @@ router.delete('/:id', requireAuth, async (req, res) => {
       }
     }
 
+    // ⬇️ MEHKO BRISANJE: namesto DELETE, samo označimo preklicano = 1
     const refund = Number(reservation.krediti_porabili || 0);
     if (refund > 0) await conn.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id=?', [refund, reservation.user_id]);
-    await conn.query('DELETE FROM rezervacije WHERE id=?', [id]);
+    await conn.query('UPDATE rezervacije SET preklicano = 1, datum_preklica = NOW() WHERE id=?', [id]);
     await conn.commit();
-    res.json({ message: refund ? `Rezervacija izbrisana. Vrnjeno: ${refund} kreditov.` : 'Rezervacija izbrisana', refundedCredits: refund });
+    res.json({ message: refund ? `Rezervacija preklicana. Vrnjeno: ${refund} kreditov.` : 'Rezervacija preklicana', refundedCredits: refund });
   } catch (err) {
     await conn.rollback();
     console.error('delete reservation', err.message);
-    res.status(500).json({ message: 'Napaka pri brisanju rezervacije' });
+    res.status(500).json({ message: 'Napaka pri preklicu rezervacije' });
   } finally {
     conn.release();
   }

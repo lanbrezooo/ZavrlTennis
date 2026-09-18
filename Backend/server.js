@@ -109,15 +109,33 @@ admin.use(requireAuth, requireAdmin);
 admin.get('/users', async (_req,res) => { try { const [users] = await pool.query('SELECT id, ime, priimek, email, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin, prikazi_telefon, created_at FROM uporabniki ORDER BY id DESC'); res.json({users}); } catch(e){ console.error(e.message); res.status(500).json({message:'Napaka pri pridobivanju uporabnikov'}); } });
 admin.put('/users/:id', async (req,res) => { const id=Number(req.params.id); if(!Number.isInteger(id)||id<1) return res.status(400).json({message:'Neveljaven ID'}); const b=req.body; if(!String(b.ime||'').trim()||!String(b.priimek||'').trim()||!String(b.email||'').includes('@')) return res.status(400).json({message:'Preverite obvezna polja'}); const credits=Number(b.krediti); if(!Number.isInteger(credits)||credits<0) return res.status(400).json({message:'Krediti morajo biti celo število 0 ali več'}); try { await pool.query('UPDATE uporabniki SET ime=?, priimek=?, email=?, telefon=?, leto_rojstva=?, opis=?, nivo=?, letna_karta=?, krediti=?, admin=?, prikazi_telefon=? WHERE id=?',[String(b.ime).trim().slice(0,50),String(b.priimek).trim().slice(0,50),String(b.email).trim().toLowerCase().slice(0,100),String(b.telefon||'').trim().slice(0,30)||null,b.leto_rojstva?Number(b.leto_rojstva):null,String(b.opis||'').slice(0,1000),String(b.nivo||'Rekreativec').slice(0,50),b.letna_karta?1:0,credits,b.admin?1:0,b.prikazi_telefon?1:0,id]); res.json({message:'Uporabnik posodobljen'}); } catch(e){ if(e.code==='ER_DUP_ENTRY') return res.status(409).json({message:'Email že obstaja'}); console.error(e.message); res.status(500).json({message:'Napaka pri posodabljanju uporabnika'}); } });
 admin.delete('/users/:id', async (req,res)=>{ const id=Number(req.params.id); if(id===req.user.id) return res.status(400).json({message:'Ne morete izbrisati samega sebe'}); try { await pool.query('DELETE FROM uporabniki WHERE id=?',[id]); res.json({message:'Uporabnik izbrisan'}); } catch(e){console.error(e.message);res.status(500).json({message:'Napaka pri brisanju uporabnika'});} });
-admin.get('/reservations', async (_req,res)=>{ try { const [reservations]=await pool.query("SELECT r.id, r.user_id, r.igrisce, DATE_FORMAT(r.datum, '%Y-%m-%d') AS datum, r.ura_zacetka, r.trajanje, r.oznaka, r.blokada, r.krediti_porabili, r.letna_karta_uporabljena, u.ime, u.priimek, u.email FROM rezervacije r JOIN uporabniki u ON u.id=r.user_id ORDER BY r.datum DESC,r.ura_zacetka ASC"); res.json({reservations}); }catch(e){console.error(e.message);res.status(500).json({message:'Napaka pri pridobivanju rezervacij'});} });
+admin.get('/reservations', async (_req,res)=>{ try { const [reservations]=await pool.query("SELECT r.id, r.user_id, r.igrisce, DATE_FORMAT(r.datum, '%Y-%m-%d') AS datum, r.ura_zacetka, r.trajanje, r.oznaka, r.blokada, r.preklicano, r.datum_preklica, r.krediti_porabili, r.letna_karta_uporabljena, u.ime, u.priimek, u.email FROM rezervacije r JOIN uporabniki u ON u.id=r.user_id ORDER BY r.datum DESC, r.ura_zacetka ASC"); res.json({reservations}); }catch(e){console.error(e.message);res.status(500).json({message:'Napaka pri pridobivanju rezervacij'});} });
 admin.delete('/reservations/:id', async (req,res)=>{
   const id=Number(req.params.id); if(!Number.isInteger(id)||id<1) return res.status(400).json({message:'Neveljaven ID'});
   const conn=await pool.getConnection();
-  try { await conn.beginTransaction(); const [rows]=await conn.query('SELECT user_id, krediti_porabili FROM rezervacije WHERE id=? FOR UPDATE',[id]); if(!rows.length){await conn.rollback();return res.status(404).json({message:'Rezervacija ne obstaja'});} const refund=Number(rows[0].krediti_porabili||0); if(refund>0) await conn.query('UPDATE uporabniki SET krediti=krediti+? WHERE id=?',[refund,rows[0].user_id]); await conn.query('DELETE FROM rezervacije WHERE id=?',[id]); await conn.commit(); res.json({message:'Rezervacija izbrisana',refundedCredits:refund}); } catch(e){await conn.rollback();console.error(e.message);res.status(500).json({message:'Napaka pri brisanju rezervacije'});} finally {conn.release();}
+  try {
+    await conn.beginTransaction();
+    const [rows]=await conn.query('SELECT user_id, krediti_porabili FROM rezervacije WHERE id=? AND preklicano = 0 FOR UPDATE',[id]);
+    if(!rows.length){await conn.rollback();return res.status(404).json({message:'Rezervacija ne obstaja'});}
+    const refund=Number(rows[0].krediti_porabili||0);
+    if(refund>0) await conn.query('UPDATE uporabniki SET krediti=krediti+? WHERE id=?',[refund,rows[0].user_id]);
+    // ⬇️ Mehko brisanje
+    await conn.query('UPDATE rezervacije SET preklicano = 1, datum_preklica = NOW() WHERE id=?',[id]);
+    await conn.commit();
+    res.json({message:'Rezervacija preklicana',refundedCredits:refund});
+  } catch(e){await conn.rollback();console.error(e.message);res.status(500).json({message:'Napaka pri preklicu rezervacije'});} finally {conn.release();}
 });
 admin.delete('/reservations', async (_req,res)=>{
   const conn=await pool.getConnection();
-  try { await conn.beginTransaction(); const [reservations]=await conn.query('SELECT user_id, krediti_porabili FROM rezervacije FOR UPDATE'); const refunds=new Map(); for(const row of reservations) refunds.set(row.user_id,(refunds.get(row.user_id)||0)+Number(row.krediti_porabili||0)); for(const [userId,refund] of refunds){ if(refund>0) await conn.query('UPDATE uporabniki SET krediti=krediti+? WHERE id=?',[refund,userId]); } await conn.query('DELETE FROM rezervacije'); await conn.commit(); res.json({message:'Vse rezervacije izbrisane'}); } catch(e){await conn.rollback();console.error(e.message);res.status(500).json({message:'Napaka pri brisanju rezervacij'});} finally {conn.release();}
+  try {
+    await conn.beginTransaction();
+    const [reservations]=await conn.query('SELECT id FROM rezervacije WHERE preklicano = 0 FOR UPDATE');
+    for(const r of reservations){
+      await conn.query('UPDATE rezervacije SET preklicano = 1, datum_preklica = NOW() WHERE id=?',[r.id]);
+    }
+    await conn.commit();
+    res.json({message:'Vse rezervacije preklicane'});
+  } catch(e){await conn.rollback();console.error(e.message);res.status(500).json({message:'Napaka pri preklicu rezervacij'});} finally {conn.release();}
 });
 // ===== ADMIN: BLOKADA / IZREDNI DOGODEK =====
 app.post('/api/admin/block', requireAuth, requireAdmin, async (req, res) => {
@@ -149,10 +167,11 @@ app.post('/api/admin/block', requireAuth, requireAdmin, async (req, res) => {
 
     for (const ig of igriscaSeznam) {
       // Poišči obstoječe rezervacije v tem terminu
-      const [existing] = await conn.query(
+            const [existing] = await conn.query(
         `SELECT id, user_id, krediti_porabili FROM rezervacije
          WHERE igrisce = ? AND datum = ? 
          AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
+         AND preklicano = 0
          FOR UPDATE`,
         [ig, datum, ura + trajanje, ura]
       );
@@ -168,15 +187,16 @@ app.post('/api/admin/block', requireAuth, requireAdmin, async (req, res) => {
       }
 
       // Izbriši obstoječe rezervacije
-      if (existing.length > 0) {
+            if (existing.length > 0) {
         await conn.query(
-          `DELETE FROM rezervacije 
+          `UPDATE rezervacije 
+           SET preklicano = 1, datum_preklica = NOW()
            WHERE igrisce = ? AND datum = ? 
-           AND ura_zacetka < ? AND ura_zacetka + trajanje > ?`,
+           AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
+           AND preklicano = 0`,
           [ig, datum, ura + trajanje, ura]
         );
       }
-
       // Ustvari novo blokado
       await conn.query(
         `INSERT INTO rezervacije 
@@ -233,7 +253,7 @@ admin.post('/reservations/:id/cancel', async (req, res) => {
   try {
     await conn.beginTransaction();
     const [rows] = await conn.query(
-      'SELECT user_id, krediti_porabili FROM rezervacije WHERE id=? FOR UPDATE',
+      'SELECT user_id, krediti_porabili FROM rezervacije WHERE id=? AND preklicano = 0 FOR UPDATE',
       [id]
     );
     if (!rows.length) { await conn.rollback(); return res.status(404).json({ message: 'Rezervacija ne obstaja' }); }
@@ -245,7 +265,8 @@ admin.post('/reservations/:id/cancel', async (req, res) => {
       refundedCredits = krediti;
     }
 
-    await conn.query('DELETE FROM rezervacije WHERE id=?', [id]);
+    // ⬇️ Mehko brisanje
+    await conn.query('UPDATE rezervacije SET preklicano = 1, datum_preklica = NOW() WHERE id=?', [id]);
     await conn.commit();
     res.json({ message: 'Rezervacija preklicana', refundedCredits });
   } catch (e) {
