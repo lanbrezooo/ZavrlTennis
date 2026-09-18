@@ -23,11 +23,9 @@ function withinWindow(date) {
   return d >= min && d <= max;
 }
 function calculateCredits(startHour, duration, igrisce, sezona) {
-  // Balon (igrišče 7 in 8) v zimski sezoni: 2.5 kredita/uro
   if (sezona === 'zima' && (Number(igrisce) === 7 || Number(igrisce) === 8)) {
     return 2.5 * duration;
   }
-  // Normalne cene (poletje ali druga igrišča)
   let total = 0;
   for (let hour = startHour; hour < startHour + duration; hour++) {
     total += hour < MORNING_END_HOUR ? MORNING_CREDITS_PER_HOUR : AFTERNOON_CREDITS_PER_HOUR;

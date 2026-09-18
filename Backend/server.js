@@ -560,6 +560,7 @@ app.post('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (req,
 // ===== NASTAVITVE (SEZONA) =====
 
 // Javno branje sezone (uporabljajo vsi uporabniki)
+// Javno branje sezone
 app.get('/api/nastavitve', async (_req, res) => {
   try {
     const [rows] = await pool.query('SELECT kljuc, vrednost FROM nastavitve');
@@ -567,8 +568,7 @@ app.get('/api/nastavitve', async (_req, res) => {
     rows.forEach(r => { settings[r.kljuc] = r.vrednost; });
     res.json({ settings });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ message: 'Napaka pri branju nastavitev' });
+    res.status(500).json({ message: 'Napaka' });
   }
 });
 
@@ -583,8 +583,7 @@ app.put('/api/admin/nastavitve/:kljuc', requireAuth, requireAdmin, async (req, r
     );
     res.json({ message: 'Nastavitev shranjena' });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ message: 'Napaka pri shranjevanju' });
+    res.status(500).json({ message: 'Napaka' });
   }
 });
 app.use('/api/admin', admin);

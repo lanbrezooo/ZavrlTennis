@@ -895,7 +895,8 @@
     }
     return calculateReservationCredits(startHour, duration);
 }
-        function renderCreditsLegend() { const credits=document.getElementById('creditsBalance'); const annual=document.getElementById('annualCardStatus'); const date=document.getElementById('creditsDate'); if(!credits||!annual||!date)return; credits.textContent=state.user ? `${state.user.krediti ?? 0} kreditov` : 'Prijavite se'; annual.textContent=state.user ? (state.user.letna_karta ? 'Aktivna ✓' : 'Ni aktivna') : '—'; date.textContent=formatDateShort(formatDate(state.selectedDate)); }
+        const krediti = Number(state.user?.krediti ?? 0);
+credits.textContent = state.user ? `${krediti.toFixed(krediti % 1 === 0 ? 0 : 2)} kreditov` : 'Prijavite se';
         function getUserInitials(user) { return (user?.ime?.[0] || '') + (user?.priimek?.[0] || ''); }
         function getFullName(user) { return user ? `${user.ime} ${user.priimek}`.trim() : ''; }
 
@@ -951,7 +952,7 @@
                         <span class="avatar">${getUserInitials(state.user)}</span>
                         <span>${escapeHtml(getFullName(state.user))}</span>
                         ${state.user.letna_karta ? '<span title="Letna karta">🎫</span>' : ''}
-                        ${state.user.krediti !== null && state.user.krediti !== undefined ? `<span title="Krediti">💰 ${state.user.krediti}</span>` : ''}
+                        ${state.user.krediti !== null && state.user.krediti !== undefined ? `<span title="Krediti">💰 ${Number(state.user.krediti).toFixed(Number(state.user.krediti) % 1 === 0 ? 0 : 2)}</span>` : ''}
                     </div>
                     ${adminButton}
                     <button class="btn btn-outline btn-sm" onclick="showProfileModal()">Profil</button>
@@ -1554,11 +1555,11 @@ const hasAnnualCard = Boolean(state.user?.letna_karta) && (state.sezona !== 'zim
                         <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
                             <div class="form-group">
                                 <label>Trajanje rezervacije</label>
-                                <select name="trajanje" onchange="updateBookingCost(${uraZacetka})">${durationOptions}</select>
+                                <select name="trajanje" onchange="updateBookingCost(${uraZacetka}, ${igrisce})">${durationOptions}</select>
                             </div>
                             ${oznakaField}
                             <div class="annual-option ${hasAnnualCard ? '' : 'locked'}">
-                                <label><input type="checkbox" name="useAnnualCard" ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+')"' : 'disabled'}> <span>${hasAnnualCard ? '🎫 Uporabi mojo letno karto – 0 kreditov' : '🔒 Letna karta ni aktivna za vaš račun'}</span></label>
+                                <label><input type="checkbox" name="useAnnualCard" ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+', '+igrisce+')"' : 'disabled'}>
                             </div>
                             <div class="booking-cost"><span id="bookingCostLabel">Cena rezervacije</span><strong id="bookingCostValue">—</strong></div>
                             <div class="form-error" id="bookingError"></div>
@@ -1567,7 +1568,7 @@ const hasAnnualCard = Boolean(state.user?.letna_karta) && (state.sezona !== 'zim
                     </div>
                 </div>
             `;
-            updateBookingCost(uraZacetka);
+            updateBookingCost(uraZacetka, igrisce);
         }
 
         window.updateBookingCost = function(uraZacetka, igrisce) {
@@ -1577,7 +1578,7 @@ const hasAnnualCard = Boolean(state.user?.letna_karta) && (state.sezona !== 'zim
     const cost = annual ? 0 : calculateReservationCreditsSeason(uraZacetka, duration, igrisce);
             const value = document.getElementById('bookingCostValue');
             const label = document.getElementById('bookingCostLabel');
-            value.textContent = annual ? '0 kreditov' : `${cost} ${cost === 1 ? 'kredit' : 'kreditov'}`;
+            value.textContent = annual ? '0 kreditov' : `${cost.toFixed(cost % 1 === 0 ? 0 : 2)} ${cost === 1 ? 'kredit' : 'kreditov'}`;
             label.textContent = annual ? 'Letna karta uporabljena' : 'Cena rezervacije';
             const errorEl = document.getElementById('bookingError');
             if (!annual && state.user && Number(state.user.krediti || 0) < cost) errorEl.textContent = `Nimate dovolj kreditov. Potrebujete ${cost}, na voljo imate ${state.user.krediti || 0}.`;
@@ -1589,7 +1590,7 @@ const hasAnnualCard = Boolean(state.user?.letna_karta) && (state.sezona !== 'zim
             const form = e.target;
             const trajanje = parseInt(new FormData(form).get('trajanje'));
             const useAnnualCard = Boolean(form.elements.useAnnualCard?.checked && state.user?.letna_karta);
-            const cost = useAnnualCard ? 0 : calculateReservationCredits(uraZacetka, trajanje);
+            const cost = useAnnualCard ? 0 : calculateReservationCreditsSeason(uraZacetka, trajanje, igrisce);
             const errorEl = document.getElementById('bookingError');
             errorEl.textContent = '';
 
