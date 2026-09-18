@@ -744,6 +744,24 @@
     <button class="btn btn-primary btn-sm" style="background:#ef5350; color:white;" onclick="showBlockModal()">🚨 Izredni dogodek</button>
     <button class="btn btn-danger btn-sm" onclick="deleteAllReservations()">Prekliči vse rezervacije</button>
 </div>
+            <div class="admin-section">
+                <h4>Rezervacije</h4>
+                <div class="admin-toolbar">
+                    <button class="btn btn-outline" style="color:black; border-color:var(--primary);" onclick="loadAdminReservations()">↻ Osveži rezervacije</button>
+                    <input type="search" id="adminReservationSearchInput" class="search-input" oninput="filterAdminReservations()" placeholder="Išči po imenu, priimku, datumu ali igrišču...">
+                </div>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:1rem;">
+                    <button class="btn btn-primary btn-sm" style="background:#6a1b9a; color:white;" onclick="toggleSeason()" id="seasonBtn">☀️ Sezona: —</button>
+                    <button class="btn btn-primary btn-sm" onclick="showReportModal()">📊 Poročilo</button>
+                    <button class="btn btn-primary btn-sm" style="background:#1565c0; color:white;" onclick="showFixedReservationModal()">🔁 Fiksni termini</button>
+                    <button class="btn btn-primary btn-sm" style="background:#ef5350; color:white;" onclick="showBlockModal()">🚨 Izredni dogodek</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteAllReservations()">Prekliči vse rezervacije</button>
+                </div>
+                <!-- DODANO: Manjkajoči element za izpis tabele -->
+                <div class="admin-table-wrap" style="margin-top:1rem;">
+                    <div id="adminReservationsList"></div>
+                </div>
+            </div>
             </div>
             <div class="admin-section">
     <h4>Novice</h4>
@@ -1220,7 +1238,7 @@ const clickable = !isPastSlot && !isBlockCell;
             const panel = document.getElementById('adminPanel');
             state.adminPanelOpen = !state.adminPanelOpen;
             panel.style.display = state.adminPanelOpen ? 'block' : 'none';
-            if (state.adminPanelOpen) { loadAdminUsers(); loadAdminReservations();  loadAdminNovice(); }
+            if (state.adminPanelOpen) { loadAdminUsers(); loadAdminReservations();  loadAdminNovice(); renderSeasonButton();  }
         };
 
         async function loadAdminUsers() {
@@ -1956,7 +1974,7 @@ window.shiftDaysStrip = function(direction) {
         state.sezona = sData.settings?.sezona || 'poletje';
     } catch (e) {
         console.warn('Sezona ni bila naložena');
-    }
+    }       renderSeasonButton();
             await refreshView();
         });
         // ===== NOVICE (ADMIN) =====
