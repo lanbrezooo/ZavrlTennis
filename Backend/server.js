@@ -706,22 +706,27 @@ app.put('/api/admin/nastavitve/:kljuc', requireAuth, requireAdmin, async (req, r
   }
 });
 app.use('/api/admin', admin);
-// ===== STRIPE – USTVARI CHECKOUT SESSION =====
+
+
 // ===== STRIPE – USTVARI CHECKOUT SESSION =====
 app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) => {
-  const { credits } = req.body;
+  const credits = Number(req.body.credits);
 
-  if (!Number.isInteger(credits) || credits < 1 || credits > 100) {
-    return res.status(400).json({ message: 'Neveljavno število kreditov' });
+  // Validacija: 0.5 do 10, korak 0.5
+  if (!Number.isFinite(credits) || credits < 0.5 || credits > 10) {
+    return res.status(400).json({ message: 'Neveljavno število kreditov (0,5–10)' });
+  }
+  const doubled = credits * 2;
+  if (Math.abs(doubled - Math.round(doubled)) > 1e-9) {
+    return res.status(400).json({ message: 'Krediti morajo biti v korakih po 0,5' });
   }
 
-  // Cenik: 10 kreditov = 80 €, drugače 10 € / kredit
-  let computedPrice;
-  if (credits === 10) {
-    computedPrice = 80;
-  } else {
-    computedPrice = credits * 10;
-  }
+  // Cena: 10 kreditov = 80 €, drugače 10 € / kredit
+  const computedPrice = credits === 10 ? 80 : credits * 10;
+
+  const creditsLabel = Number.isInteger(credits) 
+    ? credits.toString() 
+    : credits.toFixed(1);
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -734,7 +739,7 @@ app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) 
           product_data: {
             name: credits === 10 
               ? `Paket 10 kreditov (prihranek 20 €)`
-              : `${credits} kreditov`,
+              : `${creditsLabel} ${credits === 0.5 ? 'kredita' : (credits === 1 ? 'kredit' : 'kreditov')}`,
             description: 'Zavrl Tennis Team – nakup kreditov'
           },
           unit_amount: Math.round(computedPrice * 100)
@@ -754,8 +759,6 @@ app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) 
     res.status(500).json({ message: 'Napaka pri pripravi plačila' });
   }
 });
-app.use('/api', (_req,res)=>res.status(404).json({message:'API pot ne obstaja'}));
-
 const frontendPath = path.join(__dirname, '..', 'Frontend');
 app.get('/', (_req,res)=>res.sendFile(path.join(frontendPath,'landing.html')));
 app.get('/o-klubu', (_req,res)=>res.sendFile(path.join(frontendPath,'o-klubu.html')));

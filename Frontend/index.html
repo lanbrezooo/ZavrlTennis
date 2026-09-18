@@ -497,6 +497,42 @@
     font-weight: 600;
     color: var(--primary-dark);
 }
+.stepper-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    background: white;
+    color: var(--primary-dark);
+    font-family: var(--font);
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    user-select: none;
+}
+.stepper-btn:hover {
+    border-color: var(--primary);
+    background: var(--hover);
+    color: var(--primary);
+}
+.stepper-btn:active {
+    background: var(--primary);
+    color: white;
+    transform: scale(0.95);
+}
+
+.custom-input-row input {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+}
 .custom-input-row input:focus {
     border-color: var(--primary);
     outline: none;
@@ -3367,11 +3403,30 @@ window.handlePeriodBlock = async function(e) {
     }
 };
 // ===== NAKUP KREDITOV =====
-const PACKAGE_10 = { credits: 10, price: 80, save: 20 };
 const CREDIT_PRICE = 10;
+const PACKAGE_CREDITS = 10;
+const PACKAGE_PRICE = 80;
+const MIN_CREDITS = 0.5;
+const MAX_CREDITS = 10;
 
 let selectedCredits = 10;
 let selectedPrice = 80;
+
+function calcPrice(credits) {
+    if (credits === PACKAGE_CREDITS) return PACKAGE_PRICE;
+    return credits * CREDIT_PRICE;
+}
+
+function isValidCredits(val) {
+    if (!Number.isFinite(val)) return false;
+    if (val < MIN_CREDITS || val > MAX_CREDITS) return false;
+    const doubled = val * 2;
+    return Math.abs(doubled - Math.round(doubled)) < 1e-9;
+}
+
+function formatCredits(val) {
+    return Number.isInteger(val) ? val.toString() : val.toFixed(1);
+}
 
 window.showBuyCreditsModal = function() {
     if (!state.user) {
@@ -3389,7 +3444,6 @@ window.showBuyCreditsModal = function() {
                     Izberi ugodni paket ali vpiši poljubno število kreditov.
                 </p>
 
-                <!-- Posebna ponudba -->
                 <div class="promo-card" onclick="selectPromo()" id="promoCard">
                     <div class="promo-badge">PRIHRANEK 20 €</div>
                     <div class="promo-icon">🎾</div>
@@ -3402,12 +3456,25 @@ window.showBuyCreditsModal = function() {
 
                 <div class="divider"><span>ali</span></div>
 
-                <!-- Custom vnos -->
                 <div class="custom-credits">
-                    <label>Poljubno število kreditov (10 € / kredit)</label>
+                    <label>
+                        Poljubno število kreditov
+                        <span style="font-weight:400; color:var(--text-light); display:block; margin-top:0.2rem; font-size:0.72rem;">
+                            Najmanj 0.5 kredita (5 €) · Največ 10 kreditov
+                        </span>
+                    </label>
                     <div class="custom-input-row">
-                        <input type="number" id="customCreditsInput" min="1" max="100" placeholder="npr. 5"
-                               oninput="updateCustomPrice()" onclick="clearPromoSelection()">
+                        <button type="button" class="stepper-btn" onclick="stepCredits(-0.5)" aria-label="Zmanjšaj">−</button>
+                        <input type="number" id="customCreditsInput" 
+                               min="0.5" max="10" step="0.5" 
+                               placeholder="npr. 2.5"
+                               inputmode="decimal"
+                               oninput="updateCustomPrice()" 
+                               onclick="clearPromoSelection()">
+                        <button type="button" class="stepper-btn" onclick="stepCredits(0.5)" aria-label="Povečaj">+</button>
+                        <span style="font-weight:600; color:var(--text-light); font-size:0.85rem; white-space:nowrap; margin-left:0.25rem;">
+                            × 10 €
+                        </span>
                     </div>
                 </div>
 
@@ -3428,16 +3495,17 @@ window.showBuyCreditsModal = function() {
         </div>
     `;
 
-    selectedCredits = 10;
-    selectedPrice = 80;
+    selectedCredits = PACKAGE_CREDITS;
+    selectedPrice = PACKAGE_PRICE;
     updateTotalPrice();
 };
 
 window.selectPromo = function() {
-    selectedCredits = 10;
-    selectedPrice = 80;
+    selectedCredits = PACKAGE_CREDITS;
+    selectedPrice = PACKAGE_PRICE;
     document.getElementById('customCreditsInput').value = '';
     document.getElementById('promoCard').classList.add('selected');
+    document.getElementById('buyError').textContent = '';
     updateTotalPrice();
 };
 
@@ -3445,32 +3513,86 @@ window.clearPromoSelection = function() {
     document.getElementById('promoCard').classList.remove('selected');
 };
 
+window.stepCredits = function(delta) {
+    const input = document.getElementById('customCreditsInput');
+    const errEl = document.getElementById('buyError');
+
+    // Preberi trenutno vrednost: če je prazno, začni pri 0, nato dodaj delta
+    let current = parseFloat(input.value);
+    if (!Number.isFinite(current)) current = 0;
+
+    let next = current + delta;
+
+    // Če je bilo polje prazno in uporabnik klikne +, naj bo 0.5 (ne 0.5 iz ničle je 0.5)
+    // Če je bilo polje prazno in uporabnik klikne -, naj bo 0.5 (minimalna vrednost)
+    if (!input.value && delta > 0) {
+        next = MIN_CREDITS;
+    } else if (!input.value && delta < 0) {
+        next = MIN_CREDITS;
+    }
+
+    // Omeji na obseg
+    if (next < MIN_CREDITS) next = MIN_CREDITS;
+    if (next > MAX_CREDITS) next = MAX_CREDITS;
+
+    // Zaokroži na 0.5
+    next = Math.round(next * 2) / 2;
+
+    input.value = next.toString();
+
+    errEl.textContent = '';
+    selectedCredits = next;
+    selectedPrice = calcPrice(next);
+    clearPromoSelection();
+    updateTotalPrice();
+};
+
 window.updateCustomPrice = function() {
     const input = document.getElementById('customCreditsInput');
-    const val = parseInt(input.value);
-    if (val && val > 0) {
-        selectedCredits = val;
-        selectedPrice = val * CREDIT_PRICE;
-        clearPromoSelection();
+    const errEl = document.getElementById('buyError');
+    const val = parseFloat(input.value.replace(',', '.'));
+
+    if (!input.value || isNaN(val)) {
+        selectedCredits = 0;
+        selectedPrice = 0;
+        errEl.textContent = '';
+        updateTotalPrice();
+        return;
     }
+
+    if (!isValidCredits(val)) {
+        if (val < MIN_CREDITS) {
+            errEl.textContent = `Najmanj ${formatCredits(MIN_CREDITS)} kredita (${MIN_CREDITS * CREDIT_PRICE} €).`;
+        } else if (val > MAX_CREDITS) {
+            errEl.textContent = `Največ ${MAX_CREDITS} kreditov na posamezen nakup.`;
+        } else {
+            errEl.textContent = 'Vnesite količino v korakih po 0.5 kredita.';
+        }
+        selectedCredits = 0;
+        selectedPrice = 0;
+        updateTotalPrice();
+        return;
+    }
+
+    errEl.textContent = '';
+    selectedCredits = val;
+    selectedPrice = calcPrice(val);
+    clearPromoSelection();
     updateTotalPrice();
 };
 
 window.updateTotalPrice = function() {
     const el = document.getElementById('totalPrice');
-    if (el) el.textContent = selectedPrice.toFixed(0) + ' €';
+    if (!el) return;
+    el.textContent = selectedPrice.toFixed(0) + ' €';
 };
 
 window.startStripeCheckout = async function() {
     const errEl = document.getElementById('buyError');
     errEl.textContent = '';
 
-    if (!selectedCredits || selectedCredits < 1) {
-        errEl.textContent = 'Vnesite veljavno število kreditov.';
-        return;
-    }
-    if (selectedCredits > 100) {
-        errEl.textContent = 'Največ 100 kreditov na posamezen nakup.';
+    if (!isValidCredits(selectedCredits)) {
+        errEl.textContent = `Vnesite veljavno količino (med ${formatCredits(MIN_CREDITS)} in ${MAX_CREDITS} kreditov).`;
         return;
     }
 
@@ -3485,20 +3607,6 @@ window.startStripeCheckout = async function() {
         }
     } catch (err) {
         errEl.textContent = err.message || 'Napaka pri plačilu.';
-    }
-};
-
-window.checkPaymentReturn = async function() {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
-        showToast('Plačilo uspešno! Krediti so bili dodani.', 'success');
-        await fetchCurrentUser();
-        renderHeader();
-        renderCreditsLegend();
-        window.history.replaceState({}, '', window.location.pathname);
-    } else if (params.get('payment') === 'cancel') {
-        showToast('Plačilo preklicano.', 'info');
-        window.history.replaceState({}, '', window.location.pathname);
     }
 };
 
