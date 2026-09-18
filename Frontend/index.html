@@ -774,7 +774,7 @@
                 <h3>💳 Moji krediti</h3>
                 <div class="credit-balance"><span>Trenutno stanje</span><strong id="creditsBalance">—</strong></div>
                 <div class="credit-list">
-                    <div class="credit-row"><span>Letna karta</span><strong id="annualCardStatus">—</strong></div>
+                    <div class="credit-row"><span>Sezonska karta</span><strong id="annualCardStatus">—</strong></div>
                     <div class="credit-row"><span>Izbrani datum</span><strong id="creditsDate">—</strong></div>
                 </div>
                 <div class="price-card">
@@ -1728,7 +1728,7 @@ const hasAnnualCard = Boolean(state.user?.letna_karta) && (!isWinter() || state.
                                         ${hasAnnualCard ? 'checked' : ''} 
                                         ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+', '+igrisce+')"' : 'disabled'}
                                         style="width:auto; margin:0; accent-color:var(--primary);">
-                                    <span>Uporabi letno karto</span>
+                                    <span>Uporabi sezonsko karto</span>
                                 </label>
                             </div>
                             <div class="booking-cost"><span id="bookingCostLabel">Cena rezervacije</span><strong id="bookingCostValue">—</strong></div>

@@ -104,7 +104,7 @@ const maxDuration = req.user.admin ? (END_HOUR - ura) : 3;
     const [users] = await conn.query('SELECT id, krediti, letna_karta FROM uporabniki WHERE id=? FOR UPDATE', [req.user.id]);
     if (!users.length) { await conn.rollback(); return res.status(401).json({ message: 'Uporabnik ne obstaja' }); }
     const user = users[0];
-    if (useAnnualCard && !user.letna_karta) { await conn.rollback(); return res.status(403).json({ message: 'Letna karta za vaš račun ni aktivna' }); }
+    if (useAnnualCard && !user.letna_karta) { await conn.rollback(); return res.status(403).json({ message: 'Sezonska karta za vaš račun ni aktivna' }); }
 
         const [conflicts] = await conn.query(
       `SELECT id FROM rezervacije
