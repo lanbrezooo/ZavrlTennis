@@ -303,7 +303,7 @@
         .calendar-cell.booked-own:hover { background: #bfdbfe; transform: scale(1.02); z-index: 2; box-shadow: inset 0 0 0 3px #1d4ed8; }
         .calendar-cell.blocked {
     background: #ffcdd2 !important;
-    color: #b71c1c !important;
+    color: #810202 !important;
     cursor: not-allowed;
     font-weight: 600;
     text-align: center;
@@ -1111,7 +1111,7 @@
             <div class="price-row"><span>Ostala igrišča 08:00–12:00</span><strong>1 kredit / uro</strong></div>
             <div class="price-row"><span>Ostala igrišča 12:00–21:00</span><strong>2 kredita / uro</strong></div>
             <div class="price-row" style="font-size:0.75rem;color:var(--text-light);border-top:1px solid var(--border);">
-                <span>🎫 Letna karta</span><strong style="color:#ef5350;">Pozimi ni na voljo</strong>
+                <span>🎫 Sezonska karta</span><strong style="color:#ef5350;">Pozimi ni na voljo</strong>
             </div>
         `;
     } else {
@@ -1436,7 +1436,7 @@ function goToAdminUsersPage(page) {
                             </div>
                             <div class="form-group">
                                 <label style="display:flex;align-items:center;gap:0.5rem;">
-                                    <input type="checkbox" id="editLetnaKarta" style="width:auto;margin:0;" ${user.letna_karta ? 'checked' : ''}> Imam letno karto
+                                    <input type="checkbox" id="editLetnaKarta" style="width:auto;margin:0;" ${user.letna_karta ? 'checked' : ''}> Imam sezonsko karto
                                 </label>
                             </div>
                             <div class="form-group">
