@@ -5,6 +5,11 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET mora biti nastavljen v okolju.');
 
 function getToken(req) {
+  // Najprej poskusi prebrati žeton iz HttpOnly piškotka
+  if (req.cookies && req.cookies.zt_token) {
+    return req.cookies.zt_token;
+  }
+  // Rezervna možnost: glava Authorization (za morebitne API klice ali starejše odjemalce)
   const value = req.headers.authorization || '';
   return value.startsWith('Bearer ') ? value.slice(7) : null;
 }

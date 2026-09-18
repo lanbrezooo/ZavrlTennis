@@ -22,6 +22,14 @@ function validateRegistration(body) {
   if (geslo.length < 8 || geslo.length > 128) return 'Geslo mora imeti najmanj 8 in največ 128 znakov.';
   return null;
 }
+router.post('/logout', (req, res) => {
+    res.clearCookie('zt_token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+    });
+    res.json({ message: 'Odjava uspešna' });
+});
 
 router.post('/register', async (req, res) => {
   const error = validateRegistration(req.body);
@@ -41,7 +49,14 @@ router.post('/register', async (req, res) => {
       [cleanString(ime,50), cleanString(priimek,50), normalizedEmail, hash, cleanString(telefon,30) || null, birthYear, cleanString(opis,1000), safeLevel, prikazi_telefon ? 1 : 0]
     );
     const [rows] = await pool.query('SELECT id, ime, priimek, email, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin, prikazi_telefon FROM uporabniki WHERE id = ?', [result.insertId]);
-    res.status(201).json({ token: signToken(result.insertId), user: rows[0] });
+        const token = signToken(result.insertId);
+    res.cookie('zt_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // Na Renderju bo to true, ker je HTTPS
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dni v milisekundah
+    });
+    res.status(201).json({ user: rows[0] });
   } catch (err) {
     console.error('register', err.code || err.message);
     res.status(500).json({ message: 'Napaka pri registraciji' });
@@ -55,7 +70,20 @@ router.post('/login', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM uporabniki WHERE email = ?', [email]);
     if (!rows.length || !(await bcrypt.compare(geslo, rows[0].geslo_hash))) return res.status(401).json({ message: 'Napačen email ali geslo' });
-    res.json({ token: signToken(rows[0].id), user: publicUser(rows[0]) });
+    
+    // Ustvari JWT žeton
+    const token = signToken(rows[0].id);
+    
+    // Pošlji žeton kot HttpOnly piškotek
+    res.cookie('zt_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // V produkciji (Render) zahteva HTTPS
+      sameSite: 'strict', // Zaščita pred CSRF
+      maxAge: 7 * 24 * 60 * 60 * 1000 // Veljavnost 7 dni
+    });
+    
+    // Vrni samo podatke o uporabniku (brez žetona!)
+    res.json({ user: publicUser(rows[0]) });
   } catch (err) {
     console.error('login', err.message);
     res.status(500).json({ message: 'Napaka pri prijavi' });

@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const pool = require('./db');
 const authRoutes = require('./routes/auth');
@@ -13,7 +14,15 @@ const allowedOrigin = process.env.CORS_ORIGIN || '';
 
 app.disable('x-powered-by',1);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
-app.use(cors({ origin(origin, cb) { if (!origin || !allowedOrigin || origin === allowedOrigin) return cb(null, true); cb(new Error('Origin ni dovoljen')); }, methods: ['GET','POST','PUT','DELETE'], allowedHeaders: ['Content-Type','Authorization'] }));
+app.use(cors({
+  origin(origin, cb) {
+    if (!origin || !allowedOrigin || origin === allowedOrigin) return cb(null, true);
+    cb(new Error('Origin ni dovoljen'));
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','DELETE'],
+  allowedHeaders: ['Content-Type','Authorization']
+}));
 // ===== STRIPE WEBHOOK – MORA BITI PRED express.json() =====
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 app.post('/api/payments/webhook',
@@ -43,6 +52,7 @@ app.post('/api/payments/webhook',
   }
 );
 app.use(express.json({ limit: '50mb' })); // Povečamo za base64 slike
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(rateLimit({ windowMs: 15*60*1000, max: 500, standardHeaders: true, legacyHeaders: false, message: { message: 'Preveč zahtevkov. Poskusite kasneje.' } }));

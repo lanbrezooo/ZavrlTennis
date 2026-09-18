@@ -1075,7 +1075,6 @@
 
         let state = {
             user: null,
-            token: localStorage.getItem('zt_token') || null,
             selectedDate: new Date(),
             reservations: [],
             adminUsers: [],
@@ -1105,8 +1104,7 @@
         // API KLICI
         async function apiCall(endpoint, method = 'GET', body = null) {
             const headers = { 'Content-Type': 'application/json' };
-            if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
-            const options = { method, headers };
+            const options = { method, headers,credentials: 'include' };
             if (body) options.body = JSON.stringify(body);
             const res = await fetch(`${API_URL}/api${endpoint}`, options);
             const text = await res.text();
@@ -1196,32 +1194,36 @@
 
         // AUTH FUNKCIJE
         async function registerUser(userData) {
-            const data = await apiCall('/auth/register', 'POST', userData);
-            if (data.token) { state.token = data.token; localStorage.setItem('zt_token', data.token); state.user = data.user; }
-            return data;
-        }
+    const data = await apiCall('/auth/register', 'POST', userData);
+    state.user = data.user;
+    return data;
+}
         async function loginUser(email, geslo) {
-            const data = await apiCall('/auth/login', 'POST', { email, geslo });
-            if (data.token) { state.token = data.token; localStorage.setItem('zt_token', data.token); state.user = data.user; }
-            return data;
-        }
+    const data = await apiCall('/auth/login', 'POST', { email, geslo });
+    state.user = data.user;
+    return data;
+}
         async function logoutUser() {
-            state.token = null; state.user = null; state.adminPanelOpen = false;
+            try {
+        await apiCall('/auth/logout', 'POST');
+    } catch (e) {
+        // tudi če strežnik ne odgovori, počistimo lokalno stanje
+    }
+            state.user = null; state.adminPanelOpen = false;
             state.adminUsers = []; state.adminReservations = [];
-            localStorage.removeItem('zt_token');
+            await apiCall('/auth/logout', 'POST');
             const panel = document.getElementById('adminPanel');
             if (panel) panel.style.display = 'none';
             renderCreditsLegend();
         }
         async function fetchCurrentUser() {
-            if (!state.token) return null;
-            try {
-                const data = await apiCall('/auth/me');
-                state.user = data.user; return data.user;
-            } catch (e) {
-                state.token = null; localStorage.removeItem('zt_token'); state.user = null; return null;
-            }
-        }
+    try {
+        const data = await apiCall('/auth/me');
+        state.user = data.user; return data.user;
+    } catch (e) {
+        state.user = null; return null;
+    }
+}
 
         // REZERVACIJE
         async function fetchReservations(dateStr) {
