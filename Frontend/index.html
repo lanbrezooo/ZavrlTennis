@@ -921,38 +921,41 @@ const clickable = !isPastSlot && !isBlockCell;
         });
 
         function handleCellClick(igrisce, uraZacetka) {
-            if (!state.user) {
-                showToast('Za rezervacijo se morate prijaviti.', 'error');
-                showLoginModal();
-                return;
-            }
-            const isPast = isPastDate(state.selectedDate) || (isToday(state.selectedDate) && uraZacetka <= new Date().getHours());
-            if (isPast) {
-                showToast('Tega termina ni več mogoče rezervirati.', 'error');
-                return;
-            }
-            
-            const existing = state.reservations.find(r => {
-                const start = Number(r.ura_zacetka);
-                const end = start + Number(r.trajanje);
-                return Number(r.igrisce) === igrisce && start <= uraZacetka && uraZacetka < end;
-            });
+    if (!state.user) {
+        showToast('Za rezervacijo se morate prijaviti.', 'error');
+        showLoginModal();
+        return;
+    }
+    const isPast = isPastDate(state.selectedDate) || (isToday(state.selectedDate) && uraZacetka <= new Date().getHours());
+    if (isPast) {
+        showToast('Tega termina ni več mogoče rezervirati.', 'error');
+        return;
+    }
+    
+    const existing = state.reservations.find(r => {
+        const start = Number(r.ura_zacetka);
+        const end = start + Number(r.trajanje);
+        return Number(r.igrisce) === igrisce && start <= uraZacetka && uraZacetka < end;
+    });
 
-                        if (existing) {
-                const isOwn = Number(existing.user_id) === Number(state.user.id);
-                if (isOwn) {
-                    showDeleteModal(existing);
-                } else if (state.user.admin) {
-                    showAdminReservationDetails(existing.id);
-                } else {
-                    showUserDetails(existing.user_id);
-                }
+    if (existing) {
+        const isOwn = Number(existing.user_id) === Number(state.user.id);
+        if (isOwn) {
+            // ⬇️ NOVO: preveri, ali še lahko prekliče (samo navadni uporabniki)
+            if (!canUserCancelReservation(existing)) {
+                showToast('Rezervacijo lahko prekličete le do polnoči dan pred rezervacijo.', 'error');
                 return;
-            
             }
-            showBookingModal(igrisce, uraZacetka);
+            showDeleteModal(existing);
+        } else if (state.user.admin) {
+            showAdminReservationDetails(existing.id);
+        } else {
+            showUserDetails(existing.user_id);
         }
-
+        return;
+    }
+    showBookingModal(igrisce, uraZacetka);
+}
         // PRIKAZ PODATKOV UPORABNIKA
         async function showUserDetails(userId) {
             try {
@@ -1416,6 +1419,11 @@ function goToAdminReservationsPage(page) {
         };
 
         function showDeleteModal(reservation) {
+            // ⬇️ NOVO: preveri, ali je dovoljeno preklicati
+    if (!canUserCancelReservation(reservation)) {
+        showToast('Rezervacijo lahko prekličete le do polnoči dan pred rezervacijo.', 'error');
+        return;
+    }
             const dateStr = formatDateShort(reservation.datum);
             const endHour = reservation.ura_zacetka + reservation.trajanje;
             const timeStr = `${String(reservation.ura_zacetka).padStart(2, '0')}:00 - ${String(endHour).padStart(2, '0')}:00`;
