@@ -707,18 +707,21 @@ app.put('/api/admin/nastavitve/:kljuc', requireAuth, requireAdmin, async (req, r
 });
 app.use('/api/admin', admin);
 // ===== STRIPE – USTVARI CHECKOUT SESSION =====
+// ===== STRIPE – USTVARI CHECKOUT SESSION =====
 app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) => {
-  const { season, credits } = req.body;
+  const { credits } = req.body;
 
-  if (!['summer', 'winter'].includes(season)) {
-    return res.status(400).json({ message: 'Neveljavna sezona' });
-  }
   if (!Number.isInteger(credits) || credits < 1 || credits > 100) {
     return res.status(400).json({ message: 'Neveljavno število kreditov' });
   }
 
-  const eurPerCredit = season === 'winter' ? 25 : 8;
-  const computedPrice = credits * eurPerCredit;
+  // Cenik: 10 kreditov = 80 €, drugače 10 € / kredit
+  let computedPrice;
+  if (credits === 10) {
+    computedPrice = 80;
+  } else {
+    computedPrice = credits * 10;
+  }
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -729,7 +732,9 @@ app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) 
         price_data: {
           currency: 'eur',
           product_data: {
-            name: `${credits} kreditov – ${season === 'winter' ? 'zimska' : 'poletna'} sezona`,
+            name: credits === 10 
+              ? `Paket 10 kreditov (prihranek 20 €)`
+              : `${credits} kreditov`,
             description: 'Zavrl Tennis Team – nakup kreditov'
           },
           unit_amount: Math.round(computedPrice * 100)
@@ -740,8 +745,7 @@ app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) 
       cancel_url: `${process.env.FRONTEND_URL}/app?payment=cancel`,
       metadata: {
         userId: String(req.user.id),
-        credits: String(credits),
-        season
+        credits: String(credits)
       }
     });
     res.json({ url: session.url });
