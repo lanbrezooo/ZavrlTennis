@@ -14,6 +14,34 @@ const allowedOrigin = process.env.CORS_ORIGIN || '';
 app.disable('x-powered-by',1);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(cors({ origin(origin, cb) { if (!origin || !allowedOrigin || origin === allowedOrigin) return cb(null, true); cb(new Error('Origin ni dovoljen')); }, methods: ['GET','POST','PUT','DELETE'], allowedHeaders: ['Content-Type','Authorization'] }));
+// ===== STRIPE WEBHOOK – MORA BITI PRED express.json() =====
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+app.post('/api/payments/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+      console.error('Webhook signature error:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const userId = Number(session.metadata.userId);
+      const credits = Number(session.metadata.credits);
+      try {
+        await pool.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?', [credits, userId]);
+        console.log(`✓ Uporabnik ${userId} prejel ${credits} kreditov`);
+      } catch (err) {
+        console.error('DB napaka pri webhooku:', err.message);
+      }
+    }
+    res.json({ received: true });
+  }
+);
 app.use(express.json({ limit: '50mb' })); // Povečamo za base64 slike
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -678,6 +706,50 @@ app.put('/api/admin/nastavitve/:kljuc', requireAuth, requireAdmin, async (req, r
   }
 });
 app.use('/api/admin', admin);
+// ===== STRIPE – USTVARI CHECKOUT SESSION =====
+app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) => {
+  const { season, credits } = req.body;
+
+  if (!['summer', 'winter'].includes(season)) {
+    return res.status(400).json({ message: 'Neveljavna sezona' });
+  }
+  if (!Number.isInteger(credits) || credits < 1 || credits > 100) {
+    return res.status(400).json({ message: 'Neveljavno število kreditov' });
+  }
+
+  const eurPerCredit = season === 'winter' ? 25 : 8;
+  const computedPrice = credits * eurPerCredit;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      customer_email: req.user.email,
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: `${credits} kreditov – ${season === 'winter' ? 'zimska' : 'poletna'} sezona`,
+            description: 'Zavrl Tennis Team – nakup kreditov'
+          },
+          unit_amount: Math.round(computedPrice * 100)
+        },
+        quantity: 1
+      }],
+      success_url: `${process.env.FRONTEND_URL}/app?payment=success`,
+      cancel_url: `${process.env.FRONTEND_URL}/app?payment=cancel`,
+      metadata: {
+        userId: String(req.user.id),
+        credits: String(credits),
+        season
+      }
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('stripe session', err.message);
+    res.status(500).json({ message: 'Napaka pri pripravi plačila' });
+  }
+});
 app.use('/api', (_req,res)=>res.status(404).json({message:'API pot ne obstaja'}));
 
 const frontendPath = path.join(__dirname, '..', 'Frontend');
@@ -693,3 +765,6 @@ app.get('*', (_req,res)=>res.sendFile(path.join(frontendPath,'landing.html')));
 app.use((err,req,res,_next)=>{ if(err.message==='Origin ni dovoljen') return res.status(403).json({message:'Origin ni dovoljen'}); console.error(err); res.status(500).json({message:'Nepričakovana napaka'}); });
 const PORT=process.env.PORT||3000;
 app.listen(PORT,()=>console.log(`Zavrl Tennis Team teče na portu ${PORT}`));
+
+
+

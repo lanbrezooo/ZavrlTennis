@@ -336,6 +336,153 @@
         .credits-legend { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; position:sticky; top:92px; }
         .credits-legend h3 { padding:1rem 1.1rem; color:var(--primary); font-size:1rem; border-bottom:1px solid var(--border); }
         .credit-balance { margin:1rem; padding:1rem; border-radius:12px; background:linear-gradient(135deg,var(--primary-dark),var(--primary)); color:white; }
+        /* Gumb za nakup kreditov */
+.buy-credits-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: calc(100% - 2rem);
+    margin: 0 1rem 1rem 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--accent);
+    color: var(--primary-dark);
+    border: none;
+    border-radius: 50px;
+    font-family: var(--font);
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 4px 14px rgba(253,216,53,0.35);
+    letter-spacing: 0.3px;
+}
+.buy-credits-btn:hover {
+    background: var(--accent-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(253,216,53,0.5);
+}
+.buy-credits-btn .plus-icon {
+    width: 22px;
+    height: 22px;
+    background: var(--primary-dark);
+    color: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
+    padding-bottom: 2px;
+}
+
+/* Paketi v modalu */
+.package-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.package-card {
+    padding: 1rem 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: #fafafa;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    font-family: var(--font);
+}
+.package-card:hover {
+    border-color: var(--primary-light);
+    background: var(--hover);
+}
+.package-card.selected {
+    border-color: var(--primary);
+    background: #e8f5e9;
+    box-shadow: 0 0 0 3px rgba(26,86,50,0.1);
+}
+.package-card .pkg-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+.package-card .pkg-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--primary-dark);
+    margin-bottom: 0.15rem;
+}
+.package-card .pkg-desc {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-bottom: 0.4rem;
+}
+.package-card .pkg-price {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+/* Custom vnos */
+.custom-credits {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    background: #fafafa;
+    margin-bottom: 1rem;
+}
+.custom-credits label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+.custom-input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.custom-input-row input {
+    flex: 1;
+    padding: 0.6rem 0.9rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font);
+    font-size: 0.95rem;
+    background: white;
+}
+.custom-input-row input:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(26,86,50,0.1);
+}
+.season-toggle {
+    display: flex;
+    gap: 0.3rem;
+    background: white;
+    padding: 0.25rem;
+    border-radius: 50px;
+    border: 2px solid var(--border);
+}
+.season-toggle button {
+    padding: 0.4rem 0.9rem;
+    border: none;
+    border-radius: 50px;
+    background: transparent;
+    font-family: var(--font);
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: var(--transition);
+}
+.season-toggle button.active {
+    background: var(--primary);
+    color: white;
+}
         .credit-balance strong { display:block; font-size:2rem; line-height:1; margin-top:.25rem; color:var(--accent); }
         .credit-list { padding:.25rem 1rem 1rem; display:grid; gap:.65rem; }
         .credit-row { display:flex; justify-content:space-between; gap:1rem; padding:.65rem 0; border-bottom:1px solid var(--border); font-size:.88rem; }
@@ -773,6 +920,10 @@
             <aside class="credits-legend" aria-label="Moji krediti">
                 <h3>💳 Moji krediti</h3>
                 <div class="credit-balance"><span>Trenutno stanje</span><strong id="creditsBalance">—</strong></div>
+                <button class="buy-credits-btn" onclick="showBuyCreditsModal()">
+    <span class="plus-icon">+</span>
+    <span>Kupi kredite</span>
+</button>
                 <div class="credit-list">
                     <div class="credit-row"><span>Sezonska karta</span><strong id="annualCardStatus">—</strong></div>
                     <div class="credit-row"><span>Izbrani datum</span><strong id="creditsDate">—</strong></div>
@@ -2053,6 +2204,7 @@ window.shiftDaysStrip = function(direction) {
         document.addEventListener('DOMContentLoaded', async () => {
             await fetchCurrentUser();
             renderHeader();
+            await checkPaymentReturn();
                 try {
     const sData = await apiCall('/nastavitve');
     state.sezona = sData.settings?.sezona || 'poletje';
@@ -3189,6 +3341,171 @@ window.handlePeriodBlock = async function(e) {
         if (state.adminPanelOpen) loadAdminReservations();
     } catch (err) {
         errEl.textContent = err.message;
+    }
+};
+// ===== NAKUP KREDITOV =====
+const PACKAGES = {
+    summer: { credits: 10, price: 80,  eurPerCredit: 8,  name: '10 poletnih ur',  icon: '☀️' },
+    winter: { credits: 10, price: 250, eurPerCredit: 25, name: '10 zimskih ur',   icon: '❄️' }
+};
+
+let selectedSeason = 'summer';
+let selectedCredits = 10;
+
+window.showBuyCreditsModal = function() {
+    if (!state.user) {
+        showToast('Za nakup kreditov se morate prijaviti.', 'error');
+        showLoginModal();
+        return;
+    }
+
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal" style="max-width:520px;">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2>💳 Nakup kreditov</h2>
+                <p style="text-align:center; color:var(--text-light); margin-bottom:1.25rem; font-size:0.9rem;">
+                    Izberi paket ali vpiši poljubno število kreditov.
+                </p>
+
+                <div class="package-grid">
+                    <div class="package-card selected" data-season="summer" onclick="selectPackage('summer', 10)">
+                        <div class="pkg-icon">☀️</div>
+                        <div class="pkg-name">Poletni paket</div>
+                        <div class="pkg-desc">10 kreditov</div>
+                        <div class="pkg-price">80 €</div>
+                    </div>
+                    <div class="package-card" data-season="winter" onclick="selectPackage('winter', 10)">
+                        <div class="pkg-icon">❄️</div>
+                        <div class="pkg-name">Zimski paket</div>
+                        <div class="pkg-desc">10 kreditov</div>
+                        <div class="pkg-price">250 €</div>
+                    </div>
+                </div>
+
+                <div class="custom-credits">
+                    <label>Ali vpiši poljubno število kreditov</label>
+                    <div class="custom-input-row">
+                        <input type="number" id="customCreditsInput" min="1" max="100" placeholder="npr. 5"
+                               oninput="updateCustomPrice()" onclick="clearPackageSelection()">
+                        <div class="season-toggle" id="seasonToggle">
+                            <button type="button" class="active" data-season="summer" onclick="changeCustomSeason('summer')">☀️ Poletje</button>
+                            <button type="button" data-season="winter" onclick="changeCustomSeason('winter')">❄️ Zima</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="booking-cost">
+                    <span>Skupaj za plačilo</span>
+                    <strong id="totalPrice">80 €</strong>
+                </div>
+
+                <div class="form-error" id="buyError"></div>
+                <button type="button" class="btn btn-primary" style="width:100%;justify-content:center;"
+                        onclick="startStripeCheckout()">
+                    💳 Nadaljuj na plačilo
+                </button>
+                <p style="text-align:center; color:var(--text-light); font-size:0.75rem; margin-top:0.75rem;">
+                    Varno plačilo prek Stripe. Po plačilu prejmete račun po e-pošti.
+                </p>
+            </div>
+        </div>
+    `;
+
+    selectedSeason = 'summer';
+    selectedCredits = 10;
+};
+
+window.selectPackage = function(season, credits) {
+    selectedSeason = season;
+    selectedCredits = credits;
+
+    document.getElementById('customCreditsInput').value = '';
+
+    document.querySelectorAll('.package-card').forEach(card => {
+        card.classList.toggle('selected', card.dataset.season === season);
+    });
+
+    document.querySelectorAll('#seasonToggle button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.season === season);
+    });
+
+    updateTotalPrice();
+};
+
+window.clearPackageSelection = function() {
+    document.querySelectorAll('.package-card').forEach(card => card.classList.remove('selected'));
+};
+
+window.changeCustomSeason = function(season) {
+    selectedSeason = season;
+    document.querySelectorAll('#seasonToggle button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.season === season);
+    });
+    updateCustomPrice();
+};
+
+window.updateCustomPrice = function() {
+    const input = document.getElementById('customCreditsInput');
+    const val = parseInt(input.value);
+    if (val && val > 0) {
+        selectedCredits = val;
+        clearPackageSelection();
+    }
+    updateTotalPrice();
+};
+
+window.updateTotalPrice = function() {
+    const pkg = PACKAGES[selectedSeason];
+    const total = selectedCredits * pkg.eurPerCredit;
+    const el = document.getElementById('totalPrice');
+    if (el) el.textContent = total.toFixed(0) + ' €';
+};
+
+window.startStripeCheckout = async function() {
+    const errEl = document.getElementById('buyError');
+    errEl.textContent = '';
+
+    if (!selectedCredits || selectedCredits < 1) {
+        errEl.textContent = 'Vnesite veljavno število kreditov.';
+        return;
+    }
+    if (selectedCredits > 100) {
+        errEl.textContent = 'Največ 100 kreditov na posamezen nakup.';
+        return;
+    }
+
+    const pkg = PACKAGES[selectedSeason];
+    const totalPrice = selectedCredits * pkg.eurPerCredit;
+
+    try {
+        const data = await apiCall('/payments/create-checkout-session', 'POST', {
+            season: selectedSeason,
+            credits: selectedCredits,
+            price: totalPrice
+        });
+        if (data.url) {
+            window.location.href = data.url;
+        } else {
+            errEl.textContent = 'Napaka pri pripravi plačila.';
+        }
+    } catch (err) {
+        errEl.textContent = err.message || 'Napaka pri plačilu.';
+    }
+};
+
+// Po vrnitvi iz Stripe-a
+window.checkPaymentReturn = async function() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+        showToast('Plačilo uspešno! Krediti so bili dodani.', 'success');
+        await fetchCurrentUser();
+        renderHeader();
+        renderCreditsLegend();
+        window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('payment') === 'cancel') {
+        showToast('Plačilo preklicano.', 'info');
+        window.history.replaceState({}, '', window.location.pathname);
     }
 };
 
