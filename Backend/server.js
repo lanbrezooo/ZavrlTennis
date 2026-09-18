@@ -487,7 +487,13 @@ app.post('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (req,
   const datumOd = String(req.body.datum_od || '');
   const datumDo = String(req.body.datum_do || '');
   const interval = Number(req.body.interval_tednov) === 2 ? 2 : 1;
-  const oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : 'Fiksni termin';
+    let oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : null;
+  // Če ni oznake, uporabi ime in priimek uporabnika
+  if (!oznaka) {
+    const [uRows] = await pool.query('SELECT ime, priimek FROM uporabniki WHERE id=?', [userId]);
+    if (uRows.length) oznaka = `${uRows[0].ime} ${uRows[0].priimek}`;
+    else oznaka = 'Fiksni termin';
+  }
 
   try {
     const [userRows] = await pool.query('SELECT id FROM uporabniki WHERE id=?', [userId]);
