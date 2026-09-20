@@ -1092,7 +1092,7 @@
                 <div class="price-card">
                     <h4>🎾 Cena rezervacije</h4>
                     <div class="price-row"><span>08:00–12:00</span><strong>1 kredit / uro</strong></div>
-                    <div class="price-row"><span>12:00–21:00</span><strong>2 kredita / uro</strong></div>
+                    <div class="price-row"><span>12:00–21:00</span><strong>1 kredit / uro</strong></div>
                 </div>
                 <p class="credit-note">Cena se izračuna glede na izbrani termin. Z aktivno sezonsko karto lahko izberete rezervacijo brez porabe kreditov.</p>
             </aside>
@@ -1173,7 +1173,7 @@
         const END_HOUR = 22;
         const MORNING_END_HOUR = 12;
         const MORNING_CREDITS_PER_HOUR = 1;
-        const AFTERNOON_CREDITS_PER_HOUR = 2;
+        const AFTERNOON_CREDITS_PER_HOUR = 1;
 
         let state = {
             user: null,
@@ -1422,18 +1422,16 @@
                 ❄️ Zimska sezona
             </div>
             <div class="price-row"><span>Balon 1 & 2 (igrišči 7, 8)</span><strong>2.5 kredita / uro</strong></div>
-            <div class="price-row"><span>Ostala igrišča 08:00–12:00</span><strong>1 kredit / uro</strong></div>
-            <div class="price-row"><span>Ostala igrišča 12:00–21:00</span><strong>2 kredita / uro</strong></div>
+            <div class="price-row"><span>Ostala igrišča</span><strong>1 kredit / uro</strong></div>
             <div class="price-row" style="font-size:0.75rem;color:var(--text-light);border-top:1px solid var(--border);">
                 <span>🎫 Sezonska karta</span><strong style="color:#ef5350;">Pozimi ni na voljo</strong>
             </div>
         `;
     } else {
-        html += `
-            <div class="price-row"><span>08:00–12:00</span><strong>1 kredit / uro</strong></div>
-            <div class="price-row"><span>12:00–21:00</span><strong>2 kredita / uro</strong></div>
-        `;
-    }
+    html += `
+        <div class="price-row"><span>08:00–21:00</span><strong>1 kredit / uro</strong></div>
+    `;
+}
 
     priceCard.innerHTML = html;
 }
@@ -3674,7 +3672,7 @@ window.showBuyCreditsModal = function() {
                     <label>
                         Poljubno število kreditov
                         <span style="font-weight:400; color:var(--text-light); display:block; margin-top:0.2rem; font-size:0.72rem;">
-                            Najmanj 0.5 kredita (5 €) · Največ 10 kreditov
+                            Najmanj 0.5 kredita · Največ 10 kreditov       1 KREDIT = 10 EUR
                         </span>
                     </label>
                     <div class="custom-input-row">

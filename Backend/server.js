@@ -823,14 +823,14 @@ app.post('/api/payments/create-reservation-checkout-session', requireAuth, async
   const isWinter = String(sezona || '').toLowerCase().trim() === 'zima';
 
   let credits;
-  if (isWinter && (igrisce === 7 || igrisce === 8)) {
-    credits = 2.5 * trajanje;
-  } else {
-    credits = 0;
-    for (let h = uraZacetka; h < uraZacetka + trajanje; h++) {
-      credits += h < 12 ? 1 : 2;
-    }
+if (isWinter && (igrisce === 7 || igrisce === 8)) {
+  credits = 2.5 * trajanje;
+} else {
+  credits = 0;
+  for (let h = uraZacetka; h < uraZacetka + trajanje; h++) {
+    credits += 1;
   }
+}
   const price = credits * 10; // 1 kredit = 10 €
 
   // Format datuma za prikaz (npr. "Sob, 20. sep 2026")

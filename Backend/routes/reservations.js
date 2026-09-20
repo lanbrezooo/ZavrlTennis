@@ -23,7 +23,7 @@ const COURTS = 9; // ✅ 9 igrišč
 const MAX_DAYS = 365;
 const MAX_DAYS_BACK = 3; // ✅ POPRAVLJENO: 3 dni nazaj (ne 30)
 const MORNING_CREDITS_PER_HOUR = 1;
-const AFTERNOON_CREDITS_PER_HOUR = 2;
+const AFTERNOON_CREDITS_PER_HOUR = 1;
 
 function validDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value || '') && !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
