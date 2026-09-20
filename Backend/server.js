@@ -68,11 +68,11 @@ app.post('/api/payments/webhook',
           }
 
           await conn.query(
-            `INSERT INTO rezervacije 
-             (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka)
-             VALUES (?, ?, ?, ?, ?, 0, 0, ?)`,
-            [userId, igrisce, datum, uraZacetka, trajanje, oznaka]
-          );
+  `INSERT INTO rezervacije 
+   (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka, placilo_z_kartico)
+   VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1)`,
+  [userId, igrisce, datum, uraZacetka, trajanje, oznaka]
+);
 
           await conn.commit();
           console.log(`✓ Rezervacija s kartico: uporabnik ${userId}, igrišče ${igrisce}, ${datum} ob ${uraZacetka}:00 (${trajanje}h)`);
@@ -363,7 +363,7 @@ admin.post('/reservations/:id/cancel', async (req, res) => {
 // ===== ADMIN: POROČILO (mesečno/letno) =====
 app.get('/api/admin/report', requireAuth, requireAdmin, async (req, res) => {
   const year = Number(req.query.year);
-  const month = req.query.month ? Number(req.query.month) : null; // 1-12, null = celo leto
+  const month = req.query.month ? Number(req.query.month) : null;
 
   if (!Number.isInteger(year) || year < 2020 || year > 2100) {
     return res.status(400).json({ message: 'Neveljavno leto' });
@@ -372,7 +372,6 @@ app.get('/api/admin/report', requireAuth, requireAdmin, async (req, res) => {
     return res.status(400).json({ message: 'Neveljaven mesec' });
   }
 
-  // Določi datumski obseg
   let dateFrom, dateTo, label;
   if (month) {
     dateFrom = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -387,53 +386,68 @@ app.get('/api/admin/report', requireAuth, requireAdmin, async (req, res) => {
   }
 
   try {
-    // Skupne številke
+    // ===== VSE REZERVACIJE (skupaj z blokadami) =====
     const [totalRows] = await pool.query(
-      'SELECT COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ?',
-      [dateFrom, dateTo]
-    );
-    const [activeRows] = await pool.query(
       'SELECT COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0',
-      [dateFrom, dateTo]
-    );
-    const [cancelledRows] = await pool.query(
-      'SELECT COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 1',
       [dateFrom, dateTo]
     );
     const [blocksRows] = await pool.query(
       'SELECT COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND blokada = 1 AND preklicano = 0',
       [dateFrom, dateTo]
     );
+    const [cancelledRows] = await pool.query(
+      'SELECT COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 1',
+      [dateFrom, dateTo]
+    );
 
-    // Krediti in letne karte
+    // ===== SAMO REZERVACIJE UPORABNIKOV + ADMINA (brez blokad) =====
+    const [userResRows] = await pool.query(
+      'SELECT COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0 AND blokada = 0',
+      [dateFrom, dateTo]
+    );
+
+    // Porabljeni krediti (samo uporabniki, brez blokad)
     const [creditsRows] = await pool.query(
       'SELECT COALESCE(SUM(krediti_porabili), 0) as total FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0 AND blokada = 0',
       [dateFrom, dateTo]
     );
+
+    // Rezervacije s sezonsko karto
     const [annualRows] = await pool.query(
-      'SELECT COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0 AND letna_karta_uporabljena = 1',
+      'SELECT COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0 AND blokada = 0 AND letna_karta_uporabljena = 1',
       [dateFrom, dateTo]
     );
 
-    // Uporabniki
-    const [uniqueUsersRows] = await pool.query(
-      'SELECT COUNT(DISTINCT user_id) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND blokada = 0',
+    // Rezervacije plačane s kartico (enkratno)
+    const [cardRows] = await pool.query(
+      'SELECT COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0 AND blokada = 0 AND placilo_z_kartico = 1',
       [dateFrom, dateTo]
     );
 
-    // Skupno število ur
+    // Rezervacije plačane s krediti (odšteti krediti > 0)
+    const [creditPaidRows] = await pool.query(
+      'SELECT COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0 AND blokada = 0 AND krediti_porabili > 0',
+      [dateFrom, dateTo]
+    );
+
+    // Skupno število ur (vse, tudi blokade)
     const [hoursRows] = await pool.query(
       'SELECT COALESCE(SUM(trajanje), 0) as total FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0',
       [dateFrom, dateTo]
     );
 
-    // Najbolj zasedeno igrišče
+    // Skupno število ur samo uporabnikov + admina
+    const [userHoursRows] = await pool.query(
+      'SELECT COALESCE(SUM(trajanje), 0) as total FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0 AND blokada = 0',
+      [dateFrom, dateTo]
+    );
+
+    // ===== TOP STATISTIKA – SAMO UPORABNIKI + ADMIN (brez blokad) =====
     const [topCourtRows] = await pool.query(
       'SELECT igrisce, COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0 AND blokada = 0 GROUP BY igrisce ORDER BY cnt DESC LIMIT 1',
       [dateFrom, dateTo]
     );
 
-    // Najbolj aktivni uporabnik
     const [topUserRows] = await pool.query(
       `SELECT u.ime, u.priimek, COUNT(*) as cnt 
        FROM rezervacije r 
@@ -443,13 +457,17 @@ app.get('/api/admin/report', requireAuth, requireAdmin, async (req, res) => {
       [dateFrom, dateTo]
     );
 
-    // Najbolj priljubljena ura
     const [topHourRows] = await pool.query(
       'SELECT ura_zacetka, COUNT(*) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0 AND blokada = 0 GROUP BY ura_zacetka ORDER BY cnt DESC LIMIT 1',
       [dateFrom, dateTo]
     );
 
-    // Po dnevih (za CSV – dnevna statistika)
+    const [uniqueUsersRows] = await pool.query(
+      'SELECT COUNT(DISTINCT user_id) as cnt FROM rezervacije WHERE datum BETWEEN ? AND ? AND preklicano = 0 AND blokada = 0',
+      [dateFrom, dateTo]
+    );
+
+    // Dnevna statistika
     const [dailyRows] = await pool.query(
       `SELECT DATE_FORMAT(datum, '%Y-%m-%d') as dan,
               COUNT(*) as rezervacije,
@@ -468,14 +486,24 @@ app.get('/api/admin/report', requireAuth, requireAdmin, async (req, res) => {
       dateFrom,
       dateTo,
       stats: {
-        totalReservations: totalRows[0].cnt,
-        activeReservations: activeRows[0].cnt,
-        cancelledReservations: cancelledRows[0].cnt,
+        // Vse skupaj (z blokadami)
+        totalAllReservations: totalRows[0].cnt,
         blocks: blocksRows[0].cnt,
+        cancelledReservations: cancelledRows[0].cnt,
+        totalHours: Number(hoursRows[0].total),
+
+        // Samo uporabniki + admin
+        userReservations: userResRows[0].cnt,
+        userHours: Number(userHoursRows[0].total),
+        uniqueUsers: uniqueUsersRows[0].cnt,
+
+        // Krediti in plačila
         totalCreditsUsed: Number(creditsRows[0].total),
         annualCardReservations: annualRows[0].cnt,
-        uniqueUsers: uniqueUsersRows[0].cnt,
-        totalHours: Number(hoursRows[0].total),
+        cardPaidReservations: cardRows[0].cnt,
+        creditPaidReservations: creditPaidRows[0].cnt,
+
+        // Top (samo uporabniki + admin)
         topCourt: topCourtRows[0] ? `Igrišče ${topCourtRows[0].igrisce} (${topCourtRows[0].cnt} rezervacij)` : '—',
         topUser: topUserRows[0] ? `${topUserRows[0].ime} ${topUserRows[0].priimek} (${topUserRows[0].cnt} rezervacij)` : '—',
         topHour: topHourRows[0] ? `${String(topHourRows[0].ura_zacetka).padStart(2, '0')}:00 (${topHourRows[0].cnt} rezervacij)` : '—'
@@ -828,7 +856,7 @@ app.post('/api/payments/create-reservation-checkout-session', requireAuth, async
         },
         quantity: 1
       }],
-      success_url: `${process.env.FRONTEND_URL}/app?payment=success`,
+      success_url: `${process.env.FRONTEND_URL}/app?payment=success&type=reservation`,
       cancel_url: `${process.env.FRONTEND_URL}/app?payment=cancel`,
       metadata: {
         type: 'reservation',
@@ -887,7 +915,7 @@ app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) 
         },
         quantity: 1
       }],
-      success_url: `${process.env.FRONTEND_URL}/app?payment=success`,
+      success_url: `${process.env.FRONTEND_URL}/app?payment=success&type=credits`,
       cancel_url: `${process.env.FRONTEND_URL}/app?payment=cancel`,
       metadata: {
         userId: String(req.user.id),

@@ -3115,34 +3115,20 @@ function renderReport(data) {
             <div style="font-size:0.8rem; color:var(--text-light);">${data.dateFrom} – ${data.dateTo}</div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem;">
+        <!-- === VSE SKUPAJ (z blokadami) === -->
+        <div style="font-size:0.8rem; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.5rem;">📋 Vse skupaj (z izrednimi dogodki)</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; margin-bottom:1rem;">
             <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
-                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Vse rezervacije</div>
-                <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">${s.totalReservations}</div>
-            </div>
-            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
-                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Aktivne</div>
-                <div style="font-size:1.5rem; font-weight:700; color:#2e7d32;">${s.activeReservations}</div>
-            </div>
-            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
-                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Preklicane</div>
-                <div style="font-size:1.5rem; font-weight:700; color:#ef5350;">${s.cancelledReservations}</div>
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Vse aktivne</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">${s.totalAllReservations}</div>
             </div>
             <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
                 <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Izredni dogodki</div>
                 <div style="font-size:1.5rem; font-weight:700; color:#ef5350;">${s.blocks}</div>
             </div>
             <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
-                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Porabljeni krediti</div>
-                <div style="font-size:1.5rem; font-weight:700; color:var(--accent-dark);">${s.totalCreditsUsed}</div>
-            </div>
-            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
-                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Letna karta</div>
-                <div style="font-size:1.5rem; font-weight:700; color:#1565c0;">${s.annualCardReservations}</div>
-            </div>
-            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
-                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Različni uporabniki</div>
-                <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">${s.uniqueUsers}</div>
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Preklicane</div>
+                <div style="font-size:1.5rem; font-weight:700; color:#ef5350;">${s.cancelledReservations}</div>
             </div>
             <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
                 <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Skupaj ur</div>
@@ -3150,7 +3136,46 @@ function renderReport(data) {
             </div>
         </div>
 
-        <div style="background:#fafafa; border:1px solid var(--border); border-radius:10px; padding:0.8rem; margin-top:0.8rem; font-size:0.85rem;">
+        <!-- === SAMO REZERVACIJE UPORABNIKOV + ADMIN === -->
+        <div style="font-size:0.8rem; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.5rem;">👥 Samo rezervacije uporabnikov + admina</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; margin-bottom:1rem;">
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Rezervacije</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">${s.userReservations}</div>
+            </div>
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Različni uporabniki</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">${s.uniqueUsers}</div>
+            </div>
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Ure uporabnikov</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">${s.userHours}h</div>
+            </div>
+            <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase;">Porabljeni krediti</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--accent-dark);">${s.totalCreditsUsed}</div>
+            </div>
+        </div>
+
+        <!-- === NAČIN PLAČILA === -->
+        <div style="font-size:0.8rem; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.5rem;">💳 Način plačila rezervacij</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6rem; margin-bottom:1rem;">
+            <div style="background:#edf7ef; border:1px solid #cde5d1; border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">S krediti</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">${s.creditPaidReservations}</div>
+            </div>
+            <div style="background:#e3f2fd; border:1px solid #bbdefb; border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">S kartico</div>
+                <div style="font-size:1.5rem; font-weight:700; color:#1565c0;">${s.cardPaidReservations}</div>
+            </div>
+            <div style="background:#fff8e1; border:1px solid #ffe082; border-radius:10px; padding:0.8rem;">
+                <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">Sezonska karta</div>
+                <div style="font-size:1.5rem; font-weight:700; color:#f9a825;">${s.annualCardReservations}</div>
+            </div>
+        </div>
+
+        <!-- === TOP (samo uporabniki + admin) === -->
+        <div style="background:#fafafa; border:1px solid var(--border); border-radius:10px; padding:0.8rem; font-size:0.85rem;">
             <div style="margin-bottom:0.4rem;"><strong>🏆 Najbolj zasedeno:</strong> ${escapeHtml(s.topCourt)}</div>
             <div style="margin-bottom:0.4rem;"><strong>⭐ Najbolj aktivni:</strong> ${escapeHtml(s.topUser)}</div>
             <div><strong>🕐 Najbolj priljubljena ura:</strong> ${escapeHtml(s.topHour)}</div>
@@ -3167,25 +3192,32 @@ window.downloadReportCSV = function() {
     const data = currentReportData;
     const s = data.stats;
 
-    // Povzetek
-    let csv = '\uFEFF'; // BOM za Excel
+    let csv = '\uFEFF';
     csv += `POROČILO;${data.label}\n`;
     csv += `Obdobje;${data.dateFrom} – ${data.dateTo}\n\n`;
 
-    csv += 'POVZETEK\n';
-    csv += `Vse rezervacije;${s.totalReservations}\n`;
-    csv += `Aktivne rezervacije;${s.activeReservations}\n`;
-    csv += `Preklicane rezervacije;${s.cancelledReservations}\n`;
+    csv += 'VSE SKUPAJ (z izrednimi dogodki)\n';
+    csv += `Vse aktivne;${s.totalAllReservations}\n`;
     csv += `Izredni dogodki;${s.blocks}\n`;
-    csv += `Porabljeni krediti;${s.totalCreditsUsed}\n`;
-    csv += `Rezervacije z letno karto;${s.annualCardReservations}\n`;
+    csv += `Preklicane;${s.cancelledReservations}\n`;
+    csv += `Skupaj ur;${s.totalHours}\n\n`;
+
+    csv += 'SAMO REZERVACIJE UPORABNIKOV + ADMINA\n';
+    csv += `Rezervacije;${s.userReservations}\n`;
     csv += `Različni uporabniki;${s.uniqueUsers}\n`;
-    csv += `Skupaj ur;${s.totalHours}\n`;
+    csv += `Ure uporabnikov;${s.userHours}\n`;
+    csv += `Porabljeni krediti;${s.totalCreditsUsed}\n\n`;
+
+    csv += 'NAČIN PLAČILA\n';
+    csv += `S krediti;${s.creditPaidReservations}\n`;
+    csv += `S kartico;${s.cardPaidReservations}\n`;
+    csv += `Sezonska karta;${s.annualCardReservations}\n\n`;
+
+    csv += 'TOP (samo uporabniki + admin)\n';
     csv += `Najbolj zasedeno igrišče;${s.topCourt}\n`;
     csv += `Najbolj aktivni uporabnik;${s.topUser}\n`;
     csv += `Najbolj priljubljena ura;${s.topHour}\n\n`;
 
-    // Dnevna statistika
     csv += 'DNEVNA STATISTIKA\n';
     csv += 'Datum;Vse rezervacije;Aktivne;Preklicane;Porabljeni krediti\n';
     if (data.daily && data.daily.length > 0) {
@@ -3196,7 +3228,6 @@ window.downloadReportCSV = function() {
         csv += 'Ni podatkov za to obdobje\n';
     }
 
-    // Prenesi
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -3794,10 +3825,16 @@ window.startStripeCheckout = async function() {
 window.checkPaymentReturn = async function() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
-        showToast('Plačilo uspešno! Krediti so bili dodani.', 'success');
+        const type = params.get('type');
+        if (type === 'reservation') {
+            showToast('Rezervacija je bila uspešno plačana in potrjena!', 'success');
+        } else {
+            showToast('Plačilo uspešno! Krediti so bili dodani.', 'success');
+        }
         await fetchCurrentUser();
         renderHeader();
         renderCreditsLegend();
+        await refreshView();
         window.history.replaceState({}, '', window.location.pathname);
     } else if (params.get('payment') === 'cancel') {
         showToast('Plačilo preklicano.', 'info');
