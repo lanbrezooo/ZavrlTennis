@@ -1015,19 +1015,32 @@ body:has(.modal-overlay) {
         border-radius: 10px;
     }
 
-       /* Modali na telefonu – popravek za klikljiv gumb */
+           /* === FULLSCREEN MODAL na telefonu === */
     .modal-overlay {
-        padding: 0.5rem;
-        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
-        align-items: flex-start;
+        padding: 0;
+        align-items: stretch;
+        justify-content: stretch;
     }
     .modal {
-        padding: 1rem;
-        padding-bottom: 0;
+        padding: 0;
+        padding-top: 3.5rem;
+        max-width: 100%;
+        max-height: 100%;
+        height: 100%;
+        width: 100%;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
     }
-    /* Gumb za potrditev je vedno viden na dnu modala */
+    .modal form {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 0 1rem;
+    }
+    /* Gumb je sticky na dnu */
     .modal #bookingSubmitBtn,
     .modal button[type="submit"] {
         position: sticky;
@@ -1040,10 +1053,21 @@ body:has(.modal-overlay) {
         padding: 0.85rem 1rem;
         border-radius: 50px;
         z-index: 5;
+        flex-shrink: 0;
     }
-    .modal form {
-        padding-bottom: 0.5rem;
+    /* Gumb za zapiranje (X) na vrhu */
+    .modal-close {
+        top: 0.75rem;
+        right: 0.75rem;
+        z-index: 10;
     }
+    /* Naslov z malo manjšim odmikom */
+    .modal h2 {
+        margin-top: 0;
+        padding-top: 0;
+    }
+    
+    
     .booking-summary {
         padding: 0.5rem;
     }
