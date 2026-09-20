@@ -1707,7 +1707,7 @@ const clickable = !isPastSlot && !isBlockCell;
             }
         });
 
-        function handleCellClick(igrisce, uraZacetka) {
+        async function handleCellClick(igrisce, uraZacetka) {
     if (!state.user) {
         showToast('Za rezervacijo se morate prijaviti.', 'error');
         showLoginModal();
@@ -1740,6 +1740,14 @@ const clickable = !isPastSlot && !isBlockCell;
             showUserDetails(existing.user_id);
         }
         return;
+    }
+        // ⬇️ NOVO: osveži sezono in zapiralno uro, preden odpreš modal
+    try {
+        const sData = await apiCall('/nastavitve');
+        state.sezona = sData.settings?.sezona || 'poletje';
+        state.zapiralnaUra = Number(sData.settings?.zapiralna_ura) || 22;
+    } catch (e) {
+        // če ne uspe, obdrži staro vrednost
     }
     showBookingModal(igrisce, uraZacetka);
 }
@@ -2131,7 +2139,7 @@ function goToAdminReservationsPage(page) {
             }
         };
 
-        // BOOKING MODAL
+    
         // BOOKING MODAL
 function showBookingModal(igrisce, uraZacetka) {
     const dateStr = formatDate(state.selectedDate);

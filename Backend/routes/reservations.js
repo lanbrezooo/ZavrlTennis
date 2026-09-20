@@ -127,7 +127,12 @@ const maxDuration = req.user.admin ? (END_HOUR - ura) : 3;
     }
 
     const creditsRequired = useAnnualCard ? 0 : calculateCredits(ura, trajanje, igrisce, sezona);
-
+if (!useAnnualCard && Number(user.krediti) < creditsRequired) {
+    await conn.rollback();
+    return res.status(400).json({
+        message: `Nimate dovolj kreditov. Potrebujete ${creditsRequired}, na voljo imate ${user.krediti}.`
+    });
+}
     const [result] = await conn.query(
       `INSERT INTO rezervacije
        (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka)
