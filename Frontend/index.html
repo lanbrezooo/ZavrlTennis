@@ -104,6 +104,10 @@
             display: flex; align-items: center; justify-content: center; font-weight: 700;
             color: var(--primary-dark); font-size: 0.8rem; flex-shrink: 0;
         }
+            /* Skrij ime in letno karto SAMO pri adminu – obdrži avatar + kredite */
+    .header-actions.admin-mode .user-badge > span:not(.avatar):not([title="Krediti"]) {
+        display: none;
+    }
         .btn {
             padding: 0.6rem 1.4rem; border-radius: 50px; border: none; cursor: pointer;
             font-family: var(--font); font-weight: 600; font-size: 0.9rem; transition: var(--transition);
@@ -991,10 +995,35 @@
         border-radius: 10px;
     }
 
-    /* Modali in ostalo */
+       /* Modali na telefonu – popravek za klikljiv gumb */
+    .modal-overlay {
+        padding: 0.5rem;
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+        align-items: flex-start;
+    }
     .modal {
         padding: 1rem;
-        max-height: 92vh;
+        padding-bottom: 0;
+        max-height: calc(100dvh - 1rem - env(safe-area-inset-bottom, 0px));
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    /* Gumb za potrditev je vedno viden na dnu modala */
+    .modal #bookingSubmitBtn,
+    .modal button[type="submit"] {
+        position: sticky;
+        bottom: 0;
+        background: var(--accent) !important;
+        color: var(--primary-dark) !important;
+        box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+        margin-top: 0.75rem;
+        margin-bottom: 0;
+        padding: 0.85rem 1rem;
+        border-radius: 50px;
+        z-index: 5;
+    }
+    .modal form {
+        padding-bottom: 0.5rem;
     }
     .booking-summary {
         padding: 0.5rem;
@@ -1358,8 +1387,9 @@
     `;
 
     if (state.user) {
-        const adminButton = state.user.admin ? `<button class="btn btn-outline btn-sm" onclick="toggleAdminPanel()">Admin</button>` : '';
-        headerActions.innerHTML = `
+    const adminButton = state.user.admin ? `<button class="btn btn-outline btn-sm" onclick="toggleAdminPanel()">Admin</button>` : '';
+    headerActions.classList.toggle('admin-mode', !!state.user.admin);
+    headerActions.innerHTML = `
             ${whatsappIcon}
             <div class="user-badge">
                 <span class="avatar">${getUserInitials(state.user)}</span>
