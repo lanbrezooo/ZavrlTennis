@@ -3874,6 +3874,24 @@ window.checkPaymentReturn = async function() {
         window.history.replaceState({}, '', window.location.pathname);
     }
 };
+// ===== Samodejni scroll na fokus (samo mobilno) =====
+if (window.matchMedia('(max-width: 768px)').matches) {
+    document.addEventListener('focusin', (e) => {
+        const target = e.target;
+        if (!target) return;
+        const tag = target.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return;
+        if (!target.closest('.modal')) return;
+
+        setTimeout(() => {
+            try {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } catch (_) {
+                target.scrollIntoView(false);
+            }
+        }, 250);
+    });
+}
 
 // Ob inicializaciji admin panela naloži tudi novice
 // V funkciji toggleAdminPanel dodaj klic loadAdminNovice();
