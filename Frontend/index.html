@@ -699,7 +699,7 @@ body:has(.modal-overlay) {
     overflow-y: auto;
     box-shadow: var(--shadow-lg);
     animation: slideUp 0.3s ease; position: relative;
-    overscroll-behavior: contain;
+    
 }
         .modal-close {
             position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px;
@@ -1045,6 +1045,36 @@ body:has(.modal-overlay) {
     .booking-summary {
         padding: 0.5rem;
     }
+    /* Kompakten povzetek v rezervacijskem modalu */
+.booking-summary-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    background: #f0f7f1;
+    border: 1px solid #cde5d1;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+.booking-summary-compact .bs-court {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1.1;
+}
+.booking-summary-compact .bs-date {
+    font-size: 0.78rem;
+    color: var(--text-light);
+    margin-top: 0.15rem;
+}
+.booking-summary-compact .bs-time {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--primary-dark);
+    line-height: 1;
+    white-space: nowrap;
+}
     .res-list {
         flex-direction: column;
     }
@@ -1071,6 +1101,61 @@ body:has(.modal-overlay) {
         width: 100%;
         font-size: 0.8rem;
         padding: 0.7rem 0.9rem;
+    }
+        /* === Kompakten rezervacijski modal === */
+    .modal .booking-summary-compact {
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 0.6rem;
+    }
+    .modal .booking-summary-compact .bs-court {
+        font-size: 1rem;
+    }
+    .modal .booking-summary-compact .bs-date {
+        font-size: 0.7rem;
+    }
+    .modal .booking-summary-compact .bs-time {
+        font-size: 1.3rem;
+    }
+    .modal .form-group {
+        margin-bottom: 0.55rem;
+    }
+    .modal .form-group label {
+        font-size: 0.72rem;
+        margin-bottom: 0.2rem;
+    }
+    .modal .payment-methods {
+        gap: 0.35rem;
+        margin: 0.4rem 0;
+    }
+    .modal .payment-option {
+        padding: 0.5rem 0.7rem;
+        gap: 0.5rem;
+    }
+    .modal .payment-option .pay-title {
+        font-size: 0.78rem;
+    }
+    .modal .payment-option .pay-desc {
+        font-size: 0.65rem;
+    }
+    .modal .payment-option .pay-price {
+        font-size: 0.82rem;
+    }
+    .modal .booking-cost {
+        padding: 0.6rem 0.8rem;
+        margin: 0.6rem 0;
+    }
+    .modal .booking-cost .cost-value {
+        font-size: 1.1rem;
+    }
+    .modal .booking-cost .cost-hint {
+        font-size: 0.6rem;
+    }
+    .modal .booking-cost .cost-hint strong {
+        font-size: 0.68rem;
+    }
+    .modal button[type="submit"] {
+        margin-top: 0.5rem;
+        padding: 0.75rem 1rem;
     }
 }
     </style>
@@ -2064,15 +2149,16 @@ function showBookingModal(igrisce, uraZacetka) {
         </div>
     ` : '';
 
-    modalRoot.innerHTML = `
+        modalRoot.innerHTML = `
         <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
             <div class="modal" style="max-width:520px;">
                 <button class="modal-close" onclick="closeModal()">✕</button>
-                <h2>Rezervacija termina</h2>
-                <div class="booking-summary">
-                    <div class="court-num">Igrišče ${igrisce}</div>
-                    <div class="time-range">${String(uraZacetka).padStart(2, '0')}:00</div>
-                    <div class="date-info">${dateDisplayStr}</div>
+                <div class="booking-summary-compact">
+                    <div class="bs-left">
+                        <div class="bs-court">Igrišče ${igrisce}</div>
+                        <div class="bs-date">${dateDisplayStr}</div>
+                    </div>
+                    <div class="bs-time">${String(uraZacetka).padStart(2, '0')}:00</div>
                 </div>
                 <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
                     <div class="form-group">
