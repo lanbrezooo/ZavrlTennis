@@ -3896,16 +3896,16 @@ if (window.matchMedia('(max-width: 768px)').matches) {
 
         // Počakaj, da se tipkovnica odpre in --app-height posodobi
         setTimeout(() => {
-            // Scrollaj SAMO modal (ne viewporta)
             const targetRect = target.getBoundingClientRect();
             const modalRect = modal.getBoundingClientRect();
             const padding = 24;
 
+            // Polje je pod vidnim območjem modala → scrollaj navzdol
             if (targetRect.bottom > modalRect.bottom - padding) {
-                // Polje je pod vidnim območjem modala
                 modal.scrollTop += targetRect.bottom - modalRect.bottom + padding;
-            } else if (targetRect.top < modalRect.top + padding) {
-                // Polje je nad vidnim območjem modala
+            }
+            // Polje je nad vidnim območjem modala → scrollaj navzgor
+            else if (targetRect.top < modalRect.top + padding) {
                 modal.scrollTop -= modalRect.top - targetRect.top + padding;
             }
         }, 300);
