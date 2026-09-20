@@ -676,17 +676,23 @@
         .legend-dot.past { background: #f5f5f5; }
 
         .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
-            z-index: 200; animation: fadeIn 0.2s ease; padding: 1rem;
-        }
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
+    z-index: 200; animation: fadeIn 0.2s ease; padding: 1rem;
+    height: var(--app-height, 100vh);
+}
+body:has(.modal-overlay) {
+    overflow: hidden;
+}
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .modal {
-            background: white; border-radius: var(--radius); padding: 2rem; max-width: 520px;
-            width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg);
-            animation: slideUp 0.3s ease; position: relative;
-        }
+    background: white; border-radius: var(--radius); padding: 2rem; max-width: 520px;
+    width: 100%; max-height: calc(var(--app-height, 100vh) - 2rem); overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.3s ease; position: relative;
+    overscroll-behavior: contain;
+}
         .modal-close {
             position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px;
             border-radius: 50%; border: none; background: #f5f5f5; cursor: pointer; font-size: 1.2rem;
@@ -1004,7 +1010,6 @@
     .modal {
         padding: 1rem;
         padding-bottom: 0;
-        max-height: calc(100dvh - 1rem - env(safe-area-inset-bottom, 0px));
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
     }
@@ -3872,6 +3877,27 @@ window.checkPaymentReturn = async function() {
 
 // Ob inicializaciji admin panela naloži tudi novice
 // V funkciji toggleAdminPanel dodaj klic loadAdminNovice();
+// Ob inicializaciji admin panela naloži tudi novice
+// V funkciji toggleAdminPanel dodaj klic loadAdminNovice();
+
+// ===== Pravilna višina viewporta na mobilnih napravah =====
+(function() {
+    function setAppHeight() {
+        const vv = window.visualViewport;
+        const height = vv ? vv.height : window.innerHeight;
+        document.documentElement.style.setProperty('--app-height', height + 'px');
+    }
+    setAppHeight();
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', setAppHeight);
+        window.visualViewport.addEventListener('scroll', setAppHeight);
+    }
+    window.addEventListener('resize', setAppHeight);
+    window.addEventListener('orientationchange', setAppHeight);
+    document.addEventListener('focusin', setAppHeight);
+    document.addEventListener('focusout', () => setTimeout(setAppHeight, 100));
+})();
+    </script>
     </script>
 </body>
 </html>
