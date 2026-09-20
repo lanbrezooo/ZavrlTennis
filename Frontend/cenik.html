@@ -9,6 +9,10 @@
     <style>
         :root { --primary:#1a5632; --primary-dark:#0e3a20; --accent:#fdd835; --bg:#f0f4f0; --text:#1a1a1a; --text-light:#555; --white:#fff; --shadow:0 4px 24px rgba(0,0,0,0.08); --shadow-lg:0 8px 40px rgba(0,0,0,0.12); --radius:16px; }
         * { margin:0; padding:0; box-sizing:border-box; }
+        html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+}
         body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
         .header { position:fixed; top:0; left:0; right:0; z-index:1000; background:rgba(255,255,255,0.95); backdrop-filter:blur(10px); box-shadow:0 2px 20px rgba(0,0,0,0.08); padding:1rem 2rem; display:flex; justify-content:space-between; align-items:center; }
         .logo { display:flex; align-items:center; gap:0.8rem; text-decoration:none; color:var(--primary-dark); font-weight:800; font-size:1.3rem; }

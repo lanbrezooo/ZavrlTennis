@@ -31,6 +31,10 @@
             --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+}
         body {
             font-family: var(--font);
             background: var(--bg);
@@ -850,7 +854,13 @@ body:has(.modal-overlay) {
         justify-content: center;
         align-items: center;
         width: 100%;
+        max-width: 100%;              /* ← DODANO */
+        overflow-x: auto;             /* ← DODANO */
+        scrollbar-width: none;        /* ← DODANO */
     }
+    .header-actions::-webkit-scrollbar {  /* ← DODANO */
+        display: none;                     /* ← DODANO */
+    }        
 
     /* WhatsApp ikona */
     .header-whatsapp {
@@ -3874,29 +3884,37 @@ window.checkPaymentReturn = async function() {
         window.history.replaceState({}, '', window.location.pathname);
     }
 };
-// ===== Samodejni scroll na fokus (samo mobilno) =====
+// ===== Samodejni scroll notranjosti modala na fokus (samo mobilno) =====
 if (window.matchMedia('(max-width: 768px)').matches) {
     document.addEventListener('focusin', (e) => {
         const target = e.target;
         if (!target) return;
         const tag = target.tagName;
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return;
-        if (!target.closest('.modal')) return;
+        const modal = target.closest('.modal');
+        if (!modal) return;
 
+        // Počakaj, da se tipkovnica odpre in --app-height posodobi
         setTimeout(() => {
-            try {
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } catch (_) {
-                target.scrollIntoView(false);
+            // Scrollaj SAMO modal (ne viewporta)
+            const targetRect = target.getBoundingClientRect();
+            const modalRect = modal.getBoundingClientRect();
+            const padding = 24;
+
+            if (targetRect.bottom > modalRect.bottom - padding) {
+                // Polje je pod vidnim območjem modala
+                modal.scrollTop += targetRect.bottom - modalRect.bottom + padding;
+            } else if (targetRect.top < modalRect.top + padding) {
+                // Polje je nad vidnim območjem modala
+                modal.scrollTop -= modalRect.top - targetRect.top + padding;
             }
-        }, 250);
+        }, 300);
     });
 }
 
 // Ob inicializaciji admin panela naloži tudi novice
 // V funkciji toggleAdminPanel dodaj klic loadAdminNovice();
-// Ob inicializaciji admin panela naloži tudi novice
-// V funkciji toggleAdminPanel dodaj klic loadAdminNovice();
+
 
 // ===== Pravilna višina viewporta na mobilnih napravah =====
 (function() {
@@ -3915,7 +3933,7 @@ if (window.matchMedia('(max-width: 768px)').matches) {
     document.addEventListener('focusin', setAppHeight);
     document.addEventListener('focusout', () => setTimeout(setAppHeight, 100));
 })();
-    </script>
+    
     </script>
 </body>
 </html>
