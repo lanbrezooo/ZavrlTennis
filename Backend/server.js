@@ -40,12 +40,57 @@ app.post('/api/payments/webhook',
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const userId = Number(session.metadata.userId);
-      const credits = Number(session.metadata.credits);
-      try {
-        await pool.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?', [credits, userId]);
-        console.log(`✓ Uporabnik ${userId} prejel ${credits} kreditov`);
-      } catch (err) {
-        console.error('DB napaka pri webhooku:', err.message);
+      const type = session.metadata.type || 'credits';
+
+      if (type === 'reservation') {
+        // Plačilo rezervacije s kartico
+        const igrisce = Number(session.metadata.igrisce);
+        const datum = session.metadata.datum;
+        const uraZacetka = Number(session.metadata.ura_zacetka);
+        const trajanje = Number(session.metadata.trajanje);
+        const oznaka = session.metadata.oznaka || null;
+
+        const conn = await pool.getConnection();
+        try {
+          await conn.beginTransaction();
+
+          // Preveri ponovno (mogoče je bil termin v vmesnem času zaseden)
+          const [conflicts] = await conn.query(
+            `SELECT id FROM rezervacije
+             WHERE igrisce=? AND datum=? AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
+             AND preklicano = 0 FOR UPDATE`,
+            [igrisce, datum, uraZacetka + trajanje, uraZacetka]
+          );
+          if (conflicts.length) {
+            console.error(`Webhook: termin ${igrisce}/${datum}/${uraZacetka} je v vmesnem času postal zaseden!`);
+            await conn.rollback();
+            return res.json({ received: true, conflict: true });
+          }
+
+          await conn.query(
+            `INSERT INTO rezervacije 
+             (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka)
+             VALUES (?, ?, ?, ?, ?, 0, 0, ?)`,
+            [userId, igrisce, datum, uraZacetka, trajanje, oznaka]
+          );
+
+          await conn.commit();
+          console.log(`✓ Rezervacija s kartico: uporabnik ${userId}, igrišče ${igrisce}, ${datum} ob ${uraZacetka}:00 (${trajanje}h)`);
+        } catch (err) {
+          await conn.rollback();
+          console.error('Webhook reservation DB napaka:', err.message);
+        } finally {
+          conn.release();
+        }
+      } else {
+        // Plačilo kreditov
+        const credits = Number(session.metadata.credits);
+        try {
+          await pool.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?', [credits, userId]);
+          console.log(`✓ Uporabnik ${userId} prejel ${credits} kreditov`);
+        } catch (err) {
+          console.error('DB napaka pri webhooku:', err.message);
+        }
       }
     }
     res.json({ received: true });
@@ -717,6 +762,90 @@ app.put('/api/admin/nastavitve/:kljuc', requireAuth, requireAdmin, async (req, r
 });
 app.use('/api/admin', admin);
 
+// ===== STRIPE – REZERVACIJA S KARTICO =====
+app.post('/api/payments/create-reservation-checkout-session', requireAuth, async (req, res) => {
+  const igrisce = Number(req.body.igrisce);
+  const uraZacetka = Number(req.body.ura_zacetka);
+  const trajanje = Number(req.body.trajanje);
+  const datum = String(req.body.datum || '');
+  const oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : null;
+
+  // Validacija
+  if (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > 9)
+    return res.status(400).json({ message: 'Neveljavno igrišče' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datum))
+    return res.status(400).json({ message: 'Neveljaven datum' });
+  if (!Number.isInteger(uraZacetka) || uraZacetka < 8 || uraZacetka >= 22)
+    return res.status(400).json({ message: 'Neveljavna ura' });
+  if (!Number.isInteger(trajanje) || trajanje < 1 || uraZacetka + trajanje > 22)
+    return res.status(400).json({ message: 'Neveljavno trajanje' });
+
+  // Preveri, ali je termin že zaseden
+  const [conflicts] = await pool.query(
+    `SELECT id FROM rezervacije
+     WHERE igrisce=? AND datum=? AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
+     AND preklicano = 0`,
+    [igrisce, datum, uraZacetka + trajanje, uraZacetka]
+  );
+  if (conflicts.length) return res.status(409).json({ message: 'Termin je že zaseden' });
+
+  // Preberi sezono in izračunaj ceno
+  const [sezRows] = await pool.query('SELECT vrednost FROM nastavitve WHERE kljuc = "sezona"');
+  const sezona = sezRows.length ? sezRows[0].vrednost : 'poletje';
+  const isWinter = String(sezona || '').toLowerCase().trim() === 'zima';
+
+  let credits;
+  if (isWinter && (igrisce === 7 || igrisce === 8)) {
+    credits = 2.5 * trajanje;
+  } else {
+    credits = 0;
+    for (let h = uraZacetka; h < uraZacetka + trajanje; h++) {
+      credits += h < 12 ? 1 : 2;
+    }
+  }
+  const price = credits * 10; // 1 kredit = 10 €
+
+  // Format datuma za prikaz (npr. "Sob, 20. sep 2026")
+  const d = new Date(datum + 'T00:00:00');
+  const dayNames = ['Ned', 'Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob'];
+  const monthNames = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec'];
+  const dateLabel = `${dayNames[d.getDay()]}, ${d.getDate()}. ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+  const timeLabel = `${String(uraZacetka).padStart(2, '0')}:00–${String(uraZacetka + trajanje).padStart(2, '0')}:00`;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      customer_email: req.user.email,
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: `Rezervacija igrišča ${igrisce}`,
+            description: `${dateLabel} ob ${timeLabel} (${trajanje}h) – Zavrl Tennis Team`
+          },
+          unit_amount: Math.round(price * 100)
+        },
+        quantity: 1
+      }],
+      success_url: `${process.env.FRONTEND_URL}/app?payment=success`,
+      cancel_url: `${process.env.FRONTEND_URL}/app?payment=cancel`,
+      metadata: {
+        type: 'reservation',
+        userId: String(req.user.id),
+        igrisce: String(igrisce),
+        datum,
+        ura_zacetka: String(uraZacetka),
+        trajanje: String(trajanje),
+        oznaka: oznaka || ''
+      }
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('stripe reservation session', err.message);
+    res.status(500).json({ message: 'Napaka pri pripravi plačila' });
+  }
+});
 
 // ===== STRIPE – USTVARI CHECKOUT SESSION =====
 app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) => {
@@ -747,11 +876,13 @@ app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) 
         price_data: {
           currency: 'eur',
           product_data: {
-            name: credits === 10 
-              ? `Paket 10 kreditov (prihranek 20 €)`
-              : `${creditsLabel} ${credits === 0.5 ? 'kredita' : (credits === 1 ? 'kredit' : 'kreditov')}`,
-            description: 'Zavrl Tennis Team – nakup kreditov'
-          },
+    name: credits === 10 
+        ? `Paket 10 kreditov – Zavrl Tennis Team`
+        : `Nakup ${creditsLabel} ${credits === 0.5 ? 'kredita' : (credits === 1 ? 'kredit' : 'kreditov')} – Zavrl Tennis Team`,
+    description: credits === 10
+        ? `Prihranek 20 € – krediti za rezervacijo teniških igrišč (1 kredit = 10 €)`
+        : `Krediti za rezervacijo teniških igrišč (1 kredit = 10 €)`
+},
           unit_amount: Math.round(computedPrice * 100)
         },
         quantity: 1

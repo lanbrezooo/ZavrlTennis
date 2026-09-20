@@ -556,6 +556,108 @@
         .annual-option input { width:auto; accent-color:var(--primary); }
         .annual-option.locked { opacity:.6; background:#f3f3f3; }
         .booking-cost { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1rem; border-radius:12px; background:#edf7ef; border:1px solid #cde5d1; margin:1rem 0; }
+        /* Plačilne metode */
+.payment-methods {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+}
+.payment-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: #fafafa;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.payment-option:hover {
+    border-color: var(--primary-light);
+    background: var(--hover);
+}
+.payment-option.selected,
+.payment-option:has(input:checked) {
+    border-color: var(--primary);
+    background: #e8f5e9;
+    box-shadow: 0 0 0 3px rgba(26,86,50,0.1);
+}
+.payment-option input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary);
+    margin: 0;
+    flex-shrink: 0;
+}
+.payment-option .pay-info {
+    flex: 1;
+    min-width: 0;
+}
+.payment-option .pay-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text);
+    line-height: 1.2;
+}
+.payment-option .pay-desc {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 0.1rem;
+}
+.payment-option .pay-price {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--primary-dark);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.payment-option.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f3f3f3;
+}
+
+/* Booking cost – izboljšan */
+.booking-cost {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    background: #edf7ef;
+    border: 1px solid #cde5d1;
+    margin: 1rem 0;
+}
+.booking-cost .cost-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+.booking-cost .cost-label {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.booking-cost .cost-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    line-height: 1.1;
+}
+.booking-cost .cost-hint {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    text-align: right;
+    line-height: 1.3;
+}
+.booking-cost .cost-hint strong {
+    color: var(--primary);
+    display: block;
+    font-size: 0.8rem;
+}
         .booking-cost strong { font-size:1.35rem; color:var(--primary-dark); }
         .site-footer { margin-top:2rem; padding:1.5rem; background:var(--primary-dark); color:white; border-radius:var(--radius) var(--radius) 0 0; }
         .footer-inner { max-width:1400px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; gap:1.5rem; flex-wrap:wrap; }
@@ -1890,118 +1992,197 @@ function goToAdminReservationsPage(page) {
         };
 
         // BOOKING MODAL
-        function showBookingModal(igrisce, uraZacetka) {
-            const dateStr = formatDate(state.selectedDate);
-            const dateDisplayStr = formatDateShort(dateStr);
-            const endHour = Number(state.zapiralnaUra) || 22;
-            const maxDuration = endHour - uraZacetka;
-            const isAdmin = state.user?.admin === true;
-            const maxSelectableDuration = isAdmin ? maxDuration : Math.min(maxDuration, 3);
+        // BOOKING MODAL
+function showBookingModal(igrisce, uraZacetka) {
+    const dateStr = formatDate(state.selectedDate);
+    const dateDisplayStr = formatDateShort(dateStr);
+    const endHour = Number(state.zapiralnaUra) || 22;
+    const maxDuration = endHour - uraZacetka;
+    const isAdmin = state.user?.admin === true;
+    const maxSelectableDuration = isAdmin ? maxDuration : Math.min(maxDuration, 3);
 
-            let availableDurations = [];
-            for (let d = 1; d <= maxSelectableDuration; d++) {
-                const isFree = !state.reservations.some(r => r.igrisce === igrisce && r.ura_zacetka >= uraZacetka && r.ura_zacetka < uraZacetka + d);
-                if (isFree) availableDurations.push(d);
-            }
-            if (availableDurations.length === 0) availableDurations = [1];
+    let availableDurations = [];
+    for (let d = 1; d <= maxSelectableDuration; d++) {
+        const isFree = !state.reservations.some(r => r.igrisce === igrisce && r.ura_zacetka >= uraZacetka && r.ura_zacetka < uraZacetka + d);
+        if (isFree) availableDurations.push(d);
+    }
+    if (availableDurations.length === 0) availableDurations = [1];
 
-            const durationOptions = availableDurations.map(d => `<option value="${d}">${d} ${d === 1 ? 'ura' : 'uri'} (${String(uraZacetka).padStart(2, '0')}:00 - ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`).join('');
+    const durationOptions = availableDurations.map(d => `<option value="${d}">${d} ${d === 1 ? 'ura' : (d === 2 ? 'uri' : 'ure')} (${String(uraZacetka).padStart(2, '0')}:00 – ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`).join('');
 
-            // Pozimi letna karta ni na voljo navadnim uporabnikom
-const hasAnnualCard = Boolean(state.user?.letna_karta) && (!isWinter() || state.user?.admin);
-            
-            const oznakaField = isAdmin ? `
-                <div class="form-group">
-                    <label>Ime na rezervaciji (neobvezno)</label>
-                    <input type="text" id="bookingOznaka" placeholder="npr. TURNIR" maxlength="100">
+    const hasAnnualCard = Boolean(state.user?.letna_karta) && (!isWinter() || state.user?.admin);
+
+    const oznakaField = isAdmin ? `
+        <div class="form-group">
+            <label>Ime na rezervaciji (neobvezno)</label>
+            <input type="text" id="bookingOznaka" placeholder="npr. TURNIR" maxlength="100">
+        </div>
+    ` : '';
+
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal" style="max-width:520px;">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2>Rezervacija termina</h2>
+                <div class="booking-summary">
+                    <div class="court-num">Igrišče ${igrisce}</div>
+                    <div class="time-range">${String(uraZacetka).padStart(2, '0')}:00</div>
+                    <div class="date-info">${dateDisplayStr}</div>
                 </div>
-            ` : '';
-
-            modalRoot.innerHTML = `
-                <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
-                    <div class="modal" style="max-width:470px;">
-                        <button class="modal-close" onclick="closeModal()">✕</button>
-                        <h2>Rezervacija termina</h2>
-                        <div class="booking-summary">
-                            <div class="court-num">Igrišče ${igrisce}</div>
-                            <div class="time-range">${String(uraZacetka).padStart(2, '0')}:00</div>
-                            <div class="date-info">${dateDisplayStr}</div>
-                        </div>
-                        <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
-                            <div class="form-group">
-                                <label>Trajanje rezervacije</label>
-                                <select name="trajanje" onchange="updateBookingCost(${uraZacetka}, ${igrisce})">${durationOptions}</select>
-                            </div>
-                            ${oznakaField}
-                            
-                            <div class="annual-option ${hasAnnualCard ? '' : 'locked'}">
-                                <label style="display:flex; align-items:center; gap:0.65rem; margin:0; cursor:${hasAnnualCard ? 'pointer' : 'not-allowed'};">
-                                    <input type="checkbox" name="useAnnualCard" 
-                                        ${hasAnnualCard ? 'checked' : ''} 
-                                        ${hasAnnualCard ? 'onchange="updateBookingCost('+uraZacetka+', '+igrisce+')"' : 'disabled'}
-                                        style="width:auto; margin:0; accent-color:var(--primary);">
-                                    <span>Uporabi sezonsko karto</span>
-                                </label>
-                            </div>
-                            <div class="booking-cost"><span id="bookingCostLabel">Cena rezervacije</span><strong id="bookingCostValue">—</strong></div>
-                            <div class="form-error" id="bookingError"></div>
-                            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Potrdi rezervacijo</button>
-                        </form>
+                <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
+                    <div class="form-group">
+                        <label>Trajanje rezervacije</label>
+                        <select name="trajanje" onchange="updateBookingCost(${uraZacetka}, ${igrisce})">${durationOptions}</select>
                     </div>
-                </div>
-            `;
-            updateBookingCost(uraZacetka, igrisce);
-        }
+                    ${oznakaField}
+
+                    <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-light); margin-bottom:0.35rem;">Način plačila</label>
+                    <div class="payment-methods" id="paymentMethods">
+                        ${hasAnnualCard ? `
+                            <label class="payment-option">
+                                <input type="radio" name="paymentMethod" value="annual" onchange="updateBookingCost(${uraZacetka}, ${igrisce})">
+                                <div class="pay-info">
+                                    <div class="pay-title">🎫 Uporabi sezonsko karto</div>
+                                    <div class="pay-desc">Brez porabe kreditov</div>
+                                </div>
+                                <div class="pay-price">0 €</div>
+                            </label>
+                        ` : ''}
+                        <label class="payment-option">
+                            <input type="radio" name="paymentMethod" value="credits" checked onchange="updateBookingCost(${uraZacetka}, ${igrisce})">
+                            <div class="pay-info">
+                                <div class="pay-title">💰 Uporabi kredite</div>
+                                <div class="pay-desc">Odšteje se od stanja kreditov</div>
+                            </div>
+                            <div class="pay-price" id="priceCredits">—</div>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="paymentMethod" value="card" onchange="updateBookingCost(${uraZacetka}, ${igrisce})">
+                            <div class="pay-info">
+                                <div class="pay-title">💳 Plačilo z kartico (enkratno)</div>
+                                <div class="pay-desc">Varno plačilo prek Stripe</div>
+                            </div>
+                            <div class="pay-price" id="priceCard">—</div>
+                        </label>
+                    </div>
+
+                    <div class="booking-cost">
+                        <div class="cost-left">
+                            <span class="cost-label" id="bookingCostLabel">Skupaj za plačilo</span>
+                            <span class="cost-value" id="bookingCostValue">—</span>
+                        </div>
+                        <div class="cost-hint">
+                            <strong>1 kredit = 10 €</strong>
+                            ${isWinter() ? 'Pozimi velja 2.5 kredita/uro za balon' : ''}
+                        </div>
+                    </div>
+
+                    <div class="form-error" id="bookingError"></div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="bookingSubmitBtn">Potrdi rezervacijo</button>
+                </form>
+            </div>
+        </div>
+    `;
+
+    updateBookingCost(uraZacetka, igrisce);
+}
 
       window.updateBookingCost = function(uraZacetka, igrisce) {
     const form = document.getElementById('bookingForm'); if (!form) return;
     const duration = Number(form.elements.trajanje.value);
-    const annual = Boolean(form.elements.useAnnualCard?.checked);
-    const cost = annual ? 0 : calculateReservationCreditsSeason(uraZacetka, duration, Number(igrisce));
-    const value = document.getElementById('bookingCostValue');
-    const label = document.getElementById('bookingCostLabel');
-
-    // Prikaz: 2 ali 2.5 (brez "2.50")
-    const formattedCost = cost % 1 === 0 ? cost.toFixed(0) : cost.toFixed(1);
-
-    value.textContent = annual ? '0 kreditov' : `${formattedCost} ${cost === 1 ? 'kredit' : 'kreditov'}`;
-    label.textContent = annual ? 'Sezonska karta uporabljena' : 'Cena rezervacije';
-
+    const method = form.elements.paymentMethod?.value || 'credits';
+    
+    const credits = calculateReservationCreditsSeason(uraZacetka, duration, Number(igrisce));
+    const eurValue = credits * 10;
+    
+    const creditsEl = document.getElementById('priceCredits');
+    const cardEl = document.getElementById('priceCard');
+    const valueEl = document.getElementById('bookingCostValue');
+    const labelEl = document.getElementById('bookingCostLabel');
+    const submitBtn = document.getElementById('bookingSubmitBtn');
     const errorEl = document.getElementById('bookingError');
-    if (!annual && state.user && Number(state.user.krediti || 0) < cost) {
-        errorEl.textContent = `Nimate dovolj kreditov. Potrebujete ${formattedCost}, na voljo imate ${state.user.krediti || 0}.`;
-    } else {
+    
+    if (creditsEl) creditsEl.textContent = `${credits.toFixed(credits % 1 === 0 ? 0 : 1)} ${credits === 1 ? 'kredit' : (credits === 2 ? 'kredita' : 'kreditov')}`;
+    if (cardEl) cardEl.textContent = `${eurValue.toFixed(0)} €`;
+    
+    // Preveri stanje kreditov
+    const userCredits = Number(state.user?.krediti || 0);
+    const hasEnoughCredits = userCredits >= credits;
+    
+    if (method === 'annual') {
+        valueEl.textContent = '0 €';
+        labelEl.textContent = 'Sezonska karta';
+        submitBtn.textContent = 'Potrdi rezervacijo';
+        errorEl.textContent = '';
+    } else if (method === 'credits') {
+        valueEl.textContent = `${credits.toFixed(credits % 1 === 0 ? 0 : 1)} ${credits === 1 ? 'kredit' : (credits === 2 ? 'kredita' : 'kreditov')}`;
+        labelEl.textContent = 'Skupaj za plačilo';
+        submitBtn.textContent = 'Potrdi rezervacijo';
+        if (!hasEnoughCredits) {
+            errorEl.textContent = `Nimate dovolj kreditov. Potrebujete ${credits}, na voljo imate ${userCredits}.`;
+        } else {
+            errorEl.textContent = '';
+        }
+    } else if (method === 'card') {
+        valueEl.textContent = `${eurValue.toFixed(0)} €`;
+        labelEl.textContent = 'Skupaj za plačilo';
+        submitBtn.textContent = '💳 Nadaljuj na plačilo';
         errorEl.textContent = '';
     }
 };
 
         window.handleBooking = async function(e, igrisce, uraZacetka) {
-            e.preventDefault();
-            const form = e.target;
-            const trajanje = parseInt(new FormData(form).get('trajanje'));
-            const useAnnualCard = Boolean(form.elements.useAnnualCard?.checked && state.user?.letna_karta);
-            const cost = useAnnualCard ? 0 : calculateReservationCreditsSeason(uraZacetka, trajanje, igrisce);
-            const errorEl = document.getElementById('bookingError');
-            errorEl.textContent = '';
+    e.preventDefault();
+    const form = e.target;
+    const trajanje = parseInt(new FormData(form).get('trajanje'));
+    const method = form.elements.paymentMethod?.value || 'credits';
+    const errorEl = document.getElementById('bookingError');
+    errorEl.textContent = '';
 
-            const oznakaInput = document.getElementById('bookingOznaka');
-            const oznaka = oznakaInput ? oznakaInput.value.trim() : null;
+    const oznakaInput = document.getElementById('bookingOznaka');
+    const oznaka = oznakaInput ? oznakaInput.value.trim() : null;
 
-            if (!useAnnualCard && (!state.user || Number(state.user.krediti || 0) < cost)) {
-                errorEl.textContent = `Za rezervacijo potrebujete ${cost} kredit${cost === 1 ? '' : 'ov'}.`;
+    const dateStr = formatDate(state.selectedDate);
+
+    // 1) Plačilo s kartico → Stripe
+    if (method === 'card') {
+        const submitBtn = document.getElementById('bookingSubmitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Preusmerjam na plačilo...';
+        try {
+            const data = await apiCall('/payments/create-reservation-checkout-session', 'POST', {
+                igrisce, datum: dateStr, ura_zacetka: uraZacetka, trajanje, oznaka
+            });
+            if (data.url) {
+                window.location.href = data.url;
                 return;
             }
+            errorEl.textContent = 'Napaka pri pripravi plačila.';
+        } catch (err) {
+            errorEl.textContent = err.message || 'Napaka pri plačilu.';
+        }
+        submitBtn.disabled = false;
+        submitBtn.textContent = '💳 Nadaljuj na plačilo';
+        return;
+    }
 
-            const dateStr = formatDate(state.selectedDate);
-            try {
-                const data = await createReservation(igrisce, dateStr, uraZacetka, trajanje, useAnnualCard, oznaka);
-                if (state.user && Number.isFinite(Number(data.remainingCredits))) state.user.krediti = Number(data.remainingCredits);
-                renderCreditsLegend(); renderHeader();
-                showToast(useAnnualCard ? 'Rezervacija uspešno ustvarjena z letno karto!' : `Rezervacija uspešna. Porabljeno: ${data.creditsCharged} kreditov.`, 'success');
-                closeModal(); await refreshView();
-            } catch (err) { errorEl.textContent = err.message; }
-        };
+    // 2) Uporaba sezonske karte ali kreditov → takojšnja rezervacija
+    const useAnnualCard = method === 'annual' && state.user?.letna_karta;
+    const cost = useAnnualCard ? 0 : calculateReservationCreditsSeason(uraZacetka, trajanje, igrisce);
 
+    if (!useAnnualCard && (!state.user || Number(state.user.krediti || 0) < cost)) {
+        errorEl.textContent = `Za rezervacijo potrebujete ${cost} kredit${cost === 1 ? '' : 'ov'}.`;
+        return;
+    }
+
+    try {
+        const data = await createReservation(igrisce, dateStr, uraZacetka, trajanje, useAnnualCard, oznaka);
+        if (state.user && Number.isFinite(Number(data.remainingCredits))) state.user.krediti = Number(data.remainingCredits);
+        renderCreditsLegend(); renderHeader();
+        showToast(useAnnualCard ? 'Rezervacija uspešna s sezonsko karto!' : `Rezervacija uspešna. Porabljeno: ${data.creditsCharged} kreditov.`, 'success');
+        closeModal(); await refreshView();
+    } catch (err) { errorEl.textContent = err.message; }
+};
         function showDeleteModal(reservation) {
             // ⬇️ NOVO: preveri, ali je dovoljeno preklicati
     if (!canUserCancelReservation(reservation)) {
