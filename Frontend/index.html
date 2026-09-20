@@ -668,6 +668,45 @@
     display: block;
     font-size: 0.8rem;
 }
+/* Kompakten povzetek v rezervacijskem modalu */
+.booking-summary-compact {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 1.25rem;
+    background: linear-gradient(135deg, #f0f7f1 0%, #e8f5e9 100%);
+    border: 1px solid #cde5d1;
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 2px 8px rgba(26,86,50,0.06);
+}
+.booking-summary-compact .bs-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+.booking-summary-compact .bs-court {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+}
+.booking-summary-compact .bs-date {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+.booking-summary-compact .bs-time {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary-dark);
+    line-height: 1;
+    white-space: nowrap;
+    letter-spacing: -1px;
+}
         .booking-cost strong { font-size:1.35rem; color:var(--primary-dark); }
         .site-footer { margin-top:2rem; padding:1.5rem; background:var(--primary-dark); color:white; border-radius:var(--radius) var(--radius) 0 0; }
         .footer-inner { max-width:1400px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; gap:1.5rem; flex-wrap:wrap; }
@@ -1045,36 +1084,7 @@ body:has(.modal-overlay) {
     .booking-summary {
         padding: 0.5rem;
     }
-    /* Kompakten povzetek v rezervacijskem modalu */
-.booking-summary-compact {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    background: #f0f7f1;
-    border: 1px solid #cde5d1;
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-}
-.booking-summary-compact .bs-court {
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: var(--primary);
-    line-height: 1.1;
-}
-.booking-summary-compact .bs-date {
-    font-size: 0.78rem;
-    color: var(--text-light);
-    margin-top: 0.15rem;
-}
-.booking-summary-compact .bs-time {
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: var(--primary-dark);
-    line-height: 1;
-    white-space: nowrap;
-}
+
     .res-list {
         flex-direction: column;
     }
