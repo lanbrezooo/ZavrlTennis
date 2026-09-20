@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- Favicon (emoji) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎾</text></svg>">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>Zavrl Tennis Team - Rezervacije</title>
     <style>
         :root {
@@ -29,6 +29,8 @@
             --radius-sm: 8px;
             --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            --app-height: 100vh;
+            --keyboard-height: 0px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -684,6 +686,7 @@
     backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
     z-index: 200; animation: fadeIn 0.2s ease; padding: 1rem;
     height: var(--app-height, 100vh);
+    padding-bottom: calc(1rem + var(--keyboard-height, 0px));
 }
 body:has(.modal-overlay) {
     overflow: hidden;
@@ -692,7 +695,8 @@ body:has(.modal-overlay) {
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .modal {
     background: white; border-radius: var(--radius); padding: 2rem; max-width: 520px;
-    width: 100%; max-height: calc(var(--app-height, 100vh) - 2rem); overflow-y: auto;
+    width: 100%; max-height: calc(var(--app-height, 100vh) - 2rem - var(--keyboard-height, 0px));
+    overflow-y: auto;
     box-shadow: var(--shadow-lg);
     animation: slideUp 0.3s ease; position: relative;
     overscroll-behavior: contain;
@@ -3884,54 +3888,39 @@ window.checkPaymentReturn = async function() {
         window.history.replaceState({}, '', window.location.pathname);
     }
 };
-// ===== Samodejni scroll notranjosti modala na fokus (samo mobilno) =====
-if (window.matchMedia('(max-width: 768px)').matches) {
-    document.addEventListener('focusin', (e) => {
-        const target = e.target;
-        if (!target) return;
-        const tag = target.tagName;
-        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return;
-        const modal = target.closest('.modal');
-        if (!modal) return;
 
-        // Počakaj, da se tipkovnica odpre in --app-height posodobi
-        setTimeout(() => {
-            const targetRect = target.getBoundingClientRect();
-            const modalRect = modal.getBoundingClientRect();
-            const padding = 24;
-
-            // Polje je pod vidnim območjem modala → scrollaj navzdol
-            if (targetRect.bottom > modalRect.bottom - padding) {
-                modal.scrollTop += targetRect.bottom - modalRect.bottom + padding;
-            }
-            // Polje je nad vidnim območjem modala → scrollaj navzgor
-            else if (targetRect.top < modalRect.top + padding) {
-                modal.scrollTop -= modalRect.top - targetRect.top + padding;
-            }
-        }, 300);
-    });
-}
 
 // Ob inicializaciji admin panela naloži tudi novice
 // V funkciji toggleAdminPanel dodaj klic loadAdminNovice();
 
 
-// ===== Pravilna višina viewporta na mobilnih napravah =====
+// ===== Pravilna višina viewporta + višina tipkovnice =====
 (function() {
-    function setAppHeight() {
+    function updateViewport() {
         const vv = window.visualViewport;
-        const height = vv ? vv.height : window.innerHeight;
-        document.documentElement.style.setProperty('--app-height', height + 'px');
+        const fullHeight = window.innerHeight;
+        
+        if (vv) {
+            const appHeight = vv.height;
+            // Višina tipkovnice = razlika med polno in vidno višino
+            const keyboardHeight = Math.max(0, fullHeight - vv.height - (vv.offsetTop || 0));
+            
+            document.documentElement.style.setProperty('--app-height', appHeight + 'px');
+            document.documentElement.style.setProperty('--keyboard-height', keyboardHeight + 'px');
+        } else {
+            document.documentElement.style.setProperty('--app-height', fullHeight + 'px');
+            document.documentElement.style.setProperty('--keyboard-height', '0px');
+        }
     }
-    setAppHeight();
+    
+    updateViewport();
+    
     if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', setAppHeight);
-        window.visualViewport.addEventListener('scroll', setAppHeight);
+        window.visualViewport.addEventListener('resize', updateViewport);
+        window.visualViewport.addEventListener('scroll', updateViewport);
     }
-    window.addEventListener('resize', setAppHeight);
-    window.addEventListener('orientationchange', setAppHeight);
-    document.addEventListener('focusin', setAppHeight);
-    document.addEventListener('focusout', () => setTimeout(setAppHeight, 100));
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('orientationchange', () => setTimeout(updateViewport, 100));
 })();
     
     </script>
