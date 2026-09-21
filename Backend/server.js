@@ -11,6 +11,7 @@ const reservationRoutes = require('./routes/reservations');
 const { requireAuth, requireAdmin } = require('./middleware');
 const { izdajMinimaxRacun } = require('./routes/minimax');
 const app = express();
+app.set('trust proxy', 1);
 const allowedOrigin = process.env.CORS_ORIGIN || '';
 
 app.disable('x-powered-by',1);
