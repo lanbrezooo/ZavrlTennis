@@ -9,6 +9,7 @@ const pool = require('./db');
 const authRoutes = require('./routes/auth');
 const reservationRoutes = require('./routes/reservations');
 const { requireAuth, requireAdmin } = require('./middleware');
+const { izdajMinimaxRacun } = require('./routes/minimax');
 const app = express();
 const allowedOrigin = process.env.CORS_ORIGIN || '';
 
@@ -75,23 +76,117 @@ app.post('/api/payments/webhook',
 );
 
           await conn.commit();
-          console.log(`✓ Rezervacija s kartico: uporabnik ${userId}, igrišče ${igrisce}, ${datum} ob ${uraZacetka}:00 (${trajanje}h)`);
-        } catch (err) {
-          await conn.rollback();
-          console.error('Webhook reservation DB napaka:', err.message);
-        } finally {
-          conn.release();
-        }
+console.log(`✓ Rezervacija s kartico: uporabnik ${userId}, igrišče ${igrisce}, ${datum} ob ${uraZacetka}:00 (${trajanje}h)`);
+
+// ===== DODANO: IZDAJ MINIMAX RAČUN ZA REZERVACIJO =====
+try {
+  const [userRows] = await pool.query(
+    'SELECT id, ime, priimek, email FROM uporabniki WHERE id = ?',
+    [userId]
+  );
+  if (userRows.length) {
+    const user = userRows[0];
+
+    // Preberi sezono za izračun cene
+    const [sezRows] = await pool.query('SELECT vrednost FROM nastavitve WHERE kljuc = "sezona"');
+    const sezona = sezRows.length ? sezRows[0].vrednost : 'poletje';
+    const isWinter = String(sezona || '').toLowerCase().trim() === 'zima';
+
+    let krediti;
+    if (isWinter && (igrisce === 7 || igrisce === 8)) {
+      krediti = 2.5 * trajanje;
+    } else {
+      krediti = trajanje;
+    }
+    const znesek = krediti * 10;
+
+    const dateLabel = new Date(datum + 'T00:00:00').toLocaleDateString('sl-SI');
+    const opis = `Rezervacija igrišča ${igrisce} – ${dateLabel}, ${uraZacetka}:00 (${trajanje}h) – Zavrl Tennis Team`;
+
+    const rezultat = await izdajMinimaxRacun({
+      user,
+      znesek,
+      opis,
+      stripeSessionId: session.id,
+      tip: 'rezervacija'
+    });
+
+    if (rezultat.uspeh) {
+      await pool.query(
+        `INSERT INTO minimax_racuni (user_id, minimax_invoice_id, stripe_session_id, znesek, tip, status)
+         VALUES (?, ?, ?, ?, 'rezervacija', 'izdan')`,
+        [userId, rezultat.invoiceId, session.id, znesek]
+      );
+      console.log(`✓ Minimax račun za rezervacijo izdan: ${rezultat.invoiceId}`);
+    } else {
+      await pool.query(
+        `INSERT INTO minimax_racuni (user_id, minimax_invoice_id, stripe_session_id, znesek, tip, status, napaka)
+         VALUES (?, '', ?, ?, 'rezervacija', 'napaka', ?)`,
+        [userId, session.id, znesek, rezultat.napaka]
+      );
+      console.error(`✗ Napaka pri Minimax računu za rezervacijo: ${rezultat.napaka}`);
+    }
+  }
+} catch (minimaxErr) {
+  console.error('Napaka pri Minimax integraciji za rezervacijo:', minimaxErr.message);
+}
+// ===== KONEC DODANEGA DELA =====
+
+} catch (err) {
+  await conn.rollback();
+  console.error('Webhook reservation DB napaka:', err.message);
+} finally {
+  conn.release();
+}
       } else {
-        // Plačilo kreditov
-        const credits = Number(session.metadata.credits);
-        try {
-          await pool.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?', [credits, userId]);
-          console.log(`✓ Uporabnik ${userId} prejel ${credits} kreditov`);
-        } catch (err) {
-          console.error('DB napaka pri webhooku:', err.message);
+    // Plačilo kreditov
+    const credits = Number(session.metadata.credits);
+    try {
+      await pool.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?', [credits, userId]);
+      console.log(`✓ Uporabnik ${userId} prejel ${credits} kreditov`);
+
+      // ===== DODANO: IZDAJ MINIMAX RAČUN =====
+      const [userRows] = await pool.query(
+        'SELECT id, ime, priimek, email FROM uporabniki WHERE id = ?',
+        [userId]
+      );
+      if (userRows.length) {
+        const user = userRows[0];
+        const znesek = credits === 10 ? 80 : credits * 10;
+        const opis = credits === 10
+          ? 'Paket 10 kreditov – Zavrl Tennis Team'
+          : `Nakup ${credits} kreditov – Zavrl Tennis Team`;
+
+        const rezultat = await izdajMinimaxRacun({
+          user,
+          znesek,
+          opis,
+          stripeSessionId: session.id,
+          tip: 'krediti'
+        });
+
+        if (rezultat.uspeh) {
+          await pool.query(
+            `INSERT INTO minimax_racuni (user_id, minimax_invoice_id, stripe_session_id, znesek, tip, status)
+             VALUES (?, ?, ?, ?, 'krediti', 'izdan')`,
+            [userId, rezultat.invoiceId, session.id, znesek]
+          );
+          console.log(`✓ Minimax račun izdan: ${rezultat.invoiceId}`);
+        } else {
+          await pool.query(
+            `INSERT INTO minimax_racuni (user_id, minimax_invoice_id, stripe_session_id, znesek, tip, status, napaka)
+             VALUES (?, '', ?, ?, 'krediti', 'napaka', ?)`,
+            [userId, session.id, znesek, rezultat.napaka]
+          );
+          console.error(`✗ Napaka pri Minimax računu: ${rezultat.napaka}`);
         }
       }
+      // ===== KONEC DODANEGA DELA =====
+
+    } catch (err) {
+      console.error('DB napaka pri webhooku:', err.message);
+    }
+}
     }
     res.json({ received: true });
   }
