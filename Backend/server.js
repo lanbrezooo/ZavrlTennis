@@ -474,11 +474,12 @@ app.post('/api/admin/block', requireAuth, requireAdmin, async (req, res) => {
           [ig, datum, ura + trajanje, ura]
         );
       }
-      // Ustvari novo blokado
+      
+            // Ustvari novo blokado
       await conn.query(
         `INSERT INTO rezervacije 
-         (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka, blokada)
-         VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1)`,
+         (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka, blokada, placilo_status)
+         VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1, 'placano')`,
         [req.user.id, ig, datum, ura, trajanje, oznaka]
       );
     }
@@ -940,10 +941,10 @@ app.post('/api/admin/period-block', requireAuth, requireAdmin, async (req, res) 
           );
         }
 
-        await conn.query(
+                await conn.query(
           `INSERT INTO rezervacije 
-           (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka, blokada)
-           VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1)`,
+           (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka, blokada, placilo_status)
+           VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1, 'placano')`,
           [req.user.id, ig, datumStr, uraZacetka, trajanje, oznaka]
         );
         totalBlocks++;

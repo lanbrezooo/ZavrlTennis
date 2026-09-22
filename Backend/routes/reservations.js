@@ -29,19 +29,24 @@ router.get('/', async (req, res) => {
     );
 
     const [rows] = await pool.query(
-      `SELECT r.id, r.user_id, r.igrisce,
-              DATE_FORMAT(r.datum, '%Y-%m-%d') AS datum,
-              r.ura_zacetka, r.trajanje, r.oznaka, r.blokada,
-              u.ime, u.priimek, u.prikazi_telefon
-       FROM rezervacije r
-       JOIN uporabniki u ON u.id = r.user_id
-       WHERE r.datum = ?
-         AND r.preklicano = 0
-         AND (r.placilo_status IS NULL OR r.placilo_status IN ('pending','placano'))
+  `SELECT r.id, r.user_id, r.igrisce,
+          DATE_FORMAT(r.datum, '%Y-%m-%d') AS datum,
+          r.ura_zacetka, r.trajanje, r.oznaka, r.blokada,
+          u.ime, u.priimek, u.prikazi_telefon
+   FROM rezervacije r
+   JOIN uporabniki u ON u.id = r.user_id
+   WHERE r.datum = ?
+     AND r.preklicano = 0
+     AND (
+       r.blokada = 1
+       OR (
+         (r.placilo_status IS NULL OR r.placilo_status IN ('pending','placano'))
          AND (r.hold_expires_at IS NULL OR r.hold_expires_at > NOW())
-       ORDER BY r.igrisce, r.ura_zacetka`,
-      [date]
-    );
+       )
+     )
+   ORDER BY r.igrisce, r.ura_zacetka`,
+  [date]
+);
 
     res.json({ reservations: rows });
   } catch (err) {
@@ -55,7 +60,7 @@ router.post('/', requireAuth, async (req, res) => {
   const ura = Number(req.body.ura_zacetka);
   const trajanje = Number(req.body.trajanje);
   const datum = String(req.body.datum || '');
-  const useAnnualCard = req.body.useAnnualCard === true;
+  const useAnnualCard = Boolean(req.body.useAnnualCard);
   const oznaka = req.body.oznaka
     ? String(req.body.oznaka).trim().slice(0, 100)
     : null;
