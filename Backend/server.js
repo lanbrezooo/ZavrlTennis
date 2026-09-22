@@ -525,8 +525,9 @@ admin.get('/reservations/:id/details', async (req, res) => {
   if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Neveljaven ID' });
   try {
         const [rows] = await pool.query(
-      `SELECT r.id, r.user_id, r.igrisce, DATE_FORMAT(r.datum, '%Y-%m-%d') AS datum, r.ura_zacetka, r.trajanje, r.oznaka,
+            `SELECT r.id, r.user_id, r.igrisce, DATE_FORMAT(r.datum, '%Y-%m-%d') AS datum, r.ura_zacetka, r.trajanje, r.oznaka,
               r.krediti_porabili, r.letna_karta_uporabljena, r.blokada,
+              r.placilo_z_kartico, r.placilo_status,
               u.ime, u.priimek, u.email, u.telefon, u.nivo, u.opis, u.letna_karta
        FROM rezervacije r
        JOIN uporabniki u ON u.id = r.user_id

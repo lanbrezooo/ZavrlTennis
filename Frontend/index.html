@@ -3089,16 +3089,28 @@ async function showAdminReservationDetails(reservationId) {
         const dateStr = formatDateShort(r.datum);
 
         const krediti = Number(r.krediti_porabili || 0);
-        const letnaKarta = Number(r.letna_karta_uporabljena) === 1;
+const letnaKarta = Number(r.letna_karta_uporabljena) === 1;
+const kartica = Number(r.placilo_z_kartico) === 1;
+const blokada = Number(r.blokada) === 1;
+const placiloStatus = r.placilo_status || '';
 
-        let creditInfoHtml = '';
-        if (letnaKarta) {
-            creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>🎫 Letna karta (brez kreditov)</span></div>`;
-        } else if (krediti > 0) {
-            creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>💰 ${krediti} ${krediti === 1 ? 'kredit' : 'krediti'}</span></div>`;
-        } else {
-            creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>—</span></div>`;
-        }
+let creditInfoHtml = '';
+if (blokada) {
+    creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>🚨 Blokada (izredni dogodek)</span></div>`;
+} else if (kartica) {
+    const statusLabel = placiloStatus === 'pending'
+        ? '⏳ Kartica – čaka plačilo'
+        : placiloStatus === 'preklicano'
+            ? '✗ Kartica – preklicano'
+            : '💳 Kartica – plačano';
+    creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>${statusLabel}</span></div>`;
+} else if (letnaKarta) {
+    creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>🎫 Letna karta (brez kreditov)</span></div>`;
+} else if (krediti > 0) {
+    creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>💰 ${krediti} ${krediti === 1 ? 'kredit' : 'krediti'}</span></div>`;
+} else {
+    creditInfoHtml = `<div class="detail-row"><strong>Plačilo</strong><span>—</span></div>`;
+}
 
         const telefonHtml = r.telefon
             ? `<div class="detail-row"><strong>Telefon</strong><span>${escapeHtml(r.telefon)}</span></div>`
