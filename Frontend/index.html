@@ -3561,23 +3561,36 @@ window.previewFixedReservations = async function(e) {
         previewEl.innerHTML = `<p style="color:var(--danger); text-align:center;">${escapeHtml(err.message)}</p>`;
     }
 };
+
+let fixedListPage = 1;
+const FIXED_PER_PAGE = 5;
+
 window.showFixedListModal = async function() {
+  fixedListPage = 1;
+  await renderFixedListModal();
+};
+
+window.renderFixedListModal = async function() {
   try {
     const data = await apiCall('/admin/fixed-reservations');
     const groups = data.groups || [];
-    
-    let html = '';
+
+    const totalPages = Math.max(1, Math.ceil(groups.length / FIXED_PER_PAGE));
+    if (fixedListPage > totalPages) fixedListPage = totalPages;
+    const start = (fixedListPage - 1) * FIXED_PER_PAGE;
+    const display = groups.slice(start, start + FIXED_PER_PAGE);
+
+    let listHtml = '';
     if (groups.length === 0) {
-      html = '<p style="text-align:center; color:var(--text-light); padding:1.5rem;">Ni fiksnih terminov.</p>';
+      listHtml = '<p style="text-align:center; color:var(--text-light); padding:1.5rem;">Ni aktivnih fiksnih terminov.</p>';
     } else {
-      html = groups.map(g => {
+      listHtml = display.map(g => {
         const dateOd = formatDateShort(g.datum_od);
         const dateDo = formatDateShort(g.datum_do);
         const ige = Number(g.igrisce);
         const igeName = ige === 7 ? 'Balon 1' : ige === 8 ? 'Balon 2' : `Igrišče ${ige}`;
         const time = `${String(g.ura_zacetka).padStart(2,'0')}:00 – ${String(Number(g.ura_zacetka) + Number(g.trajanje)).padStart(2,'0')}:00`;
-        const hasFuture = Number(g.future_count) > 0;
-        
+
         return `
           <div style="background:#f9f9f9; border:1px solid var(--border); border-radius:10px; padding:0.9rem 1rem; margin-bottom:0.6rem;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
@@ -3586,26 +3599,34 @@ window.showFixedListModal = async function() {
                   👤 ${escapeHtml(g.ime)} ${escapeHtml(g.priimek)}
                 </div>
                 <div style="font-size:0.85rem; color:var(--text); margin-bottom:0.2rem;">
-                  🎾 ${escapeHtml(igeName)} · ⏰ ${time} ${g.oznaka ? '· 🏷 ' + escapeHtml(g.oznaka) : ''}
+                  🎾 ${escapeHtml(igeName)} · ⏰ ${time}${g.oznaka ? ' · 🏷 ' + escapeHtml(g.oznaka) : ''}
                 </div>
                 <div style="font-size:0.8rem; color:var(--text-light);">
                   📅 ${escapeHtml(dateOd)} – ${escapeHtml(dateDo)} · 
-                  <strong style="color:${hasFuture ? '#2e7d32' : '#999'};">${g.future_count} prihodnjih</strong>
+                  <strong style="color:#2e7d32;">${g.future_count} prihodnjih</strong>
                   / ${g.total_count} skupaj
                 </div>
               </div>
               <div style="flex-shrink:0;">
-                ${hasFuture 
-                  ? `<button class="btn btn-danger btn-sm" onclick="deleteFixedGroup('${g.fixed_group_id}', '${escapeHtml(g.ime).replace(/'/g, '')} ${escapeHtml(g.priimek).replace(/'/g, '')}')">
-                       🗑 Izbriši nadaljnje
-                     </button>`
-                  : `<span style="font-size:0.75rem; color:var(--text-light); padding:0.4rem 0.8rem; background:#eee; border-radius:6px; display:inline-block;">Vsi v preteklosti</span>`
-                }
+                <button class="btn btn-danger btn-sm" onclick="deleteFixedGroup('${g.fixed_group_id}', '${escapeHtml(g.ime).replace(/'/g, '')} ${escapeHtml(g.priimek).replace(/'/g, '')}')">
+                  🗑 Izbriši nadaljnje
+                </button>
               </div>
             </div>
           </div>
         `;
       }).join('');
+    }
+
+    let paginationHtml = '';
+    if (totalPages > 1) {
+      paginationHtml = '<div class="pagination" style="margin-top:1rem;">';
+      paginationHtml += `<button class="page-btn" ${fixedListPage === 1 ? 'disabled' : ''} onclick="goToFixedListPage(${fixedListPage - 1})">‹</button>`;
+      for (let i = 1; i <= totalPages; i++) {
+        paginationHtml += `<button class="page-btn ${i === fixedListPage ? 'active' : ''}" onclick="goToFixedListPage(${i})">${i}</button>`;
+      }
+      paginationHtml += `<button class="page-btn" ${fixedListPage === totalPages ? 'disabled' : ''} onclick="goToFixedListPage(${fixedListPage + 1})">›</button>`;
+      paginationHtml += '</div>';
     }
 
     modalRoot.innerHTML = `
@@ -3614,9 +3635,10 @@ window.showFixedListModal = async function() {
           <button class="modal-close" onclick="closeModal()">✕</button>
           <h2 style="color:#6a1b9a;">📋 Fiksni termini</h2>
           <p style="text-align:center; color:var(--text-light); margin-bottom:1rem; font-size:0.9rem;">
-            Pregled vseh fiksnih terminov. Klikni <strong>Izbriši nadaljnje</strong> za preklic prihodnjih terminov v skupini. Pretekli ostanejo nedotaknjeni.
+            Pregled aktivnih fiksnih terminov (${groups.length} skupin). Klikni <strong>Izbriši nadaljnje</strong> za preklic prihodnjih terminov v skupini. Pretekli ostanejo nedotaknjeni.
           </p>
-          <div>${html}</div>
+          <div>${listHtml}</div>
+          ${paginationHtml}
           <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:1rem; color:black; border-color:var(--border);" onclick="closeModal()">Zapri</button>
         </div>
       </div>
@@ -3625,6 +3647,12 @@ window.showFixedListModal = async function() {
     showToast(err.message, 'error');
   }
 };
+
+window.goToFixedListPage = function(page) {
+  fixedListPage = page;
+  renderFixedListModal();
+};
+
 
 window.deleteFixedGroup = async function(groupId, userName) {
   if (!confirm(`Ali res želiš izbrisati vse PRIHODNJE termine za "${userName}"?\n\nPretekli termini ostanejo nedotaknjeni.`)) return;

@@ -823,7 +823,7 @@ app.post('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (req,
       const createdDates = [];
       const skippedDates = [];
 
-      for (const d of dates) {
+            for (const d of dates) {
         const [conflict] = await conn.query(
           `SELECT id, user_id, krediti_porabili FROM rezervacije
            WHERE igrisce=? AND datum=? AND preklicano=0
@@ -834,7 +834,6 @@ app.post('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (req,
 
         if (conflict.length) {
           if (override) {
-            // Prepiši: prekliči in vrni kredite
             for (const c of conflict) {
               const refund = Number(c.krediti_porabili || 0);
               if (refund > 0) {
@@ -913,6 +912,7 @@ app.get('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (_req,
       WHERE r.fixed_group_id IS NOT NULL
       GROUP BY r.fixed_group_id, r.user_id, u.ime, u.priimek, u.email,
                r.igrisce, r.ura_zacetka, r.trajanje, r.oznaka
+      HAVING future_count > 0
       ORDER BY MIN(r.created_at) DESC`
     );
     res.json({ groups: rows });
