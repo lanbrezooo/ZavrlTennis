@@ -10,6 +10,16 @@ const authRoutes = require('./routes/auth');
 const reservationRoutes = require('./routes/reservations');
 const { requireAuth, requireAdmin } = require('./middleware');
 const { izdajMinimaxRacun } = require('./routes/minimax');
+const {
+  getEndHour,
+  validateReservation,
+  calculateCredits
+} = require('./routes/reservationRules');
+
+const {
+  withReservationLock,
+  reservationLockName
+} = require('./routes/reservationLock');
 const app = express();
 app.set('trust proxy', 1);
 const allowedOrigin = process.env.CORS_ORIGIN || '';
@@ -27,169 +37,257 @@ app.use(cors({
 }));
 // ===== STRIPE WEBHOOK – MORA BITI PRED express.json() =====
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-app.post('/api/payments/webhook',
+
+async function handleCreditsPaid(session) {
+  const userId = Number(session.metadata.userId);
+  const credits = Number(session.metadata.credits);
+
+  if (!Number.isInteger(userId) || userId < 1 || !Number.isFinite(credits) || credits <= 0) {
+    throw new Error('Neveljavni metadata za kredite');
+  }
+
+  const conn = await pool.getConnection();
+  let recordId;
+  let alreadyAdded = false;
+
+  try {
+    await conn.beginTransaction();
+
+    const [rows] = await conn.query(
+      `SELECT id, krediti_dodani, status
+       FROM minimax_racuni
+       WHERE stripe_session_id = ?
+       FOR UPDATE`,
+      [session.id]
+    );
+
+    if (rows.length) {
+      recordId = rows[0].id;
+      alreadyAdded = Number(rows[0].krediti_dodani) === 1;
+    } else {
+      const znesek = credits === 10 ? 80 : credits * 10;
+
+      const [ins] = await conn.query(
+        `INSERT INTO minimax_racuni
+         (user_id, stripe_session_id, znesek, tip, status, krediti_dodani)
+         VALUES (?, ?, ?, 'krediti', 'pending', 0)`,
+        [userId, session.id, znesek]
+      );
+
+      recordId = ins.insertId;
+    }
+
+    if (!alreadyAdded) {
+      await conn.query(
+        'UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?',
+        [credits, userId]
+      );
+
+      await conn.query(
+        'UPDATE minimax_racuni SET krediti_dodani = 1 WHERE id = ?',
+        [recordId]
+      );
+    }
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  const [statusRows] = await pool.query(
+    'SELECT status FROM minimax_racuni WHERE id = ?',
+    [recordId]
+  );
+
+  if (statusRows[0]?.status === 'izdan') return;
+
+  const [userRows] = await pool.query(
+    'SELECT id, ime, priimek, email FROM uporabniki WHERE id = ?',
+    [userId]
+  );
+
+  if (!userRows.length) return;
+
+  const user = userRows[0];
+  const znesek = credits === 10 ? 80 : credits * 10;
+  const opis =
+    credits === 10
+      ? 'Paket 10 kreditov – Zavrl Tennis Team'
+      : `Nakup ${credits} kreditov – Zavrl Tennis Team`;
+
+  const rezultat = await izdajMinimaxRacun({
+    user,
+    znesek,
+    opis,
+    stripeSessionId: session.id,
+    tip: 'krediti'
+  });
+
+  if (rezultat.uspeh) {
+    await pool.query(
+      `UPDATE minimax_racuni
+       SET status = 'izdan', minimax_invoice_id = ?, napaka = NULL
+       WHERE id = ?`,
+      [rezultat.invoiceId, recordId]
+    );
+  } else {
+    await pool.query(
+      `UPDATE minimax_racuni
+       SET status = 'napaka', napaka = ?
+       WHERE id = ?`,
+      [rezultat.napaka || 'Neznana napaka', recordId]
+    );
+
+    throw new Error(`Minimax račun ni izdan: ${rezultat.napaka || 'neznana napaka'}`);
+  }
+}
+
+async function handleReservationPaid(session) {
+  const reservationId = Number(session.metadata.reservationId);
+  const conn = await pool.getConnection();
+
+  let reservation;
+  let needRefund = false;
+
+  try {
+    await conn.beginTransaction();
+
+    const [rows] = await conn.query(
+      `SELECT *
+       FROM rezervacije
+       WHERE id = ? OR stripe_session_id = ?
+       FOR UPDATE`,
+      [Number.isInteger(reservationId) ? reservationId : -1, session.id]
+    );
+
+    if (!rows.length) {
+      throw new Error('Rezervacija ne obstaja');
+    }
+
+    reservation = rows[0];
+
+    if (reservation.stripe_refund_id) {
+      await conn.commit();
+      return;
+    }
+
+    if (
+      Number(reservation.preklicano) === 1 ||
+      reservation.placilo_status === 'preklicano'
+    ) {
+      needRefund = true;
+      await conn.commit();
+    } else if (reservation.placilo_status === 'placano') {
+      await conn.commit();
+      return;
+    } else {
+      const expired =
+        reservation.hold_expires_at &&
+        new Date(reservation.hold_expires_at) < new Date();
+
+      if (expired) {
+        await conn.query(
+          `UPDATE rezervacije
+           SET preklicano = 1,
+               placilo_status = 'preklicano',
+               hold_expires_at = NULL
+           WHERE id = ?`,
+          [reservation.id]
+        );
+
+        needRefund = true;
+      } else {
+        await conn.query(
+          `UPDATE rezervacije
+           SET placilo_status = 'placano',
+               hold_expires_at = NULL
+           WHERE id = ?`,
+          [reservation.id]
+        );
+      }
+
+      await conn.commit();
+    }
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  if (needRefund && session.payment_intent) {
+    try {
+      const refund = await stripe.refunds.create({
+        payment_intent: session.payment_intent
+      });
+
+      await pool.query(
+        'UPDATE rezervacije SET stripe_refund_id = ? WHERE id = ?',
+        [refund.id, reservation.id]
+      );
+    } catch (refundErr) {
+      console.error('Stripe refund error:', refundErr.message);
+      throw refundErr;
+    }
+  }
+}
+
+async function handleReservationExpired(session) {
+  await pool.query(
+    `UPDATE rezervacije
+     SET preklicano = 1,
+         placilo_status = 'preklicano',
+         hold_expires_at = NULL
+     WHERE stripe_session_id = ?
+       AND placilo_status = 'pending'
+       AND preklicano = 0`,
+    [session.id]
+  );
+}
+
+app.post(
+  '/api/payments/webhook',
   express.raw({ type: 'application/json' }),
   async (req, res) => {
     const sig = req.headers['stripe-signature'];
     let event;
+
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
     } catch (err) {
       console.error('Webhook signature error:', err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      const userId = Number(session.metadata.userId);
-      const type = session.metadata.type || 'credits';
-
-      if (type === 'reservation') {
-        // Plačilo rezervacije s kartico
-        const igrisce = Number(session.metadata.igrisce);
-        const datum = session.metadata.datum;
-        const uraZacetka = Number(session.metadata.ura_zacetka);
-        const trajanje = Number(session.metadata.trajanje);
-        const oznaka = session.metadata.oznaka || null;
-
-        const conn = await pool.getConnection();
-        try {
-          await conn.beginTransaction();
-
-          // Preveri ponovno (mogoče je bil termin v vmesnem času zaseden)
-          const [conflicts] = await conn.query(
-            `SELECT id FROM rezervacije
-             WHERE igrisce=? AND datum=? AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
-             AND preklicano = 0 FOR UPDATE`,
-            [igrisce, datum, uraZacetka + trajanje, uraZacetka]
-          );
-          if (conflicts.length) {
-            console.error(`Webhook: termin ${igrisce}/${datum}/${uraZacetka} je v vmesnem času postal zaseden!`);
-            await conn.rollback();
-            return res.json({ received: true, conflict: true });
-          }
-
-          await conn.query(
-  `INSERT INTO rezervacije 
-   (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka, placilo_z_kartico)
-   VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1)`,
-  [userId, igrisce, datum, uraZacetka, trajanje, oznaka]
-);
-
-          await conn.commit();
-console.log(`✓ Rezervacija s kartico: uporabnik ${userId}, igrišče ${igrisce}, ${datum} ob ${uraZacetka}:00 (${trajanje}h)`);
-
-// ===== DODANO: IZDAJ MINIMAX RAČUN ZA REZERVACIJO =====
-try {
-  const [userRows] = await pool.query(
-    'SELECT id, ime, priimek, email FROM uporabniki WHERE id = ?',
-    [userId]
-  );
-  if (userRows.length) {
-    const user = userRows[0];
-
-    // Preberi sezono za izračun cene
-    const [sezRows] = await pool.query('SELECT vrednost FROM nastavitve WHERE kljuc = "sezona"');
-    const sezona = sezRows.length ? sezRows[0].vrednost : 'poletje';
-    const isWinter = String(sezona || '').toLowerCase().trim() === 'zima';
-
-    let krediti;
-    if (isWinter && (igrisce === 7 || igrisce === 8)) {
-      krediti = 2.5 * trajanje;
-    } else {
-      krediti = trajanje;
-    }
-    const znesek = krediti * 10;
-
-    const dateLabel = new Date(datum + 'T00:00:00').toLocaleDateString('sl-SI');
-    const opis = `Rezervacija igrišča ${igrisce} – ${dateLabel}, ${uraZacetka}:00 (${trajanje}h) – Zavrl Tennis Team`;
-
-    const rezultat = await izdajMinimaxRacun({
-      user,
-      znesek,
-      opis,
-      stripeSessionId: session.id,
-      tip: 'rezervacija'
-    });
-
-    if (rezultat.uspeh) {
-      await pool.query(
-        `INSERT INTO minimax_racuni (user_id, minimax_invoice_id, stripe_session_id, znesek, tip, status)
-         VALUES (?, ?, ?, ?, 'rezervacija', 'izdan')`,
-        [userId, rezultat.invoiceId, session.id, znesek]
-      );
-      console.log(`✓ Minimax račun za rezervacijo izdan: ${rezultat.invoiceId}`);
-    } else {
-      await pool.query(
-        `INSERT INTO minimax_racuni (user_id, minimax_invoice_id, stripe_session_id, znesek, tip, status, napaka)
-         VALUES (?, '', ?, ?, 'rezervacija', 'napaka', ?)`,
-        [userId, session.id, znesek, rezultat.napaka]
-      );
-      console.error(`✗ Napaka pri Minimax računu za rezervacijo: ${rezultat.napaka}`);
-    }
-  }
-} catch (minimaxErr) {
-  console.error('Napaka pri Minimax integraciji za rezervacijo:', minimaxErr.message);
-}
-// ===== KONEC DODANEGA DELA =====
-
-} catch (err) {
-  await conn.rollback();
-  console.error('Webhook reservation DB napaka:', err.message);
-} finally {
-  conn.release();
-}
-      } else {
-    // Plačilo kreditov
-    const credits = Number(session.metadata.credits);
     try {
-      await pool.query('UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?', [credits, userId]);
-      console.log(`✓ Uporabnik ${userId} prejel ${credits} kreditov`);
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const type = session.metadata.type || 'credits';
 
-      // ===== DODANO: IZDAJ MINIMAX RAČUN =====
-      const [userRows] = await pool.query(
-        'SELECT id, ime, priimek, email FROM uporabniki WHERE id = ?',
-        [userId]
-      );
-      if (userRows.length) {
-        const user = userRows[0];
-        const znesek = credits === 10 ? 80 : credits * 10;
-        const opis = credits === 10
-          ? 'Paket 10 kreditov – Zavrl Tennis Team'
-          : `Nakup ${credits} kreditov – Zavrl Tennis Team`;
-
-        const rezultat = await izdajMinimaxRacun({
-          user,
-          znesek,
-          opis,
-          stripeSessionId: session.id,
-          tip: 'krediti'
-        });
-
-        if (rezultat.uspeh) {
-          await pool.query(
-            `INSERT INTO minimax_racuni (user_id, minimax_invoice_id, stripe_session_id, znesek, tip, status)
-             VALUES (?, ?, ?, ?, 'krediti', 'izdan')`,
-            [userId, rezultat.invoiceId, session.id, znesek]
-          );
-          console.log(`✓ Minimax račun izdan: ${rezultat.invoiceId}`);
+        if (type === 'reservation') {
+          await handleReservationPaid(session);
         } else {
-          await pool.query(
-            `INSERT INTO minimax_racuni (user_id, minimax_invoice_id, stripe_session_id, znesek, tip, status, napaka)
-             VALUES (?, '', ?, ?, 'krediti', 'napaka', ?)`,
-            [userId, session.id, znesek, rezultat.napaka]
-          );
-          console.error(`✗ Napaka pri Minimax računu: ${rezultat.napaka}`);
+          await handleCreditsPaid(session);
+        }
+      } else if (event.type === 'checkout.session.expired') {
+        const session = event.data.object;
+        if ((session.metadata.type || 'credits') === 'reservation') {
+          await handleReservationExpired(session);
         }
       }
-      // ===== KONEC DODANEGA DELA =====
 
+      return res.json({ received: true });
     } catch (err) {
-      console.error('DB napaka pri webhooku:', err.message);
+      console.error('Stripe webhook processing error:', err);
+      return res.status(500).json({ message: 'Webhook obdelava ni uspela' });
     }
-}
-    }
-    res.json({ received: true });
   }
 );
 app.use(express.json({ limit: '50mb' })); // Povečamo za base64 slike
@@ -887,89 +985,167 @@ app.put('/api/admin/nastavitve/:kljuc', requireAuth, requireAdmin, async (req, r
 app.use('/api/admin', admin);
 
 // ===== STRIPE – REZERVACIJA S KARTICO =====
-app.post('/api/payments/create-reservation-checkout-session', requireAuth, async (req, res) => {
-  const igrisce = Number(req.body.igrisce);
-  const uraZacetka = Number(req.body.ura_zacetka);
-  const trajanje = Number(req.body.trajanje);
-  const datum = String(req.body.datum || '');
-  const oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : null;
+app.post(
+  '/api/payments/create-reservation-checkout-session',
+  requireAuth,
+  async (req, res) => {
+    const igrisce = Number(req.body.igrisce);
+    const uraZacetka = Number(req.body.ura_zacetka);
+    const trajanje = Number(req.body.trajanje);
+    const datum = String(req.body.datum || '');
+    const oznaka = req.body.oznaka
+      ? String(req.body.oznaka).trim().slice(0, 100)
+      : null;
 
-  // Validacija
-  if (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > 9)
-    return res.status(400).json({ message: 'Neveljavno igrišče' });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(datum))
-    return res.status(400).json({ message: 'Neveljaven datum' });
-  if (!Number.isInteger(uraZacetka) || uraZacetka < 8 || uraZacetka >= 22)
-    return res.status(400).json({ message: 'Neveljavna ura' });
-  if (!Number.isInteger(trajanje) || trajanje < 1 || uraZacetka + trajanje > 22)
-    return res.status(400).json({ message: 'Neveljavno trajanje' });
+    const endHour = await getEndHour();
 
-  // Preveri, ali je termin že zaseden
-  const [conflicts] = await pool.query(
-    `SELECT id FROM rezervacije
-     WHERE igrisce=? AND datum=? AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
-     AND preklicano = 0`,
-    [igrisce, datum, uraZacetka + trajanje, uraZacetka]
-  );
-  if (conflicts.length) return res.status(409).json({ message: 'Termin je že zaseden' });
-
-  // Preberi sezono in izračunaj ceno
-  const [sezRows] = await pool.query('SELECT vrednost FROM nastavitve WHERE kljuc = "sezona"');
-  const sezona = sezRows.length ? sezRows[0].vrednost : 'poletje';
-  const isWinter = String(sezona || '').toLowerCase().trim() === 'zima';
-
-  let credits;
-if (isWinter && (igrisce === 7 || igrisce === 8)) {
-  credits = 2.5 * trajanje;
-} else {
-  credits = 0;
-  for (let h = uraZacetka; h < uraZacetka + trajanje; h++) {
-    credits += 1;
-  }
-}
-  const price = credits * 10; // 1 kredit = 10 €
-
-  // Format datuma za prikaz (npr. "Sob, 20. sep 2026")
-  const d = new Date(datum + 'T00:00:00');
-  const dayNames = ['Ned', 'Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob'];
-  const monthNames = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec'];
-  const dateLabel = `${dayNames[d.getDay()]}, ${d.getDate()}. ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
-  const timeLabel = `${String(uraZacetka).padStart(2, '0')}:00–${String(uraZacetka + trajanje).padStart(2, '0')}:00`;
-
-  try {
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      mode: 'payment',
-      customer_email: req.user.email,
-      line_items: [{
-        price_data: {
-          currency: 'eur',
-          product_data: {
-            name: `Rezervacija igrišča ${igrisce}`,
-            description: `${dateLabel} ob ${timeLabel} (${trajanje}h) – Zavrl Tennis Team`
-          },
-          unit_amount: Math.round(price * 100)
-        },
-        quantity: 1
-      }],
-      success_url: `${process.env.FRONTEND_URL}/app?payment=success&type=reservation`,
-      cancel_url: `${process.env.FRONTEND_URL}/app?payment=cancel`,
-      metadata: {
-        type: 'reservation',
-        userId: String(req.user.id),
-        igrisce: String(igrisce),
-        datum,
-        ura_zacetka: String(uraZacetka),
-        trajanje: String(trajanje),
-        oznaka: oznaka || ''
-      }
+    const validationError = validateReservation({
+      igrisce,
+      ura: uraZacetka,
+      trajanje,
+      datum,
+      endHour,
+      isAdmin: !!req.user.admin
     });
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error('stripe reservation session', err.message);
-    res.status(500).json({ message: 'Napaka pri pripravi plačila' });
+
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    let pendingId;
+    const lockName = reservationLockName(igrisce, datum);
+
+    try {
+      await withReservationLock(lockName, async (conn) => {
+        await conn.beginTransaction();
+
+        await conn.query(
+          `UPDATE rezervacije
+           SET preklicano = 1,
+               placilo_status = 'preklicano',
+               hold_expires_at = NULL
+           WHERE placilo_status = 'pending'
+             AND hold_expires_at < NOW()
+             AND preklicano = 0`
+        );
+
+        const [conflicts] = await conn.query(
+          `SELECT id
+           FROM rezervacije
+           WHERE igrisce = ?
+             AND datum = ?
+             AND ura_zacetka < ?
+             AND ura_zacetka + trajanje > ?
+             AND preklicano = 0
+             AND (placilo_status IS NULL OR placilo_status IN ('pending','placano'))
+             AND (hold_expires_at IS NULL OR hold_expires_at > NOW())
+           FOR UPDATE`,
+          [igrisce, datum, uraZacetka + trajanje, uraZacetka]
+        );
+
+        if (conflicts.length) {
+          const err = new Error('Termin je že zaseden');
+          err.status = 409;
+          throw err;
+        }
+
+        const [ins] = await conn.query(
+          `INSERT INTO rezervacije
+           (user_id, igrisce, datum, ura_zacetka, trajanje,
+            krediti_porabili, letna_karta_uporabljena, oznaka,
+            placilo_z_kartico, placilo_status, hold_expires_at)
+           VALUES (?, ?, ?, ?, ?, 0, 0, ?, 1, 'pending',
+                   DATE_ADD(NOW(), INTERVAL 15 MINUTE))`,
+          [req.user.id, igrisce, datum, uraZacetka, trajanje, oznaka]
+        );
+
+        pendingId = ins.insertId;
+        await conn.commit();
+      });
+    } catch (err) {
+      if (err.status === 409) {
+        return res.status(409).json({ message: err.message });
+      }
+
+      console.error('pending reservation', err.message);
+      return res.status(500).json({ message: 'Napaka pri pripravi rezervacije' });
+    }
+
+    const [sezRows] = await pool.query(
+      'SELECT vrednost FROM nastavitve WHERE kljuc = "sezona"'
+    );
+    const sezona = sezRows.length ? sezRows[0].vrednost : 'poletje';
+
+    const credits = calculateCredits(uraZacetka, trajanje, igrisce, sezona);
+    const price = credits * 10;
+
+    const d = new Date(datum + 'T00:00:00');
+    const dayNames = ['Ned', 'Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob'];
+    const monthNames = [
+      'jan', 'feb', 'mar', 'apr', 'maj', 'jun',
+      'jul', 'avg', 'sep', 'okt', 'nov', 'dec'
+    ];
+
+    const dateLabel = `${dayNames[d.getDay()]}, ${d.getDate()}. ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+    const timeLabel = `${String(uraZacetka).padStart(2, '0')}:00–${String(
+      uraZacetka + trajanje
+    ).padStart(2, '0')}:00`;
+
+    let session;
+
+    try {
+      session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'payment',
+        customer_email: req.user.email,
+        line_items: [
+          {
+            price_data: {
+              currency: 'eur',
+              product_data: {
+                name: `Rezervacija igrišča ${igrisce}`,
+                description: `${dateLabel} ob ${timeLabel} (${trajanje}h) – Zavrl Tennis Team`
+              },
+              unit_amount: Math.round(price * 100)
+            },
+            quantity: 1
+          }
+        ],
+        success_url: `${process.env.FRONTEND_URL}/app?payment=success&type=reservation`,
+        cancel_url: `${process.env.FRONTEND_URL}/app?payment=cancel`,
+        metadata: {
+          type: 'reservation',
+          userId: String(req.user.id),
+          reservationId: String(pendingId),
+          igrisce: String(igrisce),
+          datum,
+          ura_zacetka: String(uraZacetka),
+          trajanje: String(trajanje),
+          oznaka: oznaka || ''
+        }
+      });
+
+      await pool.query(
+        'UPDATE rezervacije SET stripe_session_id = ? WHERE id = ?',
+        [session.id, pendingId]
+      );
+
+      res.json({ url: session.url });
+    } catch (err) {
+      await pool.query(
+        `UPDATE rezervacije
+         SET preklicano = 1,
+             placilo_status = 'preklicano',
+             hold_expires_at = NULL
+         WHERE id = ?`,
+        [pendingId]
+      );
+
+      console.error('stripe reservation session', err.message);
+      res.status(500).json({ message: 'Napaka pri pripravi plačila' });
+    }
   }
-});
+);
 
 // ===== STRIPE – USTVARI CHECKOUT SESSION =====
 app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) => {
