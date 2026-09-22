@@ -37,11 +37,11 @@ router.get('/', async (req, res) => {
    JOIN uporabniki u ON u.id = r.user_id
    WHERE r.datum = ?
      AND r.preklicano = 0
-     AND (
+          AND (
        r.blokada = 1
+       OR r.placilo_status IN ('placano', 'neplacano')
        OR (
-         (r.placilo_status IS NULL OR r.placilo_status IN ('pending','placano'))
-         AND (r.hold_expires_at IS NULL OR r.hold_expires_at > NOW())
+         r.placilo_status = 'pending' AND r.hold_expires_at > NOW()
        )
      )
    ORDER BY r.igrisce, r.ura_zacetka`,

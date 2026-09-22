@@ -793,8 +793,9 @@ app.post('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (req,
   const datumOd = String(req.body.datum_od || '');
   const datumDo = String(req.body.datum_do || '');
   const interval = Number(req.body.interval_tednov) === 2 ? 2 : 1;
-    let oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : null;
-  // Če ni oznake, uporabi ime in priimek uporabnika
+  const override = req.body.override !== false; // privzeto true
+
+  let oznaka = req.body.oznaka ? String(req.body.oznaka).trim().slice(0, 100) : null;
   if (!oznaka) {
     const [uRows] = await pool.query('SELECT ime, priimek FROM uporabniki WHERE id=?', [userId]);
     if (uRows.length) oznaka = `${uRows[0].ime} ${uRows[0].priimek}`;
@@ -808,35 +809,60 @@ app.post('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (req,
     const dates = getFixedDates(datumOd, datumDo, danVTednu, interval);
     if (dates.length === 0) return res.status(400).json({ message: 'Ni datumov v izbranem obsegu' });
 
+    // Unikaten ID te skupine fiksnih terminov
+    const fixedGroupId = `fx_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
 
       let created = 0;
       let skipped = 0;
+      let overridden = 0;
+      let refundedCredits = 0;
       const createdDates = [];
       const skippedDates = [];
 
       for (const d of dates) {
         const [conflict] = await conn.query(
-          `SELECT id FROM rezervacije
+          `SELECT id, user_id, krediti_porabili FROM rezervacije
            WHERE igrisce=? AND datum=? AND preklicano=0
            AND ura_zacetka < ? AND ura_zacetka + trajanje > ?
            FOR UPDATE`,
           [igrisce, d, uraZacetka + trajanje, uraZacetka]
         );
+
         if (conflict.length) {
-          skipped++;
-          skippedDates.push(d);
-          continue;
+          if (override) {
+            // Prepiši: prekliči in vrni kredite
+            for (const c of conflict) {
+              const refund = Number(c.krediti_porabili || 0);
+              if (refund > 0) {
+                await conn.query(
+                  'UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?',
+                  [refund, c.user_id]
+                );
+                refundedCredits += refund;
+              }
+              await conn.query(
+                'UPDATE rezervacije SET preklicano = 1, datum_preklica = NOW() WHERE id = ?',
+                [c.id]
+              );
+              overridden++;
+            }
+          } else {
+            skipped++;
+            skippedDates.push(d);
+            continue;
+          }
         }
 
-        // Ustvari rezervacijo BREZ porabe kreditov
         await conn.query(
           `INSERT INTO rezervacije
-           (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili, letna_karta_uporabljena, oznaka)
-           VALUES (?, ?, ?, ?, ?, 0, 0, ?)`,
-          [userId, igrisce, d, uraZacetka, trajanje, oznaka]
+           (user_id, igrisce, datum, ura_zacetka, trajanje, krediti_porabili,
+            letna_karta_uporabljena, oznaka, placilo_status, fixed_group_id)
+           VALUES (?, ?, ?, ?, ?, 0, 0, ?, 'placano', ?)`,
+          [userId, igrisce, d, uraZacetka, trajanje, oznaka, fixedGroupId]
         );
 
         created++;
@@ -846,8 +872,11 @@ app.post('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (req,
       await conn.commit();
       res.json({
         message: 'Fiksni termini ustvarjeni',
+        fixedGroupId,
         created,
         skipped,
+        overridden,
+        refundedCredits,
         createdDates,
         skippedDates
       });
@@ -861,6 +890,85 @@ app.post('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (req,
   } catch (err) {
     console.error('fixed create outer', err.message);
     res.status(500).json({ message: 'Napaka' });
+  }
+});
+app.get('/api/admin/fixed-reservations', requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT 
+        r.fixed_group_id,
+        r.user_id,
+        u.ime, u.priimek, u.email,
+        r.igrisce,
+        r.ura_zacetka,
+        r.trajanje,
+        r.oznaka,
+        COUNT(*) AS total_count,
+        SUM(CASE WHEN r.datum >= CURDATE() AND r.preklicano = 0 THEN 1 ELSE 0 END) AS future_count,
+        DATE_FORMAT(MIN(r.datum), '%Y-%m-%d') AS datum_od,
+        DATE_FORMAT(MAX(r.datum), '%Y-%m-%d') AS datum_do,
+        MIN(r.created_at) AS created_at
+      FROM rezervacije r
+      JOIN uporabniki u ON u.id = r.user_id
+      WHERE r.fixed_group_id IS NOT NULL
+      GROUP BY r.fixed_group_id, r.user_id, u.ime, u.priimek, u.email,
+               r.igrisce, r.ura_zacetka, r.trajanje, r.oznaka
+      ORDER BY MIN(r.created_at) DESC`
+    );
+    res.json({ groups: rows });
+  } catch (err) {
+    console.error('list fixed groups', err.message);
+    res.status(500).json({ message: 'Napaka pri pridobivanju fiksnih terminov' });
+  }
+});
+app.delete('/api/admin/fixed-reservations/:groupId', requireAuth, requireAdmin, async (req, res) => {
+  const groupId = String(req.params.groupId).slice(0, 64);
+  if (!groupId) return res.status(400).json({ message: 'Neveljaven ID skupine' });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [rows] = await conn.query(
+      `SELECT id, user_id, krediti_porabili FROM rezervacije
+       WHERE fixed_group_id = ? AND preklicano = 0 AND datum >= CURDATE()
+       FOR UPDATE`,
+      [groupId]
+    );
+
+    if (rows.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ message: 'Ni prihodnjih terminov za to skupino' });
+    }
+
+    let refunded = 0;
+    for (const r of rows) {
+      const refund = Number(r.krediti_porabili || 0);
+      if (refund > 0) {
+        await conn.query(
+          'UPDATE uporabniki SET krediti = krediti + ? WHERE id = ?',
+          [refund, r.user_id]
+        );
+        refunded += refund;
+      }
+      await conn.query(
+        'UPDATE rezervacije SET preklicano = 1, datum_preklica = NOW() WHERE id = ?',
+        [r.id]
+      );
+    }
+
+    await conn.commit();
+    res.json({
+      message: 'Fiksni termini preklicani',
+      cancelled: rows.length,
+      refundedCredits: refunded
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error('delete fixed group', err.message);
+    res.status(500).json({ message: 'Napaka pri brisanju fiksnih terminov' });
+  } finally {
+    conn.release();
   }
 });
 // ===== NASTAVITVE (SEZONA) =====

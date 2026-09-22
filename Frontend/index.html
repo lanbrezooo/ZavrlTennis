@@ -1265,6 +1265,7 @@ body:has(.modal-overlay) {
                     <button class="btn btn-primary btn-sm" style="background:#6a1b9a; color:white;" onclick="toggleSeason()" id="seasonBtn">☀️ Sezona: —</button>
                     <button class="btn btn-primary btn-sm" onclick="showReportModal()">📊 Poročilo</button>
                     <button class="btn btn-primary btn-sm" style="background:#1565c0; color:white;" onclick="showFixedReservationModal()">🔁 Fiksni termini</button>
+                    <button class="btn btn-primary btn-sm" style="background:#6a1b9a; color:white;" onclick="showFixedListModal()">📋 Preglej fiksne</button>
                     <button class="btn btn-primary btn-sm" style="background:#ef5350; color:white;" onclick="showBlockModal()">🚨 Izredni dogodek</button>
                     <button class="btn btn-primary btn-sm" style="background:#00838f; color:white;" onclick="showPeriodBlockModal()">📅 Obdobje zaprtja</button>
                     <button class="btn btn-primary btn-sm" style="background:#00838f; color:white;" onclick="showEndHourModal()">🕐 Zapiralna ura</button>
@@ -3438,6 +3439,12 @@ window.showFixedReservationModal = async function() {
                             </select>
                         </div>
                     </div>
+                    <div class="form-group" style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem; background:#fff3e0; border:2px solid #f9a825; border-radius:8px;">
+  <input type="checkbox" id="fixedOverride" checked style="width:auto; margin:0; cursor:pointer;">
+  <label for="fixedOverride" style="margin:0; cursor:pointer; font-weight:600; color:#e65100;">
+    ⚠️ Prepiši obstoječe rezervacije (prekliči jih in vrni kredite)
+  </label>
+</div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>Začetna ura</label>
@@ -3502,7 +3509,8 @@ window.previewFixedReservations = async function(e) {
         datum_od: document.getElementById('fixedOd').value,
         datum_do: document.getElementById('fixedDo').value,
         interval_tednov: Number(document.getElementById('fixedInterval').value),
-                oznaka: document.getElementById('fixedOznaka').value.trim() || null
+                oznaka: document.getElementById('fixedOznaka').value.trim() || null,
+                override: document.getElementById('fixedOverride').checked
     };
 
     if (!payload.user_id) { errorEl.textContent = 'Izberite uporabnika.'; return; }
@@ -3552,6 +3560,84 @@ window.previewFixedReservations = async function(e) {
     } catch (err) {
         previewEl.innerHTML = `<p style="color:var(--danger); text-align:center;">${escapeHtml(err.message)}</p>`;
     }
+};
+window.showFixedListModal = async function() {
+  try {
+    const data = await apiCall('/admin/fixed-reservations');
+    const groups = data.groups || [];
+    
+    let html = '';
+    if (groups.length === 0) {
+      html = '<p style="text-align:center; color:var(--text-light); padding:1.5rem;">Ni fiksnih terminov.</p>';
+    } else {
+      html = groups.map(g => {
+        const dateOd = formatDateShort(g.datum_od);
+        const dateDo = formatDateShort(g.datum_do);
+        const ige = Number(g.igrisce);
+        const igeName = ige === 7 ? 'Balon 1' : ige === 8 ? 'Balon 2' : `Igrišče ${ige}`;
+        const time = `${String(g.ura_zacetka).padStart(2,'0')}:00 – ${String(Number(g.ura_zacetka) + Number(g.trajanje)).padStart(2,'0')}:00`;
+        const hasFuture = Number(g.future_count) > 0;
+        
+        return `
+          <div style="background:#f9f9f9; border:1px solid var(--border); border-radius:10px; padding:0.9rem 1rem; margin-bottom:0.6rem;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+              <div style="flex:1; min-width:200px;">
+                <div style="font-weight:700; color:var(--primary); margin-bottom:0.3rem;">
+                  👤 ${escapeHtml(g.ime)} ${escapeHtml(g.priimek)}
+                </div>
+                <div style="font-size:0.85rem; color:var(--text); margin-bottom:0.2rem;">
+                  🎾 ${escapeHtml(igeName)} · ⏰ ${time} ${g.oznaka ? '· 🏷 ' + escapeHtml(g.oznaka) : ''}
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-light);">
+                  📅 ${escapeHtml(dateOd)} – ${escapeHtml(dateDo)} · 
+                  <strong style="color:${hasFuture ? '#2e7d32' : '#999'};">${g.future_count} prihodnjih</strong>
+                  / ${g.total_count} skupaj
+                </div>
+              </div>
+              <div style="flex-shrink:0;">
+                ${hasFuture 
+                  ? `<button class="btn btn-danger btn-sm" onclick="deleteFixedGroup('${g.fixed_group_id}', '${escapeHtml(g.ime).replace(/'/g, '')} ${escapeHtml(g.priimek).replace(/'/g, '')}')">
+                       🗑 Izbriši nadaljnje
+                     </button>`
+                  : `<span style="font-size:0.75rem; color:var(--text-light); padding:0.4rem 0.8rem; background:#eee; border-radius:6px; display:inline-block;">Vsi v preteklosti</span>`
+                }
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    modalRoot.innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal" style="max-width:720px;">
+          <button class="modal-close" onclick="closeModal()">✕</button>
+          <h2 style="color:#6a1b9a;">📋 Fiksni termini</h2>
+          <p style="text-align:center; color:var(--text-light); margin-bottom:1rem; font-size:0.9rem;">
+            Pregled vseh fiksnih terminov. Klikni <strong>Izbriši nadaljnje</strong> za preklic prihodnjih terminov v skupini. Pretekli ostanejo nedotaknjeni.
+          </p>
+          <div>${html}</div>
+          <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:1rem; color:black; border-color:var(--border);" onclick="closeModal()">Zapri</button>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+};
+
+window.deleteFixedGroup = async function(groupId, userName) {
+  if (!confirm(`Ali res želiš izbrisati vse PRIHODNJE termine za "${userName}"?\n\nPretekli termini ostanejo nedotaknjeni.`)) return;
+  try {
+    const data = await apiCall(`/admin/fixed-reservations/${groupId}`, 'DELETE');
+    let msg = `Preklicanih: ${data.cancelled}`;
+    if (data.refundedCredits > 0) msg += `, vrnjenih kreditov: ${data.refundedCredits}`;
+    showToast(msg, 'success');
+    await showFixedListModal();
+    await refreshView();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 };
 
 // Prestrezi submit za potrditev
