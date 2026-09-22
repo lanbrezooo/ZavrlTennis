@@ -1988,23 +1988,40 @@ function goToAdminUsersPage(page) {
     const displayRes = reservations.slice(start, start + pageSize);
 
     let html = `<table class="admin-table">
-    <thead><tr><th>ID</th><th>Uporabnik</th><th>Igrišče</th><th>Datum</th><th>Ura</th><th>Trajanje</th><th>Oznaka</th><th>Status</th><th>Dejanja</th></tr></thead><tbody>`;
-    displayRes.forEach(r => {
-        const isCancelled = Number(r.preklicano) === 1;
-html += `<tr style="${isCancelled ? 'opacity:0.5; background:#f9f9f9;' : ''}">
-    <td>${r.id}</td>
-    <td>${escapeHtml(r.ime)} ${escapeHtml(r.priimek)}</td>
-    <td>${r.igrisce}</td>
-    <td>${r.datum}</td>
-    <td>${r.ura_zacetka}:00</td>
-    <td>${r.trajanje}h</td>
-    <td>${escapeHtml(r.oznaka || '')}</td>
-    <td>${isCancelled ? '<span style="color:#ef5350; font-weight:600;">✗ Preklicana</span>' : '<span style="color:#2e7d32; font-weight:600;">✓ Aktivna</span>'}</td>
-    <td>
-        ${isCancelled ? '—' : `<button class="btn btn-sm btn-danger" onclick="deleteAdminReservation(${r.id})">Prekliči</button>`}
-    </td>
-</tr>`;
-    });
+    <thead><tr><th>ID</th><th>Uporabnik</th><th>Igrišče</th><th>Datum</th><th>Ura</th><th>Trajanje</th><th>Oznaka</th><th>Plačilo</th><th>Status</th><th>Dejanja</th></tr></thead><tbody>`;
+displayRes.forEach(r => {
+    const isCancelled = Number(r.preklicano) === 1;
+
+    // Določi način plačila
+    let paymentBadge = '—';
+    if (Number(r.blokada) === 1) {
+        paymentBadge = '<span style="background:#ffcdd2; color:#b71c1c; padding:0.2rem 0.5rem; border-radius:6px; font-size:0.75rem; font-weight:600;">🚨 Blokada</span>';
+    } else if (Number(r.placilo_z_kartico) === 1) {
+        const isPending = r.placilo_status === 'pending';
+        paymentBadge = isPending
+            ? '<span style="background:#fff3e0; color:#e65100; padding:0.2rem 0.5rem; border-radius:6px; font-size:0.75rem; font-weight:600;">⏳ Kartica (čaka)</span>'
+            : '<span style="background:#e3f2fd; color:#1565c0; padding:0.2rem 0.5rem; border-radius:6px; font-size:0.75rem; font-weight:600;">💳 Kartica</span>';
+    } else if (Number(r.letna_karta_uporabljena) === 1) {
+        paymentBadge = '<span style="background:#fff8e1; color:#f9a825; padding:0.2rem 0.5rem; border-radius:6px; font-size:0.75rem; font-weight:600;">🎫 Sezonska</span>';
+    } else if (Number(r.krediti_porabili) > 0) {
+        paymentBadge = `<span style="background:#edf7ef; color:#1a5632; padding:0.2rem 0.5rem; border-radius:6px; font-size:0.75rem; font-weight:600;">💰 ${r.krediti_porabili} kred.</span>`;
+    }
+
+    html += `<tr style="${isCancelled ? 'opacity:0.5; background:#f9f9f9;' : ''}">
+        <td>${r.id}</td>
+        <td>${escapeHtml(r.ime)} ${escapeHtml(r.priimek)}</td>
+        <td>${r.igrisce}</td>
+        <td>${r.datum}</td>
+        <td>${r.ura_zacetka}:00</td>
+        <td>${r.trajanje}h</td>
+        <td>${escapeHtml(r.oznaka || '')}</td>
+        <td>${paymentBadge}</td>
+        <td>${isCancelled ? '<span style="color:#ef5350; font-weight:600;">✗ Preklicana</span>' : '<span style="color:#2e7d32; font-weight:600;">✓ Aktivna</span>'}</td>
+        <td>
+            ${isCancelled ? '—' : `<button class="btn btn-sm btn-danger" onclick="deleteAdminReservation(${r.id})">Prekliči</button>`}
+        </td>
+    </tr>`;
+});
     html += '</tbody></table>';
 
     // Dodaj paginacijo, če je več kot ena stran
@@ -3531,7 +3548,7 @@ window.previewFixedReservations = async function(e) {
 
         if (data.conflictCount > 0) {
             warningHtml += `<div style="background:#fff3f3; border:1px solid #ef5350; border-radius:8px; padding:0.6rem; margin-bottom:0.5rem; font-size:0.85rem;">
-                ⚠️ <strong>${data.conflictCount}</strong> ${data.conflictCount === 1 ? 'datum je že zaseden' : 'datumov je že zasedenih'} – ti bodo izpuščeni.
+                ⚠️ <strong>${data.conflictCount}</strong> ${data.conflictCount === 1 ? 'datum je že zaseden' : 'datumov je že zasedenih'} 
             </div>`;
         }
 
