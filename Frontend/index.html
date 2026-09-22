@@ -1889,7 +1889,7 @@ function goToAdminUsersPage(page) {
                             </div>
                             <div class="form-group"><label>Opis</label><textarea id="editOpis">${user.opis || ''}</textarea></div>
                             <div class="form-row">
-                                <div class="form-group"><label>Krediti</label><input type="number" id="editKrediti" value="${user.krediti || 0}" min="0"></div>
+                                <div class="form-group"><label>Krediti</label><input type="number" id="editKrediti" value="${user.krediti || 0}" min="0" step="0.5" inputmode="decimal"></div>
                                 <div class="form-group"><label>Admin</label>
                                     <select id="editAdmin">
                                         <option value="0" ${user.admin ? '' : 'selected'}>Ne</option>
@@ -1924,7 +1924,7 @@ function goToAdminUsersPage(page) {
                 leto_rojstva: document.getElementById('editLeto').value ? parseInt(document.getElementById('editLeto').value) : null,
                 nivo: document.getElementById('editNivo').value,
                 opis: document.getElementById('editOpis').value,
-                krediti: parseInt(document.getElementById('editKrediti').value),
+                krediti: Math.round(parseFloat(document.getElementById('editKrediti').value || 0) * 2) / 2,
                 letna_karta: document.getElementById('editLetnaKarta').checked ? 1 : 0,
                 admin: document.getElementById('editAdmin').value === '1' ? 1 : 0,
                 prikazi_telefon: document.getElementById('editPrikaziTelefon').checked ? 1 : 0
@@ -3762,7 +3762,7 @@ window.showEndHourModal = function() {
                     <div class="form-group">
                         <label>Zapiralna ura</label>
                         <select id="endHourSelect">
-                            ${[16,17,18,19,20,21].map(h => 
+                            ${[16,17,18,19,20,21,22].map(h => 
                                 `<option value="${h}" ${Number(state.zapiralnaUra) === h ? 'selected' : ''}>${String(h).padStart(2,'0')}:00</option>`
                             ).join('')}
                         </select>

@@ -384,7 +384,49 @@ app.get('/api/auth/user/:id', async (req, res) => {
 const admin = express.Router();
 admin.use(requireAuth, requireAdmin);
 admin.get('/users', async (_req,res) => { try { const [users] = await pool.query('SELECT id, ime, priimek, email, telefon, leto_rojstva, opis, nivo, letna_karta, krediti, admin, prikazi_telefon, created_at FROM uporabniki ORDER BY id DESC'); res.json({users}); } catch(e){ console.error(e.message); res.status(500).json({message:'Napaka pri pridobivanju uporabnikov'}); } });
-admin.put('/users/:id', async (req,res) => { const id=Number(req.params.id); if(!Number.isInteger(id)||id<1) return res.status(400).json({message:'Neveljaven ID'}); const b=req.body; if(!String(b.ime||'').trim()||!String(b.priimek||'').trim()||!String(b.email||'').includes('@')) return res.status(400).json({message:'Preverite obvezna polja'}); const credits=Number(b.krediti); if(!Number.isInteger(credits)||credits<0) return res.status(400).json({message:'Krediti morajo biti celo število 0 ali več'}); try { await pool.query('UPDATE uporabniki SET ime=?, priimek=?, email=?, telefon=?, leto_rojstva=?, opis=?, nivo=?, letna_karta=?, krediti=?, admin=?, prikazi_telefon=? WHERE id=?',[String(b.ime).trim().slice(0,50),String(b.priimek).trim().slice(0,50),String(b.email).trim().toLowerCase().slice(0,100),String(b.telefon||'').trim().slice(0,30)||null,b.leto_rojstva?Number(b.leto_rojstva):null,String(b.opis||'').slice(0,1000),String(b.nivo||'Rekreativec').slice(0,50),b.letna_karta?1:0,credits,b.admin?1:0,b.prikazi_telefon?1:0,id]); res.json({message:'Uporabnik posodobljen'}); } catch(e){ if(e.code==='ER_DUP_ENTRY') return res.status(409).json({message:'Email že obstaja'}); console.error(e.message); res.status(500).json({message:'Napaka pri posodabljanju uporabnika'}); } });
+admin.put('/users/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(400).json({ message: 'Neveljaven ID' });
+  }
+
+  const b = req.body;
+  if (!String(b.ime || '').trim() || !String(b.priimek || '').trim() || !String(b.email || '').includes('@')) {
+    return res.status(400).json({ message: 'Preverite obvezna polja' });
+  }
+
+  // Krediti – dovolimo decimalna števila (korak 0.5)
+  const credits = Number(b.krediti);
+  if (!Number.isFinite(credits) || credits < 0) {
+    return res.status(400).json({ message: 'Krediti morajo biti število 0 ali več' });
+  }
+  const creditsRounded = Math.round(credits * 2) / 2;
+
+  try {
+    await pool.query(
+      'UPDATE uporabniki SET ime=?, priimek=?, email=?, telefon=?, leto_rojstva=?, opis=?, nivo=?, letna_karta=?, krediti=?, admin=?, prikazi_telefon=? WHERE id=?',
+      [
+        String(b.ime).trim().slice(0, 50),
+        String(b.priimek).trim().slice(0, 50),
+        String(b.email).trim().toLowerCase().slice(0, 100),
+        String(b.telefon || '').trim().slice(0, 30) || null,
+        b.leto_rojstva ? Number(b.leto_rojstva) : null,
+        String(b.opis || '').slice(0, 1000),
+        String(b.nivo || 'Rekreativec').slice(0, 50),
+        b.letna_karta ? 1 : 0,
+        creditsRounded,
+        b.admin ? 1 : 0,
+        b.prikazi_telefon ? 1 : 0,
+        id
+      ]
+    );
+    res.json({ message: 'Uporabnik posodobljen' });
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'Email že obstaja' });
+    console.error(e.message);
+    res.status(500).json({ message: 'Napaka pri posodabljanju uporabnika' });
+  }
+});
 admin.delete('/users/:id', async (req,res)=>{ const id=Number(req.params.id); if(id===req.user.id) return res.status(400).json({message:'Ne morete izbrisati samega sebe'}); try { await pool.query('DELETE FROM uporabniki WHERE id=?',[id]); res.json({message:'Uporabnik izbrisan'}); } catch(e){console.error(e.message);res.status(500).json({message:'Napaka pri brisanju uporabnika'});} });
 admin.get('/reservations', async (_req, res) => {
   try {
