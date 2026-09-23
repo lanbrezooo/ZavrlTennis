@@ -1448,20 +1448,20 @@ app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) 
   const credits = Number(req.body.credits);
 
   // Validacija: 0.5 do 10, korak 0.5
-  if (!Number.isFinite(credits) || credits < 0.5 || credits > 10) {
-    return res.status(400).json({ message: 'Neveljavno število kreditov (0,5–10)' });
-  }
-  const doubled = credits * 2;
-  if (Math.abs(doubled - Math.round(doubled)) > 1e-9) {
-    return res.status(400).json({ message: 'Krediti morajo biti v korakih po 0,5' });
-  }
+  if (!Number.isFinite(credits) || credits < 0.25 || credits > 10) {
+    return res.status(400).json({ message: 'Neveljavno število kreditov (0,25–10)' });
+}
+const quadrupled = credits * 4;
+if (Math.abs(quadrupled - Math.round(quadrupled)) > 1e-9) {
+    return res.status(400).json({ message: 'Krediti morajo biti v korakih po 0,25' });
+}
 
   // Cena: 10 kreditov = 80 €, drugače 10 € / kredit
   const computedPrice = credits === 10 ? 80 : credits * 10;
 
   const creditsLabel = Number.isInteger(credits) 
     ? credits.toString() 
-    : credits.toFixed(1);
+    : (Math.abs(credits * 2 - Math.round(credits * 2)) < 1e-9 ? credits.toFixed(1) : credits.toFixed(2));
 
   try {
     const session = await stripe.checkout.sessions.create({

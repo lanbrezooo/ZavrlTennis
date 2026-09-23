@@ -276,17 +276,21 @@
         .calendar-grid {
     display: grid;
     grid-template-columns: 70px repeat(9, minmax(90px, 1fr));
+    grid-template-rows: 40px;
+    grid-auto-rows: 22px;
     min-width: 900px;
-    grid-auto-rows: minmax(20px, auto);
 }
 .calendar-cell {
-    min-height: 20px;
-    padding: 2px 4px;
-    font-size: 0.7rem;
+    padding: 1px 4px;
+    font-size: 0.65rem;
     border: 1px solid var(--border);
     overflow: hidden;
     min-width: 0;
-    word-break: break-word;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    line-height: 1.1;
 }
 .calendar-cell.half-hour {
     border-top: 1px dashed #e8e8e8;
@@ -1005,9 +1009,10 @@ body:has(.modal-overlay) {
     }
 
     .calendar-grid {
-        grid-template-columns: 40px repeat(9, 1fr);
+        grid-template-columns: 38px repeat(9, 1fr);
+        grid-template-rows: 32px;
+        grid-auto-rows: 18px;
         min-width: 0;
-        grid-auto-rows: minmax(16px, auto);
     }
     .calendar-cell.time-cell {
         font-size: 0.55rem;  
@@ -1027,9 +1032,9 @@ body:has(.modal-overlay) {
 }
 
     .calendar-cell {
-        min-height: 16px;
-        padding: 1px;
-        font-size: 0.45rem;
+        padding: 1px 2px;
+        font-size: 0.5rem;
+        line-height: 1.05;
     }
     .res-name {
         font-size: 0.45rem;
@@ -1555,6 +1560,7 @@ function formatCreditsNum(n) {
         }
     }
 
+
     // 2) Status letne karte
         const annualEl = document.getElementById('annualCardStatus');
     if (annualEl) {
@@ -1600,46 +1606,120 @@ function formatCreditsNum(n) {
 }
 
         
-        function renderCalendar() {
+    function formatHour(h) {
+    const totalMin = Math.round(Number(h) * 60);
+    const hour = Math.floor(totalMin / 60);
+    const min = totalMin % 60;
+    return `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+function formatDurationShort(d) {
+    const h = Math.floor(d);
+    const min = Math.round((d - h) * 60);
+    if (min === 0) return `${h}h`;
+    if (h === 0) return `${min}min`;
+    return `${h}h${min}`;
+}
+function formatCreditsNum(n) {
+    const num = Number(n) || 0;
+    if (Number.isInteger(num)) return num.toString();
+    if (Math.abs(num * 2 - Math.round(num * 2)) < 1e-9) return num.toFixed(1);
+    return num.toFixed(2);
+}
+
+function renderCalendar() {
     renderCreditsLegend();
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     const isPast = state.selectedDate < today;
     const isTodaySelected = state.selectedDate.toDateString() === today.toDateString();
     const now = new Date();
     const nowDecimal = now.getHours() + now.getMinutes() / 60;
+    const endHour = Number(state.zapiralnaUra) || 22;
 
+    const slots = [];
+    for (let h = START_HOUR; h < END_HOUR; h += 0.5) slots.push(h);
+
+    const resByCourt = {};
+    for (let c = 1; c <= COURTS; c++) {
+        resByCourt[c] = state.reservations.filter(r => Number(r.igrisce) === c);
+    }
+
+    const covered = new Set();
     let html = '';
 
     // Header
-    html += `<div class="calendar-cell header-cell">Ura</div>`;
+    html += `<div class="calendar-cell header-cell" style="grid-column:1;grid-row:1;">Ura</div>`;
     for (let c = 1; c <= COURTS; c++) {
         let courtName;
         if (state.sezona === 'zima' && c === 7) courtName = 'Balon 1';
         else if (state.sezona === 'zima' && c === 8) courtName = 'Balon 2';
-        else if (c === 9) courtName = 'Igrišče 9<small style="display:block;font-size:0.65rem;font-weight:400;opacity:0.9;">hard</small>';
+        else if (c === 9) courtName = 'Igrišče 9<small style="display:block;font-size:0.6rem;font-weight:400;opacity:0.9;">hard</small>';
         else courtName = `Igrišče ${c}`;
-        html += `<div class="calendar-cell header-cell">${courtName}</div>`;
+        html += `<div class="calendar-cell header-cell" style="grid-column:${c+1};grid-row:1;">${courtName}</div>`;
     }
 
-    const endHour = Number(state.zapiralnaUra) || 22;
+    // Data rows
+    for (let si = 0; si < slots.length; si++) {
+        const gridRow = si + 2;
+        const slotHour = slots[si];
 
-    // Vsaka ura = 2 vrstici (00 in 30)
-    for (let h = START_HOUR; h < END_HOUR; h++) {
-        // Time label spans 2 rows
-        const isAfterClosing = h >= endHour;
-        const timeCellClass = isAfterClosing ? 'time-cell past-time' : 'time-cell';
-        html += `<div class="calendar-cell ${timeCellClass}" style="grid-row: span 2;">${formatHour(h)}</div>`;
-
-        // Row 1: :00
-        for (let c = 1; c <= COURTS; c++) {
-            html += renderCalendarCell(h, c, isPast, isTodaySelected, nowDecimal, endHour, false);
+        // Time cell - only on whole hours, spans 2 rows
+        if (Number.isInteger(slotHour)) {
+            const isAfterClosing = slotHour >= endHour;
+            const tClass = isAfterClosing ? 'time-cell past-time' : 'time-cell';
+            html += `<div class="calendar-cell ${tClass}" style="grid-column:1;grid-row:${gridRow} / span 2;">${formatHour(slotHour)}</div>`;
         }
-        // Row 2: :30
+
+        // Court cells
         for (let c = 1; c <= COURTS; c++) {
-            html += renderCalendarCell(h + 0.5, c, isPast, isTodaySelected, nowDecimal, endHour, true);
+            if (covered.has(`${c}_${gridRow}`)) continue;
+
+            const res = resByCourt[c].find(r => {
+                const s = Number(r.ura_zacetka);
+                const e = s + Number(r.trajanje);
+                return s <= slotHour + 1e-9 && e > slotHour + 1e-9;
+            });
+
+            if (!res) {
+                const isAfterClosing = slotHour >= endHour;
+                const isPastSlot = isPast || (isTodaySelected && slotHour < nowDecimal) || isAfterClosing;
+                const cls = isPastSlot ? 'past' : 'available';
+                const cursor = !isPastSlot ? 'cursor:pointer;' : '';
+                html += `<div class="calendar-cell ${cls}" data-igrisce="${c}" data-ura="${slotHour}" style="grid-column:${c+1};grid-row:${gridRow};${cursor}"></div>`;
+                continue;
+            }
+
+            const startH = Number(res.ura_zacetka);
+            if (Math.abs(startH - slotHour) > 1e-9) continue; // not start of reservation
+
+            const span = Math.max(1, Math.round(Number(res.trajanje) * 2));
+            const isOwn = state.user && Number(res.user_id) === Number(state.user.id);
+            const isBlock = Number(res.blokada) === 1;
+            let cls = isOwn ? 'booked-own' : 'booked';
+            if (isBlock) cls = 'blocked';
+
+            const resEnd = startH + Number(res.trajanje);
+            const isPastSlot = isPast || (isTodaySelected && resEnd <= nowDecimal);
+            if (isPastSlot && !isBlock) cls = 'past';
+
+            let displayName = '';
+            if (res.oznaka) displayName = res.oznaka;
+            else if (res.ime && res.priimek) displayName = `${res.ime} ${res.priimek}`;
+            else if (isOwn && state.user) displayName = getFullName(state.user);
+            else displayName = 'Zasedeno';
+
+            const durLabel = Number(res.trajanje) >= 1 ? formatDurationShort(Number(res.trajanje)) : '';
+            const clickable = !isPastSlot && !isBlock;
+            const cursor = clickable ? 'cursor:pointer;' : '';
+
+            html += `<div class="calendar-cell ${cls}" data-igrisce="${c}" data-ura="${startH}" style="grid-column:${c+1};grid-row:${gridRow} / span ${span};${cursor}">
+                <span class="res-name">${escapeHtml(displayName)}</span>
+                ${durLabel ? `<span class="res-duration">${durLabel}</span>` : ''}
+            </div>`;
+
+            for (let k = 1; k < span; k++) covered.add(`${c}_${gridRow + k}`);
         }
     }
 
@@ -2192,11 +2272,10 @@ function showBookingModal(igrisce, uraZacetka) {
     const dateStr = formatDate(state.selectedDate);
     const dateDisplayStr = formatDateShort(dateStr);
     const endHour = Number(state.zapiralnaUra) || 22;
-    const isAdmin = state.user?.admin === true;
+const isAdmin = state.user?.admin === true;
 const maxDuration = endHour - uraZacetka;
 const maxSelectableDuration = isAdmin ? maxDuration : Math.min(maxDuration, 2);
 
-// Preveri katero trajanje je možno (brez prekrivanja)
 let availableDurations = [];
 for (let d = 1; d <= maxSelectableDuration + 1e-9; d += 0.5) {
     const newEnd = uraZacetka + d;
@@ -2207,11 +2286,7 @@ for (let d = 1; d <= maxSelectableDuration + 1e-9; d += 0.5) {
     });
     if (!overlaps) availableDurations.push(d);
 }
-
-if (availableDurations.length === 0) {
-    showToast('Za ta termin ni prostora.', 'error');
-    return;
-}
+if (availableDurations.length === 0) { showToast('Za ta termin ni prostora.', 'error'); return; }
 
 function durationLabel(d) {
     const h = Math.floor(d);
@@ -3963,7 +4038,7 @@ window.handlePeriodBlock = async function(e) {
 const CREDIT_PRICE = 10;
 const PACKAGE_CREDITS = 10;
 const PACKAGE_PRICE = 80;
-const MIN_CREDITS = 0.5;
+const MIN_CREDITS = 0.25;
 const MAX_CREDITS = 10;
 
 let selectedCredits = 10;
@@ -3977,8 +4052,8 @@ function calcPrice(credits) {
 function isValidCredits(val) {
     if (!Number.isFinite(val)) return false;
     if (val < MIN_CREDITS || val > MAX_CREDITS) return false;
-    const doubled = val * 2;
-    return Math.abs(doubled - Math.round(doubled)) < 1e-9;
+    const quadrupled = val * 4;
+return Math.abs(quadrupled - Math.round(quadrupled)) < 1e-9;
 }
 
 function formatCredits(val) {
@@ -4017,18 +4092,18 @@ window.showBuyCreditsModal = function() {
                     <label>
                         Poljubno število kreditov
                         <span style="font-weight:400; color:var(--text-light); display:block; margin-top:0.2rem; font-size:0.72rem;">
-                            Najmanj 0.5 kredita · Največ 10 kreditov       1 KREDIT = 10 EUR
-                        </span>
+    Najmanj 0.25 kredita · Največ 10 kreditov · korak 0.25 · 1 KREDIT = 10 EUR
+</span>
                     </label>
                     <div class="custom-input-row">
-                        <button type="button" class="stepper-btn" onclick="stepCredits(-0.5)" aria-label="Zmanjšaj">−</button>
+                        <button type="button" class="stepper-btn" onclick="stepCredits(-0.25)" aria-label="Zmanjšaj">−</button>
                         <input type="number" id="customCreditsInput" 
-                               min="0.5" max="10" step="0.5" 
-                               placeholder="npr. 2.5"
-                               inputmode="decimal"
-                               oninput="updateCustomPrice()" 
-                               onclick="clearPromoSelection()">
-                        <button type="button" class="stepper-btn" onclick="stepCredits(0.5)" aria-label="Povečaj">+</button>
+       min="0.25" max="10" step="0.25" 
+       placeholder="npr. 2.25"
+       inputmode="decimal"
+       oninput="updateCustomPrice()" 
+       onclick="clearPromoSelection()">
+                        <button type="button" class="stepper-btn" onclick="stepCredits(0.25)" aria-label="Povečaj">+</button>
                     </div>
                 </div>
 
