@@ -278,7 +278,7 @@ async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessio
     ItemId: 10739145,
     Description: opis,
     Quantity: 1,
-    UnitPrice: znesek,
+    UnitPrice: Number((znesek / 1.095).toFixed(6)),
     VatRateId: 28,
     UnitOfMeasurement: 'kom'
 }]
@@ -561,64 +561,36 @@ async function getLastInvoiceNumberFromMinimax() {
     const leto = new Date().getFullYear();
     
     try {
-        let skip = 0;
-        const pageSize = 100;
-        let maxNumber = 0;
-        let hasMore = true;
-        let totalChecked = 0;
-        
-        // Paginacija skozi vse račune
-        while (hasMore && skip < 2000) {
-            const res = await axios.get(
-                `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices`,
-                {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    params: {
-                        $top: pageSize,
-                        $skip: skip,
-                        $orderby: 'IssuedInvoiceId desc'
-                    }
-                }
-            );
-            
-            const rows = res.data?.Rows || [];
-            
-            if (rows.length === 0) {
-                hasMore = false;
-                break;
-            }
-            
-            // Filtriraj samo račune iz tega leta
-            const letosnji = rows.filter(r => Number(r.Year) === leto);
-            totalChecked += rows.length;
-            
-            if (letosnji.length > 0) {
-                const maxInBatch = Math.max(...letosnji.map(r => Number(r.InvoiceNumber) || 0));
-                if (maxInBatch > maxNumber) {
-                    maxNumber = maxInBatch;
+        // Pridobi VSE račune v enem klicu (brez paginacije)
+        const res = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` },
+                params: {
+                    $top: 5000
                 }
             }
-            
-            if (rows.length < pageSize) {
-                hasMore = false;
-            } else {
-                skip += pageSize;
-            }
-        }
+        );
         
-        console.log(`✓ Preverjenih ${totalChecked} računov, max v letu ${leto}: ${maxNumber}`);
+        const rows = res.data?.Rows || [];
+        console.log(`✓ Naloženih ${rows.length} računov`);
         
-        if (maxNumber === 0) {
+        // Filtriraj samo račune iz tega leta
+        const letosnji = rows.filter(r => Number(r.Year) === leto);
+        console.log(`✓ Najdenih ${letosnji.length} računov v letu ${leto}`);
+        
+        if (letosnji.length === 0) {
             console.log(`✓ Prvi račun v letu ${leto}: številka 1`);
             return 1;
         }
         
+        const maxNumber = Math.max(...letosnji.map(r => Number(r.InvoiceNumber) || 0));
         const nextNumber = maxNumber + 1;
-        console.log(`✓ Naslednja številka računa: ${nextNumber}`);
+        console.log(`✓ Max v letu ${leto}: ${maxNumber}, naslednja: ${nextNumber}`);
         return nextNumber;
     } catch (err) {
         console.error('Napaka pri branju zadnje številke:', err.message);
-        // Fallback: uporabi timestamp
+        // Fallback: timestamp
         return Math.floor(Date.now() / 1000);
     }
 }
