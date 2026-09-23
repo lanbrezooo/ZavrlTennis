@@ -282,8 +282,6 @@ async function createDraftInvoice({ customerId, znesek, opis, user }) {
         // Besedilo na računu (obvezno)
         InvoiceText: opis,
 
-        // Vrsta izpisa za dobavnico (obvezno - uporabimo isti numbering ID)
-        IssuedInvoiceReportTemplate: { ID: numberingId },
 
         // Vrstice računa
         Rows: [{

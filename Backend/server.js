@@ -271,7 +271,16 @@ async function handleReservationPaid(session) {
         }
         const znesek = krediti * 10;
 
-        const dateLabel = new Date(reservation.datum + 'T00:00:00').toLocaleDateString('sl-SI');
+        // Pretvori datum v varen format
+let dateLabel = 'Neznan datum';
+try {
+    const d = new Date(reservation.datum);
+    if (!isNaN(d.getTime())) {
+        dateLabel = d.toLocaleDateString('sl-SI');
+    }
+} catch (e) {
+    console.warn('Napaka pri formatu datuma:', reservation.datum);
+}
         const opis = `Rezervacija igrišča ${igrisce} – ${dateLabel}, ${reservation.ura_zacetka}:00 (${trajanje}h) – Zavrl Tennis Team`;
 
         const rezultat = await izdajMinimaxRacun({
