@@ -1459,6 +1459,50 @@ app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) 
     res.status(500).json({ message: 'Napaka pri pripravi plačila' });
   }
 });
+// ===== DIAGNOSTIKA MINIMAX =====
+const axios = require('axios');
+const MINIMAX_API_URL_DIAG = 'https://moj.minimax.si/SI/API/api';
+
+app.get('/api/admin/diagnose', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const token = await getMinimaxToken();
+        const ORG = process.env.MINIMAX_ORG_ID;
+
+        async function fetchMM(path) {
+            try {
+                const r = await axios.get(
+                    `${MINIMAX_API_URL_DIAG}/orgs/${ORG}${path}`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                );
+                return r.data;
+            } catch (e) {
+                return { error: e.response?.status, message: e.message };
+            }
+        }
+
+        const results = {
+            tokens: {
+                client_id: process.env.MINIMAX_CLIENT_ID ? '✓' : '✗',
+                client_secret: process.env.MINIMAX_CLIENT_SECRET ? '✓' : '✗',
+                username: process.env.MINIMAX_USERNAME || '✗',
+                password: process.env.MINIMAX_PASSWORD ? '✓' : '✗',
+                org_id: ORG || '✗',
+                token_ok: token ? '✓' : '✗'
+            },
+            numbering: await fetchMM('/document-numbering'),
+            items: await fetchMM('/items'),
+            vatRates: await fetchMM('/vat-rates'),
+            paymentMethods: await fetchMM('/paymentMethods')
+        };
+
+        res.json(results);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ===== FRONTEND =====
+
 const frontendPath = path.join(__dirname, '..', 'Frontend');
 app.get('/', (_req,res)=>res.sendFile(path.join(frontendPath,'landing.html')));
 app.get('/o-klubu', (_req,res)=>res.sendFile(path.join(frontendPath,'o-klubu.html')));
