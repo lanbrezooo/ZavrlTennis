@@ -182,7 +182,7 @@ async function handleReservationPaid(session) {
       await conn.commit();
     } else if (reservation.placilo_status === 'placano') {
       await conn.commit();
-      return;
+      return; // že obdelano
     } else {
       const expired =
         reservation.hold_expires_at &&
@@ -197,7 +197,6 @@ async function handleReservationPaid(session) {
            WHERE id = ?`,
           [reservation.id]
         );
-
         needRefund = true;
       } else {
         await conn.query(
@@ -218,12 +217,12 @@ async function handleReservationPaid(session) {
     conn.release();
   }
 
+  // Refund, če je bilo potrebno
   if (needRefund && session.payment_intent) {
     try {
       const refund = await stripe.refunds.create({
         payment_intent: session.payment_intent
       });
-
       await pool.query(
         'UPDATE rezervacije SET stripe_refund_id = ? WHERE id = ?',
         [refund.id, reservation.id]
@@ -231,6 +230,70 @@ async function handleReservationPaid(session) {
     } catch (refundErr) {
       console.error('Stripe refund error:', refundErr.message);
       throw refundErr;
+    }
+  }
+
+  // === IZDAJ MINIMAX RAČUN za rezervacijo ===
+  if (!needRefund && reservation && reservation.placilo_status === 'placano') {
+    try {
+      const [userRows] = await pool.query(
+        'SELECT id, ime, priimek, email FROM uporabniki WHERE id = ?',
+        [reservation.user_id]
+      );
+
+      if (userRows.length) {
+        const user = userRows[0];
+
+        // Izračunaj znesek
+        const [sezRows] = await pool.query(
+          'SELECT vrednost FROM nastavitve WHERE kljuc = "sezona"'
+        );
+        const sezona = sezRows.length ? sezRows[0].vrednost : 'poletje';
+        const isWinter = String(sezona || '').toLowerCase().trim() === 'zima';
+
+        const trajanje = Number(reservation.trajanje);
+        const igrisce = Number(reservation.igrisce);
+
+        let krediti;
+        if (isWinter && (igrisce === 7 || igrisce === 8)) {
+          krediti = 2.5 * trajanje;
+        } else {
+          krediti = 1 * trajanje;
+        }
+        const znesek = krediti * 10;
+
+        const dateLabel = new Date(reservation.datum + 'T00:00:00').toLocaleDateString('sl-SI');
+        const opis = `Rezervacija igrišča ${igrisce} – ${dateLabel}, ${reservation.ura_zacetka}:00 (${trajanje}h) – Zavrl Tennis Team`;
+
+        const rezultat = await izdajMinimaxRacun({
+          user,
+          znesek,
+          opis,
+          stripeSessionId: session.id,
+          tip: 'rezervacija'
+        });
+
+        if (rezultat.uspeh) {
+          await pool.query(
+            `INSERT INTO minimax_racuni 
+             (user_id, minimax_invoice_id, stripe_session_id, znesek, tip, status, krediti_dodani)
+             VALUES (?, ?, ?, ?, 'rezervacija', 'izdan', 1)`,
+            [user.id, rezultat.invoiceId, session.id, znesek]
+          );
+          console.log(`✓ Minimax račun za rezervacijo izdan: ${rezultat.invoiceId}`);
+        } else {
+          await pool.query(
+            `INSERT INTO minimax_racuni 
+             (user_id, minimax_invoice_id, stripe_session_id, znesek, tip, status, napaka, krediti_dodani)
+             VALUES (?, '', ?, ?, 'rezervacija', 'napaka', ?, 1)`,
+            [user.id, session.id, znesek, rezultat.napaka || 'Neznana napaka']
+          );
+          throw new Error(`Minimax račun za rezervacijo ni izdan: ${rezultat.napaka}`);
+        }
+      }
+    } catch (minimaxErr) {
+      console.error('Minimax rezervacija napaka:', minimaxErr.message);
+      throw minimaxErr; // povzroči 500 → Stripe ponovi
     }
   }
 }
