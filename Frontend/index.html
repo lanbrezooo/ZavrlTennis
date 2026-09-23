@@ -2284,8 +2284,11 @@ function showBookingModal(igrisce, uraZacetka) {
     const endHour = Number(state.zapiralnaUra) || 22;
 const isAdmin = state.user?.admin === true;
 const maxDuration = endHour - uraZacetka;
+
+// ADMIN: max do zapiralne ure. UPORABNIK: max 2h.
 const maxSelectableDuration = isAdmin ? maxDuration : Math.min(maxDuration, 2);
 
+// Preveri katero trajanje je možno (brez prekrivanja)
 let availableDurations = [];
 for (let d = 1; d <= maxSelectableDuration + 1e-9; d += 0.5) {
     const newEnd = uraZacetka + d;
@@ -2296,7 +2299,11 @@ for (let d = 1; d <= maxSelectableDuration + 1e-9; d += 0.5) {
     });
     if (!overlaps) availableDurations.push(d);
 }
-if (availableDurations.length === 0) { showToast('Za ta termin ni prostora.', 'error'); return; }
+
+if (availableDurations.length === 0) {
+    showToast('Za ta termin ni prostora.', 'error');
+    return;
+}
 
 function durationLabel(d) {
     const h = Math.floor(d);
@@ -4070,7 +4077,7 @@ function isValidCredits(val) {
     if (!Number.isFinite(val)) return false;
     if (val < MIN_CREDITS || val > MAX_CREDITS) return false;
     const quadrupled = val * 4;
-return Math.abs(quadrupled - Math.round(quadrupled)) < 1e-9;
+    return Math.abs(quadrupled - Math.round(quadrupled)) < 1e-9;
 }
 
 function formatCredits(val) {
@@ -4184,8 +4191,8 @@ window.stepCredits = function(delta) {
     if (next < MIN_CREDITS) next = MIN_CREDITS;
     if (next > MAX_CREDITS) next = MAX_CREDITS;
 
-    // Zaokroži na 0.5
-    next = Math.round(next * 2) / 2;
+    
+next = Math.round(next * 4) / 4;
 
     input.value = next.toString();
 
