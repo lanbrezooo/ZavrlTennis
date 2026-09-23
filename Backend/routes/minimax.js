@@ -274,13 +274,14 @@ async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessio
         InvoiceText: opis,
         ExternalReference: stripeSessionId || null,
         Rows: [{
-            Item: { ID: 10739145 },
-            Description: opis,
-            Quantity: 1,
-            Price: znesek,
-            VatRate: { ID: 28 },
-            UnitOfMeasurement: 'kom'
-        }]
+    RowNumber: 1,
+    ItemId: 10739145,
+    Description: opis,
+    Quantity: 1,
+    UnitPrice: znesek,
+    VatRateId: 28,
+    UnitOfMeasurement: 'kom'
+}]
     };
 
     try {
