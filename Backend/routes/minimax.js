@@ -356,9 +356,8 @@ async function issueInvoiceAndGeneratePdf(invoiceId, rowVersion) {
     const token = await getMinimaxToken();
     try {
         // RowVersion vsebuje posebne znake (=, /, +) – treba jih je URL-encodati
-const encodedRowVersion = encodeURIComponent(rowVersion);
 await axios.put(
-    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/issueAndGeneratepdf_${encodedRowVersion}`,
+    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/issueAndGeneratepdf_${rowVersion}`,
     {},
     { headers: { 'Authorization': `Bearer ${token}` } }
 );
@@ -375,9 +374,8 @@ await axios.put(
 async function sendEInvoice(invoiceId, rowVersion) {
     const token = await getMinimaxToken();
     try {
-        const encodedRowVersion = encodeURIComponent(rowVersion);
         await axios.put(
-            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice_${encodedRowVersion}`,
+    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice_${rowVersion}`,
             {},
             { headers: { 'Authorization': `Bearer ${token}` } }
         );
