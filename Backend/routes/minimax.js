@@ -307,15 +307,40 @@ async function createDraftInvoice({ customerId, znesek, opis, user }) {
         );
 
         const location = response.headers.location;
-        if (!location) {
-            throw new Error('Minimax ni vrnil lokacije računa');
-        }
-        const cleanLocation = location.split('?')[0];
-        const invoiceId = cleanLocation.split('/').pop();
-        const rowVersion = response.data?.RowVersion || response.data?.rowVersion;
+if (!location) {
+    throw new Error('Minimax ni vrnil lokacije računa');
+}
 
-        console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}, RowVersion: ${rowVersion}`);
-        return { invoiceId, rowVersion };
+// Preberi invoiceId iz Location header-ja
+let invoiceId = null;
+const matchSlash = location.match(/\/(\d+)(?:\?|$)/);
+const matchId = location.match(/[?&]id=(\d+)/);
+if (matchSlash) invoiceId = matchSlash[1];
+else if (matchId) invoiceId = matchId[1];
+else invoiceId = location.split('?')[0].split('/').pop();
+
+if (!invoiceId || !/^\d+$/.test(invoiceId)) {
+    throw new Error(`Ne morem izluščiti invoiceId iz Location: ${location}`);
+}
+
+// Pridobi RowVersion z dodatnim GET klicem
+console.log(`Osnutek ustvarjen (ID: ${invoiceId}), berem RowVersion...`);
+
+const getResponse = await axios.get(
+    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}`,
+    { headers: { 'Authorization': `Bearer ${token}` } }
+);
+
+const rowVersion = getResponse.data?.RowVersion || getResponse.data?.rowVersion;
+
+if (!rowVersion) {
+    console.error('Odgovor GET /issuedinvoices:');
+    console.error(JSON.stringify(getResponse.data).slice(0, 2000));
+    throw new Error('RowVersion ni najden v GET odgovoru');
+}
+
+console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}, RowVersion: ${rowVersion}`);
+return { invoiceId, rowVersion };
     } catch (err) {
         console.error('✗ Napaka pri ustvarjanju računa:');
         console.error('  Status:', err.response?.status);
@@ -330,11 +355,13 @@ async function createDraftInvoice({ customerId, znesek, opis, user }) {
 async function issueInvoiceAndGeneratePdf(invoiceId, rowVersion) {
     const token = await getMinimaxToken();
     try {
-        await axios.put(
-            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/issueAndGeneratepdf_${rowVersion}`,
-            {},
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
+        // RowVersion vsebuje posebne znake (=, /, +) – treba jih je URL-encodati
+const encodedRowVersion = encodeURIComponent(rowVersion);
+await axios.put(
+    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/issueAndGeneratepdf_${encodedRowVersion}`,
+    {},
+    { headers: { 'Authorization': `Bearer ${token}` } }
+);
         console.log(`✓ Račun ${invoiceId} izdan in PDF generiran`);
     } catch (err) {
         console.error('✗ Napaka pri izdaji računa:', err.response?.data || err.message);
@@ -348,8 +375,9 @@ async function issueInvoiceAndGeneratePdf(invoiceId, rowVersion) {
 async function sendEInvoice(invoiceId, rowVersion) {
     const token = await getMinimaxToken();
     try {
+        const encodedRowVersion = encodeURIComponent(rowVersion);
         await axios.put(
-            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice_${rowVersion}`,
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice_${encodedRowVersion}`,
             {},
             { headers: { 'Authorization': `Bearer ${token}` } }
         );
