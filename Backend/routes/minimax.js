@@ -260,9 +260,12 @@ async function createDraftInvoice({ customerId, znesek, opis, user }) {
         console.warn('Napaka pri branju stranke:', e.message);
     }
 
-    const payload = {
+   const invoiceNumber = await getLastInvoiceNumberFromMinimax();
+
+const payload = {
     InvoiceType: 'R',
     DocumentNumbering: { ID: numberingId },
+    InvoiceNumber: invoiceNumber,
     Customer: { ID: Number(customerId) },
     DateIssued: today,
     DateTransaction: today,
@@ -559,6 +562,45 @@ async function debugCurrencies() {
         return null;
     }
 }
+async function getLastInvoiceNumberFromMinimax() {
+    const token = await getMinimaxToken();
+    const leto = new Date().getFullYear();
+    
+    try {
+        // Preberi zadnjih 100 računov iz tega leta, sortirano padajoče
+        const res = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` },
+                params: {
+                    $top: 100,
+                    $orderby: 'IssuedInvoiceId desc'
+                }
+            }
+        );
+        
+        const rows = res.data?.Rows || [];
+        
+        // Filtriraj samo račune iz tega leta
+        const letosnji = rows.filter(r => Number(r.Year) === leto);
+        
+        if (letosnji.length === 0) {
+            console.log(`✓ Prvi račun v letu ${leto}: številka 1`);
+            return 1;
+        }
+        
+        // Poišči najvišjo številko
+        const maxNumber = Math.max(...letosnji.map(r => Number(r.InvoiceNumber) || 0));
+        const nextNumber = maxNumber + 1;
+        
+        console.log(`✓ Zadnja številka leta ${leto}: ${maxNumber} → naslednja: ${nextNumber}`);
+        return nextNumber;
+    } catch (err) {
+        console.error('Napaka pri branju zadnje številke:', err.message);
+        // Fallback: uporabi timestamp
+        return Math.floor(Date.now() / 1000);
+    }
+}
 
 module.exports = {
     izdajMinimaxRacun,
@@ -566,6 +608,7 @@ module.exports = {
     findCustomerByEmail,
     findCustomerByName,
     createCustomer,
-     debugCountries,     // ← dodaj
-    debugCurrencies
+     debugCountries,     
+    debugCurrencies,
+    getLastInvoiceNumberFromMinimax
 };
