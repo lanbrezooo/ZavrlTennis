@@ -259,18 +259,64 @@ async function sendEInvoice(invoiceId, rowVersion) {
  * @returns {Object} { uspeh: boolean, invoiceId, napaka }
  */
 async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
+    const pool = require('../db');
     try {
-        // 1. Preveri, ali stranka že obstaja
-        let customerId = await findCustomerByEmail(user.email);
-        if (!customerId) {
-            customerId = await createCustomer({
-                ime: user.ime,
-                priimek: user.priimek,
-                email: user.email
-            });
+        // 0. NAJPREJ preveri bazo minimax_stranke
+        let customerId = null;
+        try {
+            const [dbRows] = await pool.query(
+                'SELECT minimax_customer_id FROM minimax_stranke WHERE user_id = ?',
+                [user.id]
+            );
+            if (dbRows.length && dbRows[0].minimax_customer_id) {
+                customerId = dbRows[0].minimax_customer_id;
+                console.log(`✓ Stranka iz baze: ${customerId}`);
+            }
+        } catch (dbErr) {
+            console.warn('Napaka pri branju minimax_stranke:', dbErr.message);
         }
-        console.log(`✓ Uporabljena stranka: ${customerId}`);
 
+        // 1. Če ni v bazi, išči v Minimaxu
+        if (!customerId) {
+            customerId = await findCustomerByEmail(user.email);
+        }
+
+        // 2. Če ne obstaja, ustvari novo
+        if (!customerId) {
+            try {
+                customerId = await createCustomer({
+                    ime: user.ime,
+                    priimek: user.priimek,
+                    email: user.email
+                });
+            } catch (createErr) {
+                // Če vrne 409, stranka že obstaja → poskusi najti po imenu
+                if (createErr.response?.status === 409 || String(createErr.message).includes('409')) {
+                    console.log('Stranka že obstaja (409), iščem po imenu...');
+                    customerId = await findCustomerByName(user.ime, user.priimek);
+                    if (!customerId) {
+                        throw new Error('Stranka že obstaja v Minimaxu, ampak je ne najdem');
+                    }
+                } else {
+                    throw createErr;
+                }
+            }
+        }
+
+        // 3. Shrani v bazo (da naslednjič ne kličemo API)
+        if (customerId) {
+            try {
+                await pool.query(
+                    `INSERT INTO minimax_stranke (user_id, minimax_customer_id, email) 
+                     VALUES (?, ?, ?) 
+                     ON DUPLICATE KEY UPDATE minimax_customer_id = VALUES(minimax_customer_id)`,
+                    [user.id, customerId, user.email]
+                );
+                console.log(`✓ Stranka shranjena v bazo: ${customerId}`);
+            } catch (dbErr) {
+                console.warn('Napaka pri shranjevanju v minimax_stranke:', dbErr.message);
+            }
+        }
         // 2. Ustvari osnutek računa
         const { invoiceId, rowVersion } = await createDraftInvoice({
             customerId,
@@ -290,10 +336,37 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
         return { uspeh: false, napaka: err.message };
     }
 }
+async function findCustomerByName(ime, priimek) {
+    const token = await getMinimaxToken();
+    try {
+        const response = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` },
+                params: { search: priimek, limit: 100 }
+            }
+        );
+        const customers = response.data?.Rows || [];
+        const fullName = `${ime} ${priimek}`.toLowerCase().replace(/\s+/g, ' ').trim();
+        const found = customers.find(c => {
+            const cName = (c.Name || '').toLowerCase().replace(/\s+/g, ' ').trim();
+            return cName.includes(ime.toLowerCase()) && cName.includes(priimek.toLowerCase());
+        });
+        if (found) {
+            console.log(`✓ Stranka najdena po imenu: ${found.CustomerId}`);
+            return found.CustomerId;
+        }
+        return null;
+    } catch (err) {
+        console.warn('Iskanje po imenu ni uspelo:', err.message);
+        return null;
+    }
+}
 
 module.exports = {
     izdajMinimaxRacun,
     getMinimaxToken,
     findCustomerByEmail,
+    findCustomerByName,
     createCustomer
 };
