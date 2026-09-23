@@ -110,8 +110,8 @@ async function createCustomer({ ime, priimek, email }) {
     Address: 'Pot v Toplice 10',
     PostalCode: '2250',
     City: 'Ptuj',
-    CountryId: 192,
-    CurrencyId: 888888,
+    Country: 192,        
+    Currency: 888888,    
     CustomerType: 'I'
 },
             {
