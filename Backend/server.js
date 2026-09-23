@@ -1254,7 +1254,7 @@ app.get('/api/admin/diagnose', requireAuth, requireAdmin, async (req, res) => {
             },
             numbering: await fetchMM('/document-numbering'),
             items: await fetchMM('/items'),
-            vatRates: await fetchMM('/vat-rates'),
+            vatRates: await fetchMM('/vatrates'),
             paymentMethods: await fetchMM('/paymentMethods')
         };
 
