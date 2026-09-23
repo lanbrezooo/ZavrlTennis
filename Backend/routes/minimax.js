@@ -102,18 +102,26 @@ async function findCustomerByEmail(email) {
 async function createCustomer({ ime, priimek, email }) {
     const token = await getMinimaxToken();
     try {
+        // 1. Definiraj payload PRED axios.post
+        const payload = {
+            Name: `${ime} ${priimek}`.trim(),
+            Email: email,
+            Address: 'Pot v Toplice 10',
+            PostalCode: '2250',
+            City: 'Ptuj',
+            Country: { ID: 192 },
+            Currency: { ID: 7 },
+            SubjectToVAT: 'N'
+        };
+
+        console.log('=== PAYLOAD ZA MINIMAX ===');
+        console.log(JSON.stringify(payload, null, 2));
+        console.log('==========================');
+
+        // 2. Pokliči axios.post s payload
         const response = await axios.post(
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
-            {
-    Name: `${ime} ${priimek}`.trim(),
-    Email: email,
-    Address: 'Pot v Toplice 10',
-    PostalCode: '2250',
-    City: 'Ptuj',
-    Country: `/api/orgs/${ORGANISATION_ID}/countries/192`,
-    Currency: `/api/orgs/${ORGANISATION_ID}/currencies/7`,
-    SubjectToVAT: 'N'
-},
+            payload,
             {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             }
@@ -130,11 +138,9 @@ async function createCustomer({ ime, priimek, email }) {
     } catch (err) {
         const status = err.response?.status;
 
-        // ⬇️ NOVO: Če je 409 (stranka že obstaja), poskusi izluščiti CustomerId
         if (status === 409) {
             console.log('⚠ Stranka že obstaja (409), poskušam izluščiti ID...');
             
-            // 1. Iz Location header-ja
             const location = err.response?.headers?.location;
             if (location) {
                 const existingId = location.split('/').pop();
@@ -144,7 +150,6 @@ async function createCustomer({ ime, priimek, email }) {
                 }
             }
 
-            // 2. Iz body-a odgovora
             const data = err.response?.data;
             if (data && typeof data === 'object') {
                 const possibleId = 
@@ -159,11 +164,9 @@ async function createCustomer({ ime, priimek, email }) {
                     return possibleId;
                 }
                 
-                // Debug: če ne najdemo, izpiši celotno strukturo
                 console.log('Struktura 409 odgovora:', JSON.stringify(data).slice(0, 1000));
             }
 
-            // 3. Preveri, ali ima body string z številko
             if (typeof data === 'string') {
                 const match = data.match(/\/(\d+)(?:\?|$|")/);
                 if (match && match[1]) {
@@ -172,13 +175,11 @@ async function createCustomer({ ime, priimek, email }) {
                 }
             }
 
-            // 4. Če ne najdemo, vrni posebno napako
             throw new Error('Stranka že obstaja, ampak ne morem izluščiti CustomerId iz 409 odgovora');
         }
 
         console.error('✗ Napaka pri ustvarjanju stranke:');
         console.error('  Status:', status);
-        console.error('  Headers:', JSON.stringify(err.response?.headers, null, 2).slice(0, 500));
         console.error('  Data:', JSON.stringify(err.response?.data).slice(0, 2000));
         
         const wrapped = new Error('Napaka pri ustvarjanju stranke v Minimaxu');
