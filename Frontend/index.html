@@ -2282,7 +2282,7 @@ function showBookingModal(igrisce, uraZacetka) {
     const dateStr = formatDate(state.selectedDate);
     const dateDisplayStr = formatDateShort(dateStr);
     const endHour = Number(state.zapiralnaUra) || 22;
-const isAdmin = state.user?.admin === true;
+const isAdmin = Boolean(state.user?.admin);
 const maxDuration = endHour - uraZacetka;
 
 // ADMIN: max do zapiralne ure. UPORABNIK: max 2h.
