@@ -233,8 +233,16 @@ async function handleReservationPaid(session) {
     }
   }
 
-  // === IZDAJ MINIMAX RAČUN za rezervacijo ===
-  if (!needRefund && reservation && reservation.placilo_status === 'placano') {
+ 
+    // === IZDAJ MINIMAX RAČUN za rezervacijo ===
+  // Ponovno preberi iz baze, da dobimo AŽUREN placilo_status
+  const [freshRows] = await pool.query(
+    'SELECT placilo_status FROM rezervacije WHERE id = ?',
+    [reservation.id]
+  );
+  const currentStatus = freshRows.length ? freshRows[0].placilo_status : null;
+
+  if (!needRefund && currentStatus === 'placano') {
     try {
       const [userRows] = await pool.query(
         'SELECT id, ime, priimek, email FROM uporabniki WHERE id = ?',
