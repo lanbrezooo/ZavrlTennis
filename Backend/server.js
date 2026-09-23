@@ -8,7 +8,6 @@ require('dotenv').config();
 const pool = require('./db');
 const authRoutes = require('./routes/auth');
 const reservationRoutes = require('./routes/reservations');
-const { izdajMinimaxRacun, debugCountries, debugCurrencies } = require('./routes/minimax');
 const { requireAuth, requireAdmin } = require('./middleware');
 
 const { 
