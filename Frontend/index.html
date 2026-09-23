@@ -4074,7 +4074,10 @@ return Math.abs(quadrupled - Math.round(quadrupled)) < 1e-9;
 }
 
 function formatCredits(val) {
-    return Number.isInteger(val) ? val.toString() : val.toFixed(1);
+    const num = Number(val) || 0;
+    if (Number.isInteger(num)) return num.toString();
+    if (Math.abs(num * 2 - Math.round(num * 2)) < 1e-9) return num.toFixed(1);
+    return num.toFixed(2);
 }
 
 window.showBuyCreditsModal = function() {
@@ -4212,7 +4215,7 @@ window.updateCustomPrice = function() {
         } else if (val > MAX_CREDITS) {
             errEl.textContent = `Največ ${MAX_CREDITS} kreditov na posamezen nakup.`;
         } else {
-            errEl.textContent = 'Vnesite količino v korakih po 0.5 kredita.';
+            errEl.textContent = 'Vnesite količino v korakih po 0.25 kredita.';
         }
         selectedCredits = 0;
         selectedPrice = 0;
