@@ -131,7 +131,9 @@ async function createCustomer({ ime, priimek, email }) {
         if (!location) {
             throw new Error('Minimax ni vrnil lokacije nove stranke');
         }
-        const customerId = location.split('/').pop();
+        // Odstrani query string (?id=...) in vzemi zadnji del URL-ja
+const cleanLocation = location.split('?')[0];
+const customerId = cleanLocation.split('/').pop();
         console.log(`✓ Ustvarjena nova Minimax stranka: ${customerId} za ${email}`);
         return customerId;
 
@@ -202,11 +204,34 @@ async function getNumberingId() {
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/document-numbering`,
             { headers: { 'Authorization': `Bearer ${token}` } }
         );
-        const numberings = response.data || [];
-        if (!numberings.length) {
-            throw new Error('Ni najdenega številčenja dokumentov');
-        }
-        cachedNumberingId = numberings[0].DocumentNumberingId;
+        // Debug: izpiši strukturo
+console.log('=== DOCUMENT NUMBERING ODGOVOR ===');
+console.log(JSON.stringify(response.data).slice(0, 1000));
+console.log('===================================');
+
+// Podpri različne strukture
+let numberings = [];
+if (Array.isArray(response.data)) numberings = response.data;
+else if (response.data?.Rows) numberings = response.data.Rows;
+else if (response.data?.rows) numberings = response.data.rows;
+else if (response.data?.items) numberings = response.data.items;
+else if (response.data?.data) numberings = response.data.data;
+
+if (!numberings.length) {
+    throw new Error('Ni najdenega številčenja dokumentov');
+}
+
+const first = numberings[0];
+const numberingId = first.DocumentNumberingId || first.documentNumberingId || first.id || first.ID;
+
+if (!numberingId) {
+    console.error('Struktura prvega numbering:', JSON.stringify(first));
+    throw new Error('DocumentNumberingId ni najden v odgovoru');
+}
+
+cachedNumberingId = numberingId;
+console.log(`✓ Uporabljam numbering ID: ${numberingId}`);
+return cachedNumberingId;
         return cachedNumberingId;
     } catch (err) {
         console.error('✗ Napaka pri pridobivanju številčenja:', err.message);
