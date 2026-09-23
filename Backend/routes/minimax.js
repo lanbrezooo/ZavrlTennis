@@ -238,7 +238,7 @@ return cachedNumberingId;
     }
 }
 
-async function createDraftInvoice({ customerId, znesek, opis, user }) {
+async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessionId }) {
     const token = await getMinimaxToken();
     const numberingId = await getNumberingId();
     const today = new Date().toISOString().slice(0, 10);
@@ -252,43 +252,35 @@ async function createDraftInvoice({ customerId, znesek, opis, user }) {
             { headers: { 'Authorization': `Bearer ${token}` } }
         );
         customerData = custRes.data;
-        console.log('=== PODATKI O STRANKI ===');
-        console.log(JSON.stringify(customerData, null, 2).slice(0, 1000));
-        console.log('=========================');
     } catch (e) {
         console.warn('Napaka pri branju stranke:', e.message);
     }
 
-   const invoiceNumber = await getLastInvoiceNumberFromMinimax();
-
-const payload = {
-    InvoiceType: 'R',
-    InvoiceNumber: invoiceNumber,
-    Customer: { ID: Number(customerId) },
-    DateIssued: today,
-    DateTransaction: today,
-    DateDue: dueDate,
-    AddresseeName: customerData?.Name?.trim() || `${user.ime} ${user.priimek}`.trim(),
-    AddresseeAddress: customerData?.Address || 'Pot v Toplice 10',
-    AddresseePostalCode: customerData?.PostalCode || '2250',
-    AddresseeCity: customerData?.City || 'Ptuj',
-    AddresseeCountry: { ID: 192 },
-    Currency: { ID: 7 },
-    PaymentMethod: { ID: 456712 },   // ← Kartica
-    InvoiceText: opis,
-    Rows: [{
-        Item: { ID: 10739145 },       // ← Igrisce
-        Description: opis,
-        Quantity: 1,
-        Price: znesek,
-        VatRate: { ID: 28 },          // ← Z (ničelna stopnja)
-        UnitOfMeasurement: 'kom'
-    }]
-};
-
-    console.log('=== PAYLOAD ZA RAČUN ===');
-    console.log(JSON.stringify(payload, null, 2));
-    console.log('========================');
+    const payload = {
+        InvoiceType: 'R',
+        DocumentNumbering: { ID: Number(numberingId) },
+        Customer: { ID: Number(customerId) },
+        DateIssued: today,
+        DateTransaction: today,
+        DateDue: dueDate,
+        AddresseeName: customerData?.Name?.trim() || `${user.ime} ${user.priimek}`.trim(),
+        AddresseeAddress: customerData?.Address || 'Pot v Toplice 10',
+        AddresseePostalCode: customerData?.PostalCode || '2250',
+        AddresseeCity: customerData?.City || 'Ptuj',
+        AddresseeCountry: { ID: 192 },
+        Currency: { ID: 7 },
+        PaymentMethod: { ID: 456712 },
+        InvoiceText: opis,
+        ExternalReference: stripeSessionId || null,
+        Rows: [{
+            Item: { ID: 10739145 },
+            Description: opis,
+            Quantity: 1,
+            Price: znesek,
+            VatRate: { ID: 28 },
+            UnitOfMeasurement: 'kom'
+        }]
+    };
 
     try {
         const response = await axios.post(
@@ -300,40 +292,34 @@ const payload = {
         );
 
         const location = response.headers.location;
-if (!location) {
-    throw new Error('Minimax ni vrnil lokacije računa');
-}
+        if (!location) throw new Error('Minimax ni vrnil lokacije računa');
 
-// Preberi invoiceId iz Location header-ja
-let invoiceId = null;
-const matchSlash = location.match(/\/(\d+)(?:\?|$)/);
-const matchId = location.match(/[?&]id=(\d+)/);
-if (matchSlash) invoiceId = matchSlash[1];
-else if (matchId) invoiceId = matchId[1];
-else invoiceId = location.split('?')[0].split('/').pop();
+        let invoiceId = null;
+        const matchSlash = location.match(/\/(\d+)(?:\?|$)/);
+        const matchId = location.match(/[?&]id=(\d+)/);
+        if (matchSlash) invoiceId = matchSlash[1];
+        else if (matchId) invoiceId = matchId[1];
+        else invoiceId = location.split('?')[0].split('/').pop();
 
-if (!invoiceId || !/^\d+$/.test(invoiceId)) {
-    throw new Error(`Ne morem izluščiti invoiceId iz Location: ${location}`);
-}
+        if (!invoiceId || !/^\d+$/.test(invoiceId)) {
+            throw new Error(`Ne morem izluščiti invoiceId iz Location: ${location}`);
+        }
 
-// Pridobi RowVersion z dodatnim GET klicem
-console.log(`Osnutek ustvarjen (ID: ${invoiceId}), berem RowVersion...`);
+        // Pridobi RowVersion in InvoiceNumber iz GET klica
+        const getResponse = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
 
-const getResponse = await axios.get(
-    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}`,
-    { headers: { 'Authorization': `Bearer ${token}` } }
-);
+        const rowVersion = getResponse.data?.RowVersion || getResponse.data?.rowVersion;
+        const invoiceNumber = getResponse.data?.InvoiceNumber || null;
 
-const rowVersion = getResponse.data?.RowVersion || getResponse.data?.rowVersion;
+        if (!rowVersion) {
+            throw new Error('RowVersion ni najden v GET odgovoru');
+        }
 
-if (!rowVersion) {
-    console.error('Odgovor GET /issuedinvoices:');
-    console.error(JSON.stringify(getResponse.data).slice(0, 2000));
-    throw new Error('RowVersion ni najden v GET odgovoru');
-}
-
-console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}, RowVersion: ${rowVersion}, InvoiceNumber: ${invoiceNumber}`);
-return { invoiceId, rowVersion, invoiceNumber };
+        console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}, RowVersion: ${rowVersion}, InvoiceNumber: ${invoiceNumber}`);
+        return { invoiceId, rowVersion, invoiceNumber };
     } catch (err) {
         console.error('✗ Napaka pri ustvarjanju računa:');
         console.error('  Status:', err.response?.status);
@@ -341,7 +327,6 @@ return { invoiceId, rowVersion, invoiceNumber };
         throw new Error('Napaka pri ustvarjanju računa v Minimaxu');
     }
 }
-
 async function issueInvoiceAndGeneratePdf(invoiceId, rowVersion, invoiceNumber) {
     const token = await getMinimaxToken();
     try {
@@ -358,20 +343,28 @@ async function issueInvoiceAndGeneratePdf(invoiceId, rowVersion, invoiceNumber) 
     }
 }
 
-async function sendEInvoice(invoiceId, rowVersion, invoiceNumber) {
+async function sendEInvoice(invoiceId) {
     const token = await getMinimaxToken();
     try {
-        const encodedRowVersion = encodeURIComponent(rowVersion);
+        // Preberi svež RowVersion (po izdaji se je spremenil)
+        const getRes = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        const freshRowVersion = getRes.data?.RowVersion || getRes.data?.rowVersion;
+        if (!freshRowVersion) {
+            throw new Error('Ni RowVersion po izdaji');
+        }
+        const encoded = encodeURIComponent(freshRowVersion);
+
         await axios.put(
-    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice?rowVersion=${encodedRowVersion}`,
-    {},   // ← prazno body
-    { headers: { 'Authorization': `Bearer ${token}` } }
-);
-        
-           
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice?rowVersion=${encoded}`,
+            {},
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+
         console.log(`✓ E-račun ${invoiceId} poslan stranki`);
     } catch (err) {
-        // Pošiljanje e-računa ni kritično – račun je že izdan
         console.warn('⚠ Napaka pri pošiljanju e-računa:', err.response?.data || err.message);
     }
 }
@@ -391,7 +384,21 @@ async function sendEInvoice(invoiceId, rowVersion, invoiceNumber) {
 async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
     const pool = require('../db');
     try {
-        // 0. NAJPREJ preveri bazo minimax_stranke
+        // 0. IDEMPOTENTNOST: preveri, ali je račun že izdan
+        try {
+            const [existing] = await pool.query(
+                'SELECT minimax_invoice_id, status FROM minimax_racuni WHERE stripe_session_id = ? LIMIT 1',
+                [stripeSessionId]
+            );
+            if (existing.length && existing[0].status === 'izdan' && existing[0].minimax_invoice_id) {
+                console.log(`✓ Račun za ${stripeSessionId} že izdan: ${existing[0].minimax_invoice_id}`);
+                return { uspeh: true, invoiceId: existing[0].minimax_invoice_id };
+            }
+        } catch (dbErr) {
+            console.warn('Napaka pri preverjanju obstoječega računa:', dbErr.message);
+        }
+
+        // 1. Preveri, ali imamo customerId v bazi
         let customerId = null;
         try {
             const [dbRows] = await pool.query(
@@ -406,28 +413,25 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
             console.warn('Napaka pri branju minimax_stranke:', dbErr.message);
         }
 
-// 1. Če ni v bazi, poskusi ustvariti stranko (409 vrne CustomerId)
-// (preskočimo findCustomerByEmail, ker API ne vrača emaila)
+        // 2. Če ni v bazi, poskusi najti po emailu
+        if (!customerId) {
+            try {
+                customerId = await findCustomerByEmail(user.email);
+            } catch (e) {
+                console.warn('Iskanje po emailu ni uspelo:', e.message);
+            }
+        }
 
-// 2. Če ni v bazi, poskusi najti po imenu
-if (!customerId) {
-    try {
-        customerId = await findCustomerByName(user.ime, user.priimek);
-    } catch (e) {
-        console.warn('Iskanje po imenu ni uspelo:', e.message);
-    }
-}
+        // 3. Če še vedno ni, ustvari novo stranko
+        if (!customerId) {
+            customerId = await createCustomer({
+                ime: user.ime,
+                priimek: user.priimek,
+                email: user.email
+            });
+        }
 
-// 3. Če še vedno ni, ustvari novo stranko
-if (!customerId) {
-    customerId = await createCustomer({
-        ime: user.ime,
-        priimek: user.priimek,
-        email: user.email
-    });
-}
-
-        // 3. Shrani v bazo (da naslednjič ne kličemo API)
+        // 4. Shrani v bazo
         if (customerId) {
             try {
                 await pool.query(
@@ -441,18 +445,21 @@ if (!customerId) {
                 console.warn('Napaka pri shranjevanju v minimax_stranke:', dbErr.message);
             }
         }
+
+        // 5. Ustvari osnutek računa
         const { invoiceId, rowVersion, invoiceNumber } = await createDraftInvoice({
-    customerId,
-    znesek,
-    opis,
-    user
-});
+            customerId,
+            znesek,
+            opis,
+            user,
+            stripeSessionId
+        });
 
-// 3. Izda račun in generiraj PDF
-await issueInvoiceAndGeneratePdf(invoiceId, rowVersion, invoiceNumber);
+        // 6. Izda račun in generiraj PDF
+        await issueInvoiceAndGeneratePdf(invoiceId, rowVersion, invoiceNumber);
 
-// 4. Pošlji e-račun stranki
-await sendEInvoice(invoiceId, rowVersion, invoiceNumber);
+        // 7. Pošlji e-račun (funkcija sama prebere svež RowVersion)
+        await sendEInvoice(invoiceId);
 
         return { uspeh: true, invoiceId, customerId };
     } catch (err) {
