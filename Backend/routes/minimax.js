@@ -350,30 +350,62 @@ if (!customerId) {
 }
 async function findCustomerByName(ime, priimek) {
     const token = await getMinimaxToken();
+    const pageSize = 100;
+    let skip = 0;
+    let allCustomers = [];
+    let hasMore = true;
+
+    console.log(`Iskanje stranke: ${ime} ${priimek}...`);
+
     try {
-        const response = await axios.get(
-    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
-    {
-        headers: { 'Authorization': `Bearer ${token}` },
-        params: { 
-            $filter: `contains(Name,'${priimek}')`,
-            $top: 50
+        // Zanka za pridobivanje vseh strani
+        while (hasMore && skip < 2000) { // Varnostna omejitev (max 2000 strank)
+            const response = await axios.get(
+                `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
+                {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    params: {
+                        $top: pageSize,
+                        $skip: skip
+                    }
+                }
+            );
+
+            const customers = response.data?.Rows || [];
+            
+            if (customers.length === 0) {
+                hasMore = false;
+                break;
+            }
+
+            allCustomers = allCustomers.concat(customers);
+            console.log(`Naloženih ${allCustomers.length} strank...`);
+
+            if (customers.length < pageSize) {
+                hasMore = false;
+            } else {
+                skip += pageSize;
+            }
         }
-    }
-);
-        const customers = response.data?.Rows || [];
-        const fullName = `${ime} ${priimek}`.toLowerCase().replace(/\s+/g, ' ').trim();
-        const found = customers.find(c => {
+
+        console.log(`Skupaj naloženih strank: ${allCustomers.length}`);
+
+        // Iskanje po imenu in priimku
+        const found = allCustomers.find(c => {
             const cName = (c.Name || '').toLowerCase().replace(/\s+/g, ' ').trim();
             return cName.includes(ime.toLowerCase()) && cName.includes(priimek.toLowerCase());
         });
+
         if (found) {
             console.log(`✓ Stranka najdena po imenu: ${found.CustomerId}`);
             return found.CustomerId;
         }
+
+        console.log(`Stranka ${ime} ${priimek} ni najdena v vseh ${allCustomers.length} strankah.`);
         return null;
+
     } catch (err) {
-        console.warn('Iskanje po imenu ni uspelo:', err.message);
+        console.error('Napaka pri iskanju po imenu:', err.message);
         return null;
     }
 }
