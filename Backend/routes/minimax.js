@@ -99,31 +99,26 @@ async function findCustomerByEmail(email) {
     }
 }
 
-/**
- * Ustvari novo stranko v Minimaxu.
- * Vrne CustomerId nove stranke.
- */
 async function createCustomer({ ime, priimek, email }) {
     const token = await getMinimaxToken();
     try {
         const response = await axios.post(
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
             {
-    Name: `${ime} ${priimek}`.trim(),
-    Email: email,
-    Address: 'Pot v Toplice 10',
-    PostalCode: '2250',
-    City: 'Ptuj',
-    Country: 'SI',
-    Currency: 'EUR',
-    CustomerType: 'I' // I = fizična oseba (Individual) brez davčne
-},
+                Name: `${ime} ${priimek}`.trim(),
+                Email: email,
+                Address: 'Pot v Toplice 10',
+                PostalCode: '2250',
+                City: 'Ptuj',
+                Country: 'SI',
+                Currency: 'EUR',
+                CustomerType: 'I'
+            },
             {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             }
         );
 
-        // Minimax vrne ID nove stranke v glavi Location
         const location = response.headers.location;
         if (!location) {
             throw new Error('Minimax ni vrnil lokacije nove stranke');
@@ -131,19 +126,67 @@ async function createCustomer({ ime, priimek, email }) {
         const customerId = location.split('/').pop();
         console.log(`✓ Ustvarjena nova Minimax stranka: ${customerId} za ${email}`);
         return customerId;
-    } catch (err) {
-    console.error('✗ Napaka pri ustvarjanju stranke:');
-    console.error('  Status:', err.response?.status);
-    console.error('  Data:', String(err.response?.data || err.message).slice(0, 2000));
-    
-    // Ohrani response v napaki, da fallback lahko zazna 409
-    const wrapped = new Error('Napaka pri ustvarjanju stranke v Minimaxu');
-    wrapped.response = err.response;
-    wrapped.status = err.response?.status;
-    throw wrapped;
-}
-}
 
+    } catch (err) {
+        const status = err.response?.status;
+
+        // ⬇️ NOVO: Če je 409 (stranka že obstaja), poskusi izluščiti CustomerId
+        if (status === 409) {
+            console.log('⚠ Stranka že obstaja (409), poskušam izluščiti ID...');
+            
+            // 1. Iz Location header-ja
+            const location = err.response?.headers?.location;
+            if (location) {
+                const existingId = location.split('/').pop();
+                if (existingId && !isNaN(Number(existingId))) {
+                    console.log(`✓ CustomerId iz Location header: ${existingId}`);
+                    return existingId;
+                }
+            }
+
+            // 2. Iz body-a odgovora
+            const data = err.response?.data;
+            if (data && typeof data === 'object') {
+                const possibleId = 
+                    data.CustomerId || data.customerId || 
+                    data.id || data.ID || 
+                    data.Customer?.CustomerId || data.Customer?.id ||
+                    data.ResourceUrl?.split('/').pop() ||
+                    data.Location?.split('/').pop();
+                
+                if (possibleId && !isNaN(Number(possibleId))) {
+                    console.log(`✓ CustomerId iz body: ${possibleId}`);
+                    return possibleId;
+                }
+                
+                // Debug: če ne najdemo, izpiši celotno strukturo
+                console.log('Struktura 409 odgovora:', JSON.stringify(data).slice(0, 1000));
+            }
+
+            // 3. Preveri, ali ima body string z številko
+            if (typeof data === 'string') {
+                const match = data.match(/\/(\d+)(?:\?|$|")/);
+                if (match && match[1]) {
+                    console.log(`✓ CustomerId iz string body: ${match[1]}`);
+                    return match[1];
+                }
+            }
+
+            // 4. Če ne najdemo, vrni posebno napako
+            throw new Error('Stranka že obstaja, ampak ne morem izluščiti CustomerId iz 409 odgovora');
+        }
+
+        console.error('✗ Napaka pri ustvarjanju stranke:');
+        console.error('  Status:', status);
+        console.error('  Headers:', JSON.stringify(err.response?.headers, null, 2).slice(0, 500));
+        console.error('  Data:', JSON.stringify(err.response?.data).slice(0, 2000));
+        
+        const wrapped = new Error('Napaka pri ustvarjanju stranke v Minimaxu');
+        wrapped.response = err.response;
+        wrapped.status = status;
+        throw wrapped;
+    }
+}
 /**
  * Pridobi ID številčenja za izdane račune.
  */
@@ -283,36 +326,16 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
             console.warn('Napaka pri branju minimax_stranke:', dbErr.message);
         }
 
-        // 1. Če ni v bazi, poskusi najti po IMENU (ker API ne vrača emaila)
-if (!customerId) {
-    customerId = await findCustomerByName(user.ime, user.priimek);
-}
+// 1. Če ni v bazi, poskusi ustvariti stranko (409 vrne CustomerId)
+// (preskočimo findCustomerByEmail, ker API ne vrača emaila)
 
-// 2. Če še vedno ni, poskusi po emailu (za primer, če API kdaj vrne email)
+// 2. Če ni, poskusi ustvariti (409 vrne CustomerId)
 if (!customerId) {
-    customerId = await findCustomerByEmail(user.email);
-}
-
-// 3. Če še vedno ni, ustvari novo stranko
-if (!customerId) {
-    try {
-        customerId = await createCustomer({
-            ime: user.ime,
-            priimek: user.priimek,
-            email: user.email
-        });
-    } catch (createErr) {
-        // Če 409 (že obstaja) → še enkrat poskusi po imenu
-        if (createErr.response?.status === 409 || createErr.status === 409) {
-            console.log('Stranka že obstaja (409), še enkrat iščem po imenu...');
-            customerId = await findCustomerByName(user.ime, user.priimek);
-            if (!customerId) {
-                throw new Error('Stranka že obstaja v Minimaxu, ampak je ne najdem. Preverite ročno v Minimax portalu.');
-            }
-        } else {
-            throw createErr;
-        }
-    }
+    customerId = await createCustomer({
+        ime: user.ime,
+        priimek: user.priimek,
+        email: user.email
+    });
 }
 
         // 3. Shrani v bazo (da naslednjič ne kličemo API)
