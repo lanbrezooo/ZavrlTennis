@@ -1282,6 +1282,20 @@ app.get('/api/admin/diagnose', requireAuth, requireAdmin, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// ===== DEBUG: Obstječi računi =====
+app.get('/api/admin/debug-invoices', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const token = await getMinimaxToken();
+        const ORG = process.env.MINIMAX_ORG_ID;
+        const r = await axios.get(
+            `https://moj.minimax.si/SI/API/api/orgs/${ORG}/issuedinvoices?$top=5&$orderby=IssuedInvoiceId desc`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        res.json(r.data);
+    } catch (e) {
+        res.status(500).json({ error: e.response?.status, message: e.message, data: e.response?.data });
+    }
+});
 
 app.use('/api/admin', admin);
 
