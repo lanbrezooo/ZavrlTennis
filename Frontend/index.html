@@ -1874,22 +1874,22 @@ function goToAdminUsersPage(page) {
                         <h2>Uredi uporabnika</h2>
                         <form id="editUserForm" onsubmit="handleEditUser(event, ${user.id})">
                             <div class="form-row">
-                                <div class="form-group"><label>Ime</label><input type="text" id="editIme" value="${user.ime}" required></div>
-                                <div class="form-group"><label>Priimek</label><input type="text" id="editPriimek" value="${user.priimek}" required></div>
+                                                               <div class="form-group"><label>Ime</label><input type="text" id="editIme" value="${escapeHtml(user.ime)}" required></div>
+                                <div class="form-group"><label>Priimek</label><input type="text" id="editPriimek" value="${escapeHtml(user.priimek)}" required></div>
                             </div>
-                            <div class="form-group"><label>Email</label><input type="email" id="editEmail" value="${user.email}" required></div>
-                            <div class="form-group"><label>Telefon</label><input type="tel" id="editTelefon" value="${user.telefon || ''}"></div>
+                            <div class="form-group"><label>Email</label><input type="email" id="editEmail" value="${escapeHtml(user.email)}" required></div>
+                            <div class="form-group"><label>Telefon</label><input type="tel" id="editTelefon" value="${escapeHtml(user.telefon || '')}"></div>
                             <div class="form-row">
-                                <div class="form-group"><label>Leto rojstva</label><input type="number" id="editLeto" value="${user.leto_rojstva || ''}"></div>
+                                <div class="form-group"><label>Leto rojstva</label><input type="number" id="editLeto" value="${escapeHtml(String(user.leto_rojstva || ''))}"></div>
                                 <div class="form-group"><label>Nivo</label>
                                     <select id="editNivo">
                                         ${['Začetnik','Rekreativec','Srednji nivo','Napreden','Tekmovalec'].map(n => `<option ${user.nivo === n ? 'selected' : ''}>${n}</option>`).join('')}
                                     </select>
                                 </div>
                             </div>
-                            <div class="form-group"><label>Opis</label><textarea id="editOpis">${user.opis || ''}</textarea></div>
+                            <div class="form-group"><label>Opis</label><textarea id="editOpis">${escapeHtml(user.opis || '')}</textarea></div>
                             <div class="form-row">
-                                <div class="form-group"><label>Krediti</label><input type="number" id="editKrediti" value="${user.krediti || 0}" min="0" step="0.5" inputmode="decimal"></div>
+                                <div class="form-group"><label>Krediti</label><input type="number" id="editKrediti" value="${Number(user.krediti) || 0}" min="0" step="0.5" inputmode="decimal"></div>
                                 <div class="form-group"><label>Admin</label>
                                     <select id="editAdmin">
                                         <option value="0" ${user.admin ? '' : 'selected'}>Ne</option>
@@ -2416,20 +2416,20 @@ function showBookingModal(igrisce, uraZacetka) {
                         <h2>Uredi profil</h2>
                         <form onsubmit="handleProfileUpdate(event)">
                             <div class="form-row">
-                                <div class="form-group"><label>Ime</label><input type="text" id="profIme" value="${u.ime}" required></div>
-                                <div class="form-group"><label>Priimek</label><input type="text" id="profPriimek" value="${u.priimek}" required></div>
-                            </div>
-                            <div class="form-group"><label>Email</label><input type="email" id="profEmail" value="${u.email}" required></div>
-                            <div class="form-group"><label>Telefon</label><input type="tel" id="profTelefon" value="${u.telefon || ''}"></div>
-                            <div class="form-row">
-                                <div class="form-group"><label>Leto rojstva</label><input type="number" id="profLeto" value="${u.leto_rojstva || ''}"></div>
-                                <div class="form-group"><label>Nivo</label>
-                                    <select id="profNivo">
-                                        ${['Začetnik','Rekreativec','Srednji nivo','Napreden','Tekmovalec'].map(n => `<option ${u.nivo === n ? 'selected' : ''}>${n}</option>`).join('')}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group"><label>Opis</label><textarea id="profOpis">${u.opis || ''}</textarea></div>
+    <div class="form-group"><label>Ime</label><input type="text" id="profIme" value="${escapeHtml(u.ime)}" required></div>
+    <div class="form-group"><label>Priimek</label><input type="text" id="profPriimek" value="${escapeHtml(u.priimek)}" required></div>
+</div>
+<div class="form-group"><label>Email</label><input type="email" id="profEmail" value="${escapeHtml(u.email)}" required></div>
+<div class="form-group"><label>Telefon</label><input type="tel" id="profTelefon" value="${escapeHtml(u.telefon || '')}"></div>
+<div class="form-row">
+    <div class="form-group"><label>Leto rojstva</label><input type="number" id="profLeto" value="${escapeHtml(String(u.leto_rojstva || ''))}"></div>
+    <div class="form-group"><label>Nivo</label>
+        <select id="profNivo">
+            ${['Začetnik','Rekreativec','Srednji nivo','Napreden','Tekmovalec'].map(n => `<option ${u.nivo === n ? 'selected' : ''}>${n}</option>`).join('')}
+        </select>
+    </div>
+</div>
+<div class="form-group"><label>Opis</label><textarea id="profOpis">${escapeHtml(u.opis || '')}</textarea></div>
                             <div class="form-group">
                                 <label style="display:flex;align-items:center;gap:0.5rem;">
                                     <input type="checkbox" id="profPrikaziTelefon" style="width:auto;margin:0;" ${u.prikazi_telefon ? 'checked' : ''}> Dovoli prikaz telefona drugim uporabnikom
@@ -2733,20 +2733,20 @@ window.showEditNovicaModal = function(id) {
                 <button class="modal-close" onclick="closeModal()">✕</button>
                 <h2>Uredi novico</h2>
                 <form onsubmit="handleEditNovica(event, ${id})">
-                    <div class="form-group"><label>Naslov *</label><input type="text" id="editNaslov" value="${novica.naslov}" required></div>
-                    <div class="form-group"><label>Besedilo</label><textarea id="editVsebina" rows="6">${novica.vsebina}</textarea></div>
+                    <div class="form-group"><label>Naslov *</label><input type="text" id="editNaslov" value="${escapeHtml(novica.naslov)}" required></div>
+<div class="form-group"><label>Besedilo</label><textarea id="editVsebina" rows="6">${escapeHtml(novica.vsebina || '')}</textarea></div>
                     <div class="form-group">
                         <label>Glavna slika (naloži iz naprave)</label>
                         <input type="file" id="editGlavnaSlika" accept="image/*" onchange="previewMainImage(this, true)">
-                        <div id="editMainImagePreview" style="margin-top:0.5rem;">
-                            ${editNoviceGlavnaSlika ? `<img src="${editNoviceGlavnaSlika}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;">` : ''}
+                                                <div id="editMainImagePreview" style="margin-top:0.5rem;">
+                            ${editNoviceGlavnaSlika ? `<img src="${escapeHtml(editNoviceGlavnaSlika)}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;">` : ''}
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Dodatne slike (max 5)</label>
                         <input type="file" id="editDodatneSlike" accept="image/*" multiple onchange="previewAdditionalImages(this, true)">
                         <div id="editAdditionalImagesPreview" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">
-                            ${editNoviceSlike.map(s => `<img src="${s}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;">`).join('')}
+                            ${editNoviceSlike.map(s => `<img src="${escapeHtml(s)}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;">`).join('')}
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Shrani</button>
@@ -3637,7 +3637,7 @@ window.renderFixedListModal = async function() {
                 </div>
               </div>
               <div style="flex-shrink:0;">
-                <button class="btn btn-danger btn-sm" onclick="deleteFixedGroup('${g.fixed_group_id}', '${escapeHtml(g.ime).replace(/'/g, '')} ${escapeHtml(g.priimek).replace(/'/g, '')}')">
+                <button class="btn btn-danger btn-sm" data-group-id="${escapeHtml(g.fixed_group_id)}" data-user-name="${escapeHtml(`${g.ime} ${g.priimek}`)}" onclick="deleteFixedGroup(this.dataset.groupId, this.dataset.userName)">
                   🗑 Izbriši nadaljnje
                 </button>
               </div>

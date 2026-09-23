@@ -50,12 +50,14 @@ async function getMinimaxToken() {
 async function findCustomerByEmail(email) {
     const token = await getMinimaxToken();
     try {
+        const safeEmail = String(email || '').replace(/'/g, "''");
+
         const response = await axios.get(
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
             {
                 headers: { 'Authorization': `Bearer ${token}` },
                 params: { 
-               $filter: `contains(Email,'${email}')`,
+               $filter: `contains(Email,'${safeEmail}')`,
                $top: 50
 }
             }
@@ -98,7 +100,6 @@ async function findCustomerByEmail(email) {
         return null;
     }
 }
-
 async function createCustomer({ ime, priimek, email }) {
     const token = await getMinimaxToken();
     try {

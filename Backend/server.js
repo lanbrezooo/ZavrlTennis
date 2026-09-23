@@ -357,6 +357,14 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(rateLimit({ windowMs: 15*60*1000, max: 500, standardHeaders: true, legacyHeaders: false, message: { message: 'Preveč zahtevkov. Poskusite kasneje.' } }));
 app.use('/api/auth/login', rateLimit({ windowMs: 15*60*1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { message: 'Preveč poskusov prijave. Poskusite čez nekaj minut.' } }));
 app.use('/api/auth/register', rateLimit({ windowMs: 60*60*1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { message: 'Preveč registracij. Poskusite kasneje.' } }));
+// Rate limit za plačilne poti
+app.use('/api/payments', rateLimit({ 
+  windowMs: 15 * 60 * 1000, 
+  max: 30, 
+  standardHeaders: true, 
+  legacyHeaders: false, 
+  message: { message: 'Preveč poskusov plačila. Poskusite kasneje.' } 
+}));
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);
 
@@ -422,7 +430,7 @@ app.delete('/api/admin/novice/:id', requireAuth, requireAdmin, async (req, res) 
 });
 
 // ===== JAVNI UPORABNIK =====
-app.get('/api/auth/user/:id', async (req, res) => {
+app.get('/api/auth/user/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: 'Neveljaven ID' });
   try {
