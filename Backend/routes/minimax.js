@@ -258,31 +258,40 @@ async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessio
     const invoiceNumber = await getLastInvoiceNumberFromMinimax();
 
     const payload = {
-        InvoiceType: 'R',
-        InvoiceNumber: String(invoiceNumber),
-        Customer: { ID: Number(customerId) },
-        DateIssued: today,
-        DateTransaction: today,
-        DateDue: dueDate,
-        AddresseeName: customerData?.Name?.trim() || `${user.ime} ${user.priimek}`.trim(),
-        AddresseeAddress: customerData?.Address || 'Pot v Toplice 10',
-        AddresseePostalCode: customerData?.PostalCode || '2250',
-        AddresseeCity: customerData?.City || 'Ptuj',
-        AddresseeCountry: { ID: 192 },
-        Currency: { ID: 7 },
+    InvoiceType: 'R',
+    Customer: { ID: Number(customerId) },
+    DateIssued: today,
+    DateTransaction: today,
+    DateDue: dueDate,
+    AddresseeName: customerData?.Name?.trim() || `${user.ime} ${user.priimek}`.trim(),
+    AddresseeAddress: customerData?.Address || 'Pot v Toplice 10',
+    AddresseePostalCode: customerData?.PostalCode || '2250',
+    AddresseeCity: customerData?.City || 'Ptuj',
+    AddresseeCountry: { ID: 192 },
+    Currency: { ID: 7 },
+    InvoiceText: opis,
+    ExternalReference: stripeSessionId || null,
+    
+    
+    IssuedInvoiceRows: [{
+        RowNumber: 1,
+        Item: { ID: 10739145 },
+        Description: opis,
+        Quantity: 1,
+        UnitOfMeasurement: 'kom',
+        Price: Number((znesek / 1.095).toFixed(6)),   // cena BREZ DDV
+        PriceWithVAT: znesek,                          // cena Z DDV
+        VatRate: { ID: 28 },
+        VATPercent: 9.5                                
+    }],
+    
+    
+    IssuedInvoicePaymentMethods: [{
         PaymentMethod: { ID: 456712 },
-        InvoiceText: opis,
-        ExternalReference: stripeSessionId || null,
-        Rows: [{
-    RowNumber: 1,
-    ItemId: 10739145,
-    Description: opis,
-    Quantity: 1,
-    UnitPrice: Number((znesek / 1.095).toFixed(6)),
-    VatRateId: 28,
-    UnitOfMeasurement: 'kom'
-}]
-    };
+        Amount: znesek,
+        AlreadyPaid: 'D'
+    }]
+};
 
     try {
         const response = await axios.post(

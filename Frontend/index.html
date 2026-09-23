@@ -274,18 +274,22 @@
             overflow-x: auto;
         }
         .calendar-grid {
-            display: grid;
-            grid-template-columns: 70px repeat(9, minmax(90px, 1fr)); /* ✅ 9 igrišč */
-            min-width: 900px;
-        }
-        .calendar-cell {
-    min-height: 40px;
-    padding: 0.3rem;
-    font-size: 0.75rem;
+    display: grid;
+    grid-template-columns: 70px repeat(9, minmax(90px, 1fr));
+    min-width: 900px;
+    grid-auto-rows: minmax(20px, auto);
+}
+.calendar-cell {
+    min-height: 20px;
+    padding: 2px 4px;
+    font-size: 0.7rem;
     border: 1px solid var(--border);
     overflow: hidden;
     min-width: 0;
-    word-break: break-word; /* Dolga imena se prelomijo, ampak ostanejo v celici */
+    word-break: break-word;
+}
+.calendar-cell.half-hour {
+    border-top: 1px dashed #e8e8e8;
 }
         .calendar-cell.header-cell {
             background: var(--primary); color: white; font-weight: 700; font-size: 0.85rem;
@@ -1001,8 +1005,9 @@ body:has(.modal-overlay) {
     }
 
     .calendar-grid {
-        grid-template-columns: 40px repeat(9, 1fr); /* 40px za uro, ostalo za igrišča */
+        grid-template-columns: 40px repeat(9, 1fr);
         min-width: 0;
+        grid-auto-rows: minmax(16px, auto);
     }
     .calendar-cell.time-cell {
         font-size: 0.55rem;  
@@ -1022,11 +1027,9 @@ body:has(.modal-overlay) {
 }
 
     .calendar-cell {
-        min-height: 34px;
-        padding: 2px;
-        font-size: 0.5rem;
-        border-width: 0.5px;
-        word-break: break-word;
+        min-height: 16px;
+        padding: 1px;
+        font-size: 0.45rem;
     }
     .res-name {
         font-size: 0.45rem;
@@ -1414,6 +1417,26 @@ body:has(.modal-overlay) {
                 setTimeout(() => toast.remove(), 300);
             }, 3500);
         }
+        function formatHour(h) {
+  const totalMin = Math.round(Number(h) * 60);
+  const hour = Math.floor(totalMin / 60);
+  const min = totalMin % 60;
+  return `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+function formatDuration(d) {
+  const h = Math.floor(d);
+  const min = Math.round((d - h) * 60);
+  if (min === 0) return `${h}h`;
+  return `${h}h ${min}min`;
+}
+
+function formatCreditsNum(n) {
+  const num = Number(n) || 0;
+  if (Number.isInteger(num)) return num.toString();
+  if (Math.abs(num * 2 - Math.round(num * 2)) < 1e-9) return num.toFixed(1);
+  return num.toFixed(2);
+}
         function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
         function calculateReservationCredits(startHour, duration) { let total=0; for(let hour=startHour; hour<startHour+duration; hour++) total += hour < MORNING_END_HOUR ? MORNING_CREDITS_PER_HOUR : AFTERNOON_CREDITS_PER_HOUR; return total; }
         function calculateReservationCreditsSeason(startHour, duration, igrisce) {
@@ -1505,7 +1528,7 @@ body:has(.modal-overlay) {
                 <span class="avatar">${getUserInitials(state.user)}</span>
                 <span>${escapeHtml(getFullName(state.user))}</span>
                 ${state.user.letna_karta ? '<span title="Letna karta">🎫</span>' : ''}
-                ${state.user.krediti !== null && state.user.krediti !== undefined ? `<span title="Krediti">💰 ${Number(state.user.krediti).toFixed(Number(state.user.krediti) % 1 === 0 ? 0 : 2)}</span>` : ''}
+                ${state.user.krediti !== null && state.user.krediti !== undefined ? `<span title="Krediti">💰 ${formatCreditsNum(state.user.krediti)}</span>` : ''}
             </div>
             ${adminButton}
             <button class="btn btn-outline btn-sm" onclick="showProfileModal()">Profil</button>
@@ -1526,7 +1549,7 @@ body:has(.modal-overlay) {
     if (balanceEl) {
         if (state.user) {
             const krediti = Number(state.user.krediti ?? 0);
-            balanceEl.textContent = `${krediti.toFixed(krediti % 1 === 0 ? 0 : 2)} kreditov`;
+            balanceEl.textContent = `${formatCreditsNum(krediti)} kreditov`;
         } else {
             balanceEl.textContent = 'Prijavite se';
         }
@@ -1578,90 +1601,98 @@ body:has(.modal-overlay) {
 
         
         function renderCalendar() {
-            renderCreditsLegend();
+    renderCreditsLegend();
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-            const isPast = state.selectedDate < today;
-            const isTodaySelected = state.selectedDate.toDateString() === today.toDateString();
-            const nowHour = new Date().getHours();
+    const isPast = state.selectedDate < today;
+    const isTodaySelected = state.selectedDate.toDateString() === today.toDateString();
+    const now = new Date();
+    const nowDecimal = now.getHours() + now.getMinutes() / 60;
 
-            let html = '';
+    let html = '';
 
-            html += `<div class="calendar-cell header-cell">Ura</div>`;
-            for (let c = 1; c <= COURTS; c++) {
-    let courtName;
-    if (state.sezona === 'zima' && c === 7) courtName = 'Balon 1';
-    else if (state.sezona === 'zima' && c === 8) courtName = 'Balon 2';
-    else if (c === 9) courtName = 'Igrišče 9<small style="display:block;font-size:0.65rem;font-weight:400;opacity:0.9;">hard</small>';
-    else courtName = `Igrišče ${c}`;
-    html += `<div class="calendar-cell header-cell">${courtName}</div>`;
-}
-
-
-            const endHour = Number(state.zapiralnaUra) || 22;
-
-for (let h = START_HOUR; h < END_HOUR; h++) {
-    const timeLabel = `${String(h).padStart(2, '0')}:00`;
-    const isAfterClosing = h >= endHour;
-    const timeCellClass = isAfterClosing ? 'time-cell past-time' : 'time-cell';
-    html += `<div class="calendar-cell ${timeCellClass}">${timeLabel}</div>`;
-
+    // Header
+    html += `<div class="calendar-cell header-cell">Ura</div>`;
     for (let c = 1; c <= COURTS; c++) {
-        const isPastSlot = isPast || (isTodaySelected && h <= nowHour) || isAfterClosing;
-
-        const reservation = state.reservations.find(r => {
-            const startHour = Number(r.ura_zacetka);
-            const duration = Number(r.trajanje);
-            const endHour = startHour + duration;
-            return Number(r.igrisce) === Number(c) && startHour <= h && endHour > h;
-        });
-
-                    let cellClass = 'available';
-                    let cellContent = '';
-
-                    if (reservation) {
-    const isOwn = state.user && Number(reservation.user_id) === Number(state.user.id);
-    const isBlock = Number(reservation.blokada) === 1;
-    cellClass = isOwn ? 'booked-own' : 'booked';
-
-    // Blokada (izredni dogodek) – rdeča
-    if (isBlock) {
-        cellClass = 'blocked';
+        let courtName;
+        if (state.sezona === 'zima' && c === 7) courtName = 'Balon 1';
+        else if (state.sezona === 'zima' && c === 8) courtName = 'Balon 2';
+        else if (c === 9) courtName = 'Igrišče 9<small style="display:block;font-size:0.65rem;font-weight:400;opacity:0.9;">hard</small>';
+        else courtName = `Igrišče ${c}`;
+        html += `<div class="calendar-cell header-cell">${courtName}</div>`;
     }
 
-    // Pretekle rezervacije prikažemo sivo
-    if (isPastSlot && !isBlock) {
+    const endHour = Number(state.zapiralnaUra) || 22;
+
+    // Vsaka ura = 2 vrstici (00 in 30)
+    for (let h = START_HOUR; h < END_HOUR; h++) {
+        // Time label spans 2 rows
+        const isAfterClosing = h >= endHour;
+        const timeCellClass = isAfterClosing ? 'time-cell past-time' : 'time-cell';
+        html += `<div class="calendar-cell ${timeCellClass}" style="grid-row: span 2;">${formatHour(h)}</div>`;
+
+        // Row 1: :00
+        for (let c = 1; c <= COURTS; c++) {
+            html += renderCalendarCell(h, c, isPast, isTodaySelected, nowDecimal, endHour, false);
+        }
+        // Row 2: :30
+        for (let c = 1; c <= COURTS; c++) {
+            html += renderCalendarCell(h + 0.5, c, isPast, isTodaySelected, nowDecimal, endHour, true);
+        }
+    }
+
+    calendarGrid.innerHTML = html;
+    renderMyReservations();
+}
+
+function renderCalendarCell(slotHour, igrisce, isPast, isTodaySelected, nowDecimal, endHour, isHalf) {
+    const isAfterClosing = slotHour >= endHour;
+    const isPastSlot = isPast || (isTodaySelected && slotHour < nowDecimal) || isAfterClosing;
+
+    const reservation = state.reservations.find(r => {
+        const startH = Number(r.ura_zacetka);
+        const endH = startH + Number(r.trajanje);
+        return Number(r.igrisce) === Number(igrisce) && startH <= slotHour && endH > slotHour;
+    });
+
+    let cellClass = 'available';
+    let cellContent = '';
+
+    if (reservation) {
+        const isOwn = state.user && Number(reservation.user_id) === Number(state.user.id);
+        const isBlock = Number(reservation.blokada) === 1;
+        cellClass = isOwn ? 'booked-own' : 'booked';
+        if (isBlock) cellClass = 'blocked';
+        if (isPastSlot && !isBlock) cellClass = 'past';
+
+        const startH = Number(reservation.ura_zacetka);
+        const isFirstSlot = Math.abs(slotHour - startH) < 1e-9;
+
+        if (isFirstSlot) {
+            let displayName = '';
+            if (reservation.oznaka) displayName = reservation.oznaka;
+            else if (reservation.ime && reservation.priimek) displayName = `${reservation.ime} ${reservation.priimek}`;
+            else if (isOwn && state.user) displayName = getFullName(state.user);
+            else displayName = 'Zasedeno';
+
+            const dur = Number(reservation.trajanje);
+            const durLabel = dur >= 1
+                ? (Number.isInteger(dur) ? `${dur}h` : formatDuration(dur))
+                : '';
+            cellContent = `<span class="res-name">${escapeHtml(displayName)}</span>${durLabel ? `<span class="res-duration">${durLabel}</span>` : ''}`;
+        }
+    } else if (isPastSlot) {
         cellClass = 'past';
     }
 
-    let displayName = '';
-    if (reservation.oznaka) {
-        displayName = reservation.oznaka;
-    } else if (reservation.ime && reservation.priimek) {
-        displayName = `${reservation.ime} ${reservation.priimek}`;
-    } else if (isOwn && state.user) {
-        displayName = getFullName(state.user);
-    } else {
-        displayName = 'Zasedeno';
-    }
-    cellContent = `<span class="res-name">${escapeHtml(displayName)}</span><span class="res-duration">${reservation.trajanje}h</span>`;
-} else if (isPastSlot) {
-    cellClass = 'past';
+    const isBlockCell = reservation && Number(reservation.blokada) === 1;
+    const clickable = !isPastSlot && !isBlockCell;
+    const halfClass = isHalf ? ' half-hour' : '';
+    const style = clickable ? 'cursor:pointer;' : '';
+    return `<div class="calendar-cell ${cellClass}${halfClass}" data-igrisce="${igrisce}" data-ura="${slotHour}" style="${style}">${cellContent}</div>`;
 }
-
-// Blokada ni klikljiva za navadne uporabnike
-const isBlockCell = reservation && Number(reservation.blokada) === 1;
-const clickable = !isPastSlot && !isBlockCell;
-                    html += `<div class="calendar-cell ${cellClass}" data-igrisce="${c}" data-ura="${h}" ${clickable ? 'style="cursor:pointer;"' : ''}>${cellContent}</div>`;
-                
-            }  
-            }  
-
-            calendarGrid.innerHTML = html;
-            renderMyReservations();
-        }
         
 
         function renderMyReservations() {
@@ -1677,8 +1708,9 @@ const clickable = !isPastSlot && !isBlockCell;
             }
             myReservationsEl.style.display = 'block';
             resListEl.innerHTML = myRes.map(r => {
-    const endHour = Number(r.ura_zacetka) + Number(r.trajanje);
-    const timeStr = `${String(Number(r.ura_zacetka)).padStart(2, '0')}:00 - ${String(endHour).padStart(2, '0')}:00`;
+    const startH = Number(r.ura_zacetka);
+    const endH = startH + Number(r.trajanje);
+    const timeStr = `${formatHour(startH)} – ${formatHour(endH)}`;
 
     
     const canCancel = canUserCancelReservation(r);
@@ -1921,7 +1953,7 @@ function goToAdminUsersPage(page) {
                 leto_rojstva: document.getElementById('editLeto').value ? parseInt(document.getElementById('editLeto').value) : null,
                 nivo: document.getElementById('editNivo').value,
                 opis: document.getElementById('editOpis').value,
-                krediti: Math.round(parseFloat(document.getElementById('editKrediti').value || 0) * 2) / 2,
+                krediti: Math.round(parseFloat(document.getElementById('editKrediti').value || 0) * 4) / 4,
                 letna_karta: document.getElementById('editLetnaKarta').checked ? 1 : 0,
                 admin: document.getElementById('editAdmin').value === '1' ? 1 : 0,
                 prikazi_telefon: document.getElementById('editPrikaziTelefon').checked ? 1 : 0
@@ -2160,18 +2192,38 @@ function showBookingModal(igrisce, uraZacetka) {
     const dateStr = formatDate(state.selectedDate);
     const dateDisplayStr = formatDateShort(dateStr);
     const endHour = Number(state.zapiralnaUra) || 22;
-    const maxDuration = endHour - uraZacetka;
     const isAdmin = state.user?.admin === true;
-    const maxSelectableDuration = isAdmin ? maxDuration : Math.min(maxDuration, 3);
+const maxDuration = endHour - uraZacetka;
+const maxSelectableDuration = isAdmin ? maxDuration : Math.min(maxDuration, 2);
 
-    let availableDurations = [];
-    for (let d = 1; d <= maxSelectableDuration; d++) {
-        const isFree = !state.reservations.some(r => r.igrisce === igrisce && r.ura_zacetka >= uraZacetka && r.ura_zacetka < uraZacetka + d);
-        if (isFree) availableDurations.push(d);
-    }
-    if (availableDurations.length === 0) availableDurations = [1];
+// Preveri katero trajanje je možno (brez prekrivanja)
+let availableDurations = [];
+for (let d = 1; d <= maxSelectableDuration + 1e-9; d += 0.5) {
+    const newEnd = uraZacetka + d;
+    const overlaps = state.reservations.some(r => {
+        const rStart = Number(r.ura_zacetka);
+        const rEnd = rStart + Number(r.trajanje);
+        return Number(r.igrisce) === igrisce && rStart < newEnd && rEnd > uraZacetka;
+    });
+    if (!overlaps) availableDurations.push(d);
+}
 
-    const durationOptions = availableDurations.map(d => `<option value="${d}">${d} ${d === 1 ? 'ura' : (d === 2 ? 'uri' : 'ure')} (${String(uraZacetka).padStart(2, '0')}:00 – ${String(uraZacetka + d).padStart(2, '0')}:00)</option>`).join('');
+if (availableDurations.length === 0) {
+    showToast('Za ta termin ni prostora.', 'error');
+    return;
+}
+
+function durationLabel(d) {
+    const h = Math.floor(d);
+    const min = Math.round((d - h) * 60);
+    if (min === 0) return `${h} ${h === 1 ? 'ura' : (h === 2 ? 'uri' : 'ure')}`;
+    if (h === 0) return `${min} min`;
+    return `${h} ${h === 1 ? 'ura' : 'uri'} ${min} min`;
+}
+
+const durationOptions = availableDurations.map(d =>
+    `<option value="${d}">${durationLabel(d)} (${formatHour(uraZacetka)} – ${formatHour(uraZacetka + d)})</option>`
+).join('');
 
     const hasAnnualCard = Boolean(state.user?.letna_karta) && (!isWinter() || state.user?.admin);
 
@@ -2191,7 +2243,7 @@ function showBookingModal(igrisce, uraZacetka) {
                         <div class="bs-court">Igrišče ${igrisce}</div>
                         <div class="bs-date">${dateDisplayStr}</div>
                     </div>
-                    <div class="bs-time">${String(uraZacetka).padStart(2, '0')}:00</div>
+                    <div class="bs-time">${formatHour(uraZacetka)}</div>
                 </div>
                 <form id="bookingForm" onsubmit="handleBooking(event, ${igrisce}, ${uraZacetka})">
                     <div class="form-group">
@@ -2266,7 +2318,7 @@ function showBookingModal(igrisce, uraZacetka) {
     const submitBtn = document.getElementById('bookingSubmitBtn');
     const errorEl = document.getElementById('bookingError');
     
-    if (creditsEl) creditsEl.textContent = `${credits.toFixed(credits % 1 === 0 ? 0 : 1)} ${credits === 1 ? 'kredit' : (credits === 2 ? 'kredita' : 'kreditov')}`;
+    if (creditsEl) creditsEl.textContent = `${formatCreditsNum(credits)} ${credits === 1 ? 'kredit' : 'kreditov'}`;
     if (cardEl) cardEl.textContent = `${eurValue.toFixed(0)} €`;
     
     // Preveri stanje kreditov
@@ -2279,7 +2331,7 @@ function showBookingModal(igrisce, uraZacetka) {
         submitBtn.textContent = 'Potrdi rezervacijo';
         errorEl.textContent = '';
     } else if (method === 'credits') {
-        valueEl.textContent = `${credits.toFixed(credits % 1 === 0 ? 0 : 1)} ${credits === 1 ? 'kredit' : (credits === 2 ? 'kredita' : 'kreditov')}`;
+        valueEl.textContent = `${formatCreditsNum(credits)} ${credits === 1 ? 'kredit' : 'kreditov'}`;
         labelEl.textContent = 'Skupaj za plačilo';
         submitBtn.textContent = 'Potrdi rezervacijo';
         if (!hasEnoughCredits) {
@@ -2298,7 +2350,7 @@ function showBookingModal(igrisce, uraZacetka) {
         window.handleBooking = async function(e, igrisce, uraZacetka) {
     e.preventDefault();
     const form = e.target;
-    const trajanje = parseInt(new FormData(form).get('trajanje'));
+    const trajanje = parseFloat(new FormData(form).get('trajanje'));
     const method = form.elements.paymentMethod?.value || 'credits';
     const errorEl = document.getElementById('bookingError');
     errorEl.textContent = '';
@@ -2354,8 +2406,9 @@ function showBookingModal(igrisce, uraZacetka) {
         return;
     }
             const dateStr = formatDateShort(reservation.datum);
-            const endHour = reservation.ura_zacetka + reservation.trajanje;
-            const timeStr = `${String(reservation.ura_zacetka).padStart(2, '0')}:00 - ${String(endHour).padStart(2, '0')}:00`;
+            const startH = Number(reservation.ura_zacetka);
+            const endH = startH + Number(reservation.trajanje);
+            const timeStr = `${formatHour(startH)} - ${formatHour(endH)}`;
             modalRoot.innerHTML = `
                 <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
                     <div class="modal" style="max-width:400px;">
@@ -3081,8 +3134,9 @@ async function showAdminReservationDetails(reservationId) {
     try {
         const data = await apiCall(`/admin/reservations/${reservationId}/details`);
         const r = data.reservation;
-        const endHour = Number(r.ura_zacetka) + Number(r.trajanje);
-        const timeStr = `${String(r.ura_zacetka).padStart(2, '0')}:00 – ${String(endHour).padStart(2, '0')}:00`;
+        const startH = Number(r.ura_zacetka);
+        const endH = startH + Number(r.trajanje);
+        const timeStr = `${formatHour(startH)} - ${formatHour(endH)}`;
         const dateStr = formatDateShort(r.datum);
 
         const krediti = Number(r.krediti_porabili || 0);

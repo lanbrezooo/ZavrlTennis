@@ -52,41 +52,30 @@ function calculateCredits(startHour, duration, igrisce, sezona) {
   if (isWinter && (Number(igrisce) === 7 || Number(igrisce) === 8)) {
     return 2.5 * duration;
   }
-
+  // 1 kredit/uro = 0,5 / 30 min
+  const steps = Math.round(duration * 2);
   let total = 0;
-  for (let hour = startHour; hour < startHour + duration; hour++) {
-    total += hour < MORNING_END_HOUR
-      ? MORNING_CREDITS_PER_HOUR
-      : AFTERNOON_CREDITS_PER_HOUR;
+  for (let i = 0; i < steps; i++) {
+    const h = startHour + i * 0.5;
+    total += h < MORNING_END_HOUR
+      ? MORNING_CREDITS_PER_HOUR / 2
+      : AFTERNOON_CREDITS_PER_HOUR / 2;
   }
   return total;
 }
 
 function validateReservation({ igrisce, ura, trajanje, datum, endHour, isAdmin }) {
-  if (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > COURTS) {
-    return 'Neveljavno igrišče';
-  }
+  if (!Number.isInteger(igrisce) || igrisce < 1 || igrisce > COURTS) return 'Neveljavno igrišče';
+  if (!validDate(datum) || !withinWindow(datum)) return 'Neveljaven datum';
+  if (typeof ura !== 'number' || !Number.isFinite(ura)) return 'Neveljavna ura';
+  if (!Number.isInteger(ura * 2)) return 'Ura mora biti v korakih po 30 minut';
+  if (ura < START_HOUR || ura >= endHour) return 'Neveljavna ura';
+  if (typeof trajanje !== 'number' || !Number.isFinite(trajanje)) return 'Neveljavno trajanje';
+  if (!Number.isInteger(trajanje * 2) || trajanje < 1) return 'Trajanje mora biti vsaj 1 ura';
 
-  if (!validDate(datum) || !withinWindow(datum)) {
-    return 'Neveljaven datum';
-  }
-
-  if (!Number.isInteger(ura) || ura < START_HOUR || ura >= endHour) {
-    return 'Neveljavna ura';
-  }
-
-  const maxDuration = isAdmin
-    ? endHour - ura
-    : Math.min(3, endHour - ura);
-
-  if (!Number.isInteger(trajanje) || trajanje < 1 || trajanje > maxDuration) {
-    return `Neveljavno trajanje (največ ${maxDuration} ur)`;
-  }
-
-  if (ura + trajanje > endHour) {
-    return 'Termin presega zapiralno uro';
-  }
-
+  const maxDuration = isAdmin ? endHour - ura : Math.min(2, endHour - ura);
+  if (trajanje > maxDuration + 1e-9) return `Neveljavno trajanje (največ ${maxDuration} ur)`;
+  if (ura + trajanje > endHour + 1e-9) return 'Termin presega zapiralno uro';
   return null;
 }
 

@@ -468,7 +468,7 @@ admin.put('/users/:id', async (req, res) => {
   if (!Number.isFinite(credits) || credits < 0) {
     return res.status(400).json({ message: 'Krediti morajo biti število 0 ali več' });
   }
-  const creditsRounded = Math.round(credits * 2) / 2;
+  const creditsRounded = Math.round(credits * 4) / 4;
 
   try {
     await pool.query(
