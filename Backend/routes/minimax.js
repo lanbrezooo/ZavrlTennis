@@ -232,7 +232,6 @@ if (!numberingId) {
 cachedNumberingId = numberingId;
 console.log(`✓ Uporabljam numbering ID: ${numberingId}`);
 return cachedNumberingId;
-        return cachedNumberingId;
     } catch (err) {
         console.error('✗ Napaka pri pridobivanju številčenja:', err.message);
         throw new Error('Napaka pri pridobivanju številčenja');
@@ -334,8 +333,8 @@ if (!rowVersion) {
     throw new Error('RowVersion ni najden v GET odgovoru');
 }
 
-console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}, RowVersion: ${rowVersion}`);
-return { invoiceId, rowVersion };
+console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}, RowVersion: ${rowVersion}, InvoiceNumber: ${invoiceNumber}`);
+return { invoiceId, rowVersion, invoiceNumber };
     } catch (err) {
         console.error('✗ Napaka pri ustvarjanju računa:');
         console.error('  Status:', err.response?.status);
@@ -344,19 +343,15 @@ return { invoiceId, rowVersion };
     }
 }
 
-/**
- * Izda račun in generira PDF.
- */
-async function issueInvoiceAndGeneratePdf(invoiceId, rowVersion) {
+async function issueInvoiceAndGeneratePdf(invoiceId, rowVersion, invoiceNumber) {
     const token = await getMinimaxToken();
     try {
-        // RowVersion vsebuje posebne znake (=, /, +) – treba jih je URL-encodati
-const encodedRowVersion = encodeURIComponent(rowVersion);
-await axios.put(
-    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/issueAndGeneratepdf?rowVersion=${encodedRowVersion}`,
-    {},
-    { headers: { 'Authorization': `Bearer ${token}` } }
-);
+        const encodedRowVersion = encodeURIComponent(rowVersion);
+        await axios.put(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/issueAndGeneratepdf?rowVersion=${encodedRowVersion}`,
+            { InvoiceNumber: invoiceNumber },   // ← POŠLJI V BODY-JU
+            { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        );
         console.log(`✓ Račun ${invoiceId} izdan in PDF generiran`);
     } catch (err) {
         console.error('✗ Napaka pri izdaji računa:', err.response?.data || err.message);
@@ -364,18 +359,15 @@ await axios.put(
     }
 }
 
-/**
- * Pošlje e-račun stranki.
- */
-async function sendEInvoice(invoiceId, rowVersion) {
+async function sendEInvoice(invoiceId, rowVersion, invoiceNumber) {
     const token = await getMinimaxToken();
     try {
         const encodedRowVersion = encodeURIComponent(rowVersion);
-await axios.put(
-    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice?rowVersion=${encodedRowVersion}`,
-    {},
-    { headers: { 'Authorization': `Bearer ${token}` } }
-);
+        await axios.put(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice?rowVersion=${encodedRowVersion}`,
+            { InvoiceNumber: invoiceNumber },
+            { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        );
         
            
         console.log(`✓ E-račun ${invoiceId} poslan stranki`);
@@ -450,19 +442,18 @@ if (!customerId) {
                 console.warn('Napaka pri shranjevanju v minimax_stranke:', dbErr.message);
             }
         }
-        // 2. Ustvari osnutek računa
-        const { invoiceId, rowVersion } = await createDraftInvoice({
-            customerId,
-            znesek,
-            opis,
-            user
-        });
+        const { invoiceId, rowVersion, invoiceNumber } = await createDraftInvoice({
+    customerId,
+    znesek,
+    opis,
+    user
+});
 
-        // 3. Izda račun in generiraj PDF
-        await issueInvoiceAndGeneratePdf(invoiceId, rowVersion);
+// 3. Izda račun in generiraj PDF
+await issueInvoiceAndGeneratePdf(invoiceId, rowVersion, invoiceNumber);
 
-        // 4. Pošlji e-račun stranki
-        await sendEInvoice(invoiceId, rowVersion);
+// 4. Pošlji e-račun stranki
+await sendEInvoice(invoiceId, rowVersion, invoiceNumber);
 
         return { uspeh: true, invoiceId, customerId };
     } catch (err) {
@@ -567,33 +558,60 @@ async function getLastInvoiceNumberFromMinimax() {
     const leto = new Date().getFullYear();
     
     try {
-        // Preberi zadnjih 100 računov iz tega leta, sortirano padajoče
-        const res = await axios.get(
-            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices`,
-            {
-                headers: { 'Authorization': `Bearer ${token}` },
-                params: {
-                    $top: 100,
-                    $orderby: 'IssuedInvoiceId desc'
+        let skip = 0;
+        const pageSize = 100;
+        let maxNumber = 0;
+        let hasMore = true;
+        let totalChecked = 0;
+        
+        // Paginacija skozi vse račune
+        while (hasMore && skip < 2000) {
+            const res = await axios.get(
+                `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices`,
+                {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    params: {
+                        $top: pageSize,
+                        $skip: skip,
+                        $orderby: 'IssuedInvoiceId desc'
+                    }
+                }
+            );
+            
+            const rows = res.data?.Rows || [];
+            
+            if (rows.length === 0) {
+                hasMore = false;
+                break;
+            }
+            
+            // Filtriraj samo račune iz tega leta
+            const letosnji = rows.filter(r => Number(r.Year) === leto);
+            totalChecked += rows.length;
+            
+            if (letosnji.length > 0) {
+                const maxInBatch = Math.max(...letosnji.map(r => Number(r.InvoiceNumber) || 0));
+                if (maxInBatch > maxNumber) {
+                    maxNumber = maxInBatch;
                 }
             }
-        );
+            
+            if (rows.length < pageSize) {
+                hasMore = false;
+            } else {
+                skip += pageSize;
+            }
+        }
         
-        const rows = res.data?.Rows || [];
+        console.log(`✓ Preverjenih ${totalChecked} računov, max v letu ${leto}: ${maxNumber}`);
         
-        // Filtriraj samo račune iz tega leta
-        const letosnji = rows.filter(r => Number(r.Year) === leto);
-        
-        if (letosnji.length === 0) {
+        if (maxNumber === 0) {
             console.log(`✓ Prvi račun v letu ${leto}: številka 1`);
             return 1;
         }
         
-        // Poišči najvišjo številko
-        const maxNumber = Math.max(...letosnji.map(r => Number(r.InvoiceNumber) || 0));
         const nextNumber = maxNumber + 1;
-        
-        console.log(`✓ Zadnja številka leta ${leto}: ${maxNumber} → naslednja: ${nextNumber}`);
+        console.log(`✓ Naslednja številka računa: ${nextNumber}`);
         return nextNumber;
     } catch (err) {
         console.error('Napaka pri branju zadnje številke:', err.message);
@@ -601,7 +619,6 @@ async function getLastInvoiceNumberFromMinimax() {
         return Math.floor(Date.now() / 1000);
     }
 }
-
 module.exports = {
     izdajMinimaxRacun,
     getMinimaxToken,
