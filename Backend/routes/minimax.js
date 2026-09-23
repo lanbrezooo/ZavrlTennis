@@ -561,21 +561,20 @@ async function getLastInvoiceNumberFromMinimax() {
     const leto = new Date().getFullYear();
     
     try {
-        // Pridobi VSE račune v enem klicu (brez paginacije)
         const res = await axios.get(
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices`,
             {
                 headers: { 'Authorization': `Bearer ${token}` },
                 params: {
-                    $top: 5000
+                    $top: 100,
+                    $orderby: 'IssuedInvoiceId desc'
                 }
             }
         );
         
         const rows = res.data?.Rows || [];
-        console.log(`✓ Naloženih ${rows.length} računov`);
+        console.log(`✓ Naloženih ${rows.length} računov (najnovejših)`);
         
-        // Filtriraj samo račune iz tega leta
         const letosnji = rows.filter(r => Number(r.Year) === leto);
         console.log(`✓ Najdenih ${letosnji.length} računov v letu ${leto}`);
         
@@ -590,7 +589,6 @@ async function getLastInvoiceNumberFromMinimax() {
         return nextNumber;
     } catch (err) {
         console.error('Napaka pri branju zadnje številke:', err.message);
-        // Fallback: timestamp
         return Math.floor(Date.now() / 1000);
     }
 }
