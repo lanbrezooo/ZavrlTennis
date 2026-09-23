@@ -3,7 +3,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // ===== KONFIGURACIJA =====
-const MINIMAX_API_URL = 'https://moj.minimax.si/SI/api';
+const MINIMAX_API_URL = 'https://moj.minimax.si/SI/API/api';
 const MINIMAX_AUTH_URL = 'https://moj.minimax.si/si/aut/oauth20/token';
 const ORGANISATION_ID = process.env.MINIMAX_ORG_ID;
 
