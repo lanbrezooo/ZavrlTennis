@@ -432,11 +432,44 @@ async function findCustomerByName(ime, priimek) {
         return null;
     }
 }
+async function debugCountries() {
+    const token = await getMinimaxToken();
+    try {
+        const response = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/countries`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        console.log('=== DRŽAVE ===');
+        console.log(JSON.stringify(response.data, null, 2).slice(0, 3000));
+        return response.data;
+    } catch (err) {
+        console.error('Napaka pri branju držav:', err.message);
+        return null;
+    }
+}
+
+async function debugCurrencies() {
+    const token = await getMinimaxToken();
+    try {
+        const response = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/currencies`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        console.log('=== VALUTE ===');
+        console.log(JSON.stringify(response.data, null, 2).slice(0, 3000));
+        return response.data;
+    } catch (err) {
+        console.error('Napaka pri branju valut:', err.message);
+        return null;
+    }
+}
 
 module.exports = {
     izdajMinimaxRacun,
     getMinimaxToken,
     findCustomerByEmail,
     findCustomerByName,
-    createCustomer
+    createCustomer,
+     debugCountries,     // ← dodaj
+    debugCurrencies
 };
