@@ -11,6 +11,13 @@ const reservationRoutes = require('./routes/reservations');
 const { izdajMinimaxRacun, debugCountries, debugCurrencies } = require('./routes/minimax');
 const { requireAuth, requireAdmin } = require('./middleware');
 
+const { 
+  izdajMinimaxRacun,
+  getMinimaxToken,
+  debugCountries,
+  debugCurrencies
+} = require('./routes/minimax');
+
 const {
   getEndHour,
   validateReservation,
@@ -1464,6 +1471,53 @@ app.get('/app', (_req,res)=>res.sendFile(path.join(frontendPath,'index.html')));
 app.use(express.static(frontendPath,{ index:false, maxAge:'1h' }));
 app.get('*', (_req,res)=>res.sendFile(path.join(frontendPath,'landing.html')));
 app.use((err,req,res,_next)=>{ if(err.message==='Origin ni dovoljen') return res.status(403).json({message:'Origin ni dovoljen'}); console.error(err); res.status(500).json({message:'Nepričakovana napaka'}); });
+// ===== DIAGNOSTIKA MINIMAX (samo za admin) =====
+const axios = require('axios');
+const MINIMAX_API_URL = 'https://moj.minimax.si/SI/API/api';
+const MINIMAX_ORG = process.env.MINIMAX_ORG_ID;
+
+async function fetchMinimax(token, path) {
+    try {
+        const res = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${MINIMAX_ORG}${path}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        return res.data;
+    } catch (e) {
+        return { error: e.response?.status || e.message, data: e.response?.data };
+    }
+}
+
+app.get('/api/admin/diagnose', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const token = await getMinimaxToken();
+        
+        const results = {
+            org_id: MINIMAX_ORG,
+            tokens: {
+                client_id: process.env.MINIMAX_CLIENT_ID ? '✓ nastavljen' : '✗ manjka',
+                client_secret: process.env.MINIMAX_CLIENT_SECRET ? '✓ nastavljen' : '✗ manjka',
+                username: process.env.MINIMAX_USERNAME || '✗ manjka',
+                password: process.env.MINIMAX_PASSWORD ? '✓ nastavljen' : '✗ manjka',
+                org_id: MINIMAX_ORG || '✗ manjka',
+                token: token ? '✓ pridobljen' : '✗ ni uspel'
+            },
+            numbering: await fetchMinimax(token, '/document-numbering'),
+            items: await fetchMinimax(token, '/items'),
+            vatRates: await fetchMinimax(token, '/vat-rates'),
+            paymentMethods: await fetchMinimax(token, '/paymentMethods'),
+            countries: await fetchMinimax(token, '/countries'),
+            currencies: await fetchMinimax(token, '/currencies')
+        };
+        
+        res.json(results);
+    } catch (err) {
+        res.status(500).json({ 
+            error: err.message,
+            stack: err.stack 
+        });
+    }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Zavrl Tennis Team teče na portu ${PORT}`));
 
