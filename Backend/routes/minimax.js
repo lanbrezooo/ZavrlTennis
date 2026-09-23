@@ -260,39 +260,30 @@ async function createDraftInvoice({ customerId, znesek, opis, user }) {
         console.warn('Napaka pri branju stranke:', e.message);
     }
 
-    // Sestavi payload z vsemi obveznimi polji
     const payload = {
-        InvoiceType: 'R',                           // R = izdan račun
-        DocumentNumbering: { ID: numberingId },
-        InvoiceNumber: null,
-        Customer: { ID: Number(customerId) },
-        DateIssued: today,
-        DateTransaction: today,
-        DateDue: dueDate,
-
-        // Naslovnik (obvezno)
-        AddresseeName: customerData?.Name?.trim() || `${user.ime} ${user.priimek}`.trim(),
-        AddresseeAddress: customerData?.Address || 'Pot v Toplice 10',
-        AddresseePostalCode: customerData?.PostalCode || '2250',
-        AddresseeCity: customerData?.City || 'Ptuj',
-        AddresseeCountry: { ID: 192 },
-
-        // Denarna enota (obvezno)
-        Currency: { ID: 7 },
-
-        // Besedilo na računu (obvezno)
-        InvoiceText: opis,
-
-
-        // Vrstice računa
-        Rows: [{
-            Description: opis,
-            Quantity: 1,
-            Price: znesek,
-            VAT: 22,
-            VATRatePercentage: 22
-        }]
-    };
+    InvoiceType: 'R',
+    DocumentNumbering: { ID: numberingId },
+    Customer: { ID: Number(customerId) },
+    DateIssued: today,
+    DateTransaction: today,
+    DateDue: dueDate,
+    AddresseeName: customerData?.Name?.trim() || `${user.ime} ${user.priimek}`.trim(),
+    AddresseeAddress: customerData?.Address || 'Pot v Toplice 10',
+    AddresseePostalCode: customerData?.PostalCode || '2250',
+    AddresseeCity: customerData?.City || 'Ptuj',
+    AddresseeCountry: { ID: 192 },
+    Currency: { ID: 7 },
+    PaymentMethod: { ID: 456712 },   // ← Kartica
+    InvoiceText: opis,
+    Rows: [{
+        Item: { ID: 10739145 },       // ← Igrisce
+        Description: opis,
+        Quantity: 1,
+        Price: znesek,
+        VatRate: { ID: 28 },          // ← Z (ničelna stopnja)
+        UnitOfMeasurement: 'kom'
+    }]
+};
 
     console.log('=== PAYLOAD ZA RAČUN ===');
     console.log(JSON.stringify(payload, null, 2));
