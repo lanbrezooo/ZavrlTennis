@@ -81,16 +81,15 @@ async function createCustomer({ ime, priimek, email }) {
         const response = await axios.post(
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
             {
-                Name: `${ime} ${priimek}`.trim(),
-                Email: email,
-                // Obvezna polja za fizično osebo
-                Address: 'Neznan',
-                PostalCode: '1000',
-                City: 'Ljubljana',
-                Country: 'SI',
-                Currency: 'EUR',
-                CustomerType: 'F' // F = fizična oseba
-            },
+    Name: `${ime} ${priimek}`.trim(),
+    Email: email,
+    Address: 'Pot v Toplice 10',
+    PostalCode: '2250',
+    City: 'Ptuj',
+    Country: 'SI',
+    Currency: 'EUR',
+    CustomerType: 'I' // I = fizična oseba (Individual) brez davčne
+},
             {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             }
@@ -105,7 +104,10 @@ async function createCustomer({ ime, priimek, email }) {
         console.log(`✓ Ustvarjena nova Minimax stranka: ${customerId} za ${email}`);
         return customerId;
     } catch (err) {
-        console.error('✗ Napaka pri ustvarjanju stranke:', err.response?.data || err.message);
+        console.error('✗ Napaka pri ustvarjanju stranke:');
+console.error('  Status:', err.response?.status);
+console.error('  Headers:', JSON.stringify(err.response?.headers, null, 2));
+console.error('  Data:', String(err.response?.data || err.message).slice(0, 2000));;
         throw new Error('Napaka pri ustvarjanju stranke v Minimaxu');
     }
 }
