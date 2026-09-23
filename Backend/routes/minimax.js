@@ -240,11 +240,9 @@ return cachedNumberingId;
 
 async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessionId }) {
     const token = await getMinimaxToken();
-    const numberingId = await getNumberingId();
     const today = new Date().toISOString().slice(0, 10);
     const dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-    // Pridobi podatke o stranki iz Minimaxa (za Addressee polja)
     let customerData = null;
     try {
         const custRes = await axios.get(
@@ -256,9 +254,11 @@ async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessio
         console.warn('Napaka pri branju stranke:', e.message);
     }
 
+    const invoiceNumber = await getLastInvoiceNumberFromMinimax();
+
     const payload = {
         InvoiceType: 'R',
-        DocumentNumbering: { ID: Number(numberingId) },
+        InvoiceNumber: String(invoiceNumber),
         Customer: { ID: Number(customerId) },
         DateIssued: today,
         DateTransaction: today,
@@ -305,18 +305,13 @@ async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessio
             throw new Error(`Ne morem izluščiti invoiceId iz Location: ${location}`);
         }
 
-        // Pridobi RowVersion in InvoiceNumber iz GET klica
         const getResponse = await axios.get(
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}`,
             { headers: { 'Authorization': `Bearer ${token}` } }
         );
 
         const rowVersion = getResponse.data?.RowVersion || getResponse.data?.rowVersion;
-        const invoiceNumber = getResponse.data?.InvoiceNumber || null;
-
-        if (!rowVersion) {
-            throw new Error('RowVersion ni najden v GET odgovoru');
-        }
+        if (!rowVersion) throw new Error('RowVersion ni najden v GET odgovoru');
 
         console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}, RowVersion: ${rowVersion}, InvoiceNumber: ${invoiceNumber}`);
         return { invoiceId, rowVersion, invoiceNumber };
