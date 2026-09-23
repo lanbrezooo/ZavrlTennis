@@ -356,8 +356,9 @@ async function issueInvoiceAndGeneratePdf(invoiceId, rowVersion) {
     const token = await getMinimaxToken();
     try {
         // RowVersion vsebuje posebne znake (=, /, +) – treba jih je URL-encodati
+const encodedRowVersion = encodeURIComponent(rowVersion);
 await axios.put(
-    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/issueAndGeneratepdf_${rowVersion}`,
+    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/issueAndGeneratepdf?rowVersion=${encodedRowVersion}`,
     {},
     { headers: { 'Authorization': `Bearer ${token}` } }
 );
@@ -374,11 +375,14 @@ await axios.put(
 async function sendEInvoice(invoiceId, rowVersion) {
     const token = await getMinimaxToken();
     try {
-        await axios.put(
-    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice_${rowVersion}`,
-            {},
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
+        const encodedRowVersion = encodeURIComponent(rowVersion);
+await axios.put(
+    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice?rowVersion=${encodedRowVersion}`,
+    {},
+    { headers: { 'Authorization': `Bearer ${token}` } }
+);
+        
+           
         console.log(`✓ E-račun ${invoiceId} poslan stranki`);
     } catch (err) {
         // Pošiljanje e-računa ni kritično – račun je že izdan
