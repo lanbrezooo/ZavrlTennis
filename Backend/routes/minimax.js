@@ -54,7 +54,10 @@ async function findCustomerByEmail(email) {
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
             {
                 headers: { 'Authorization': `Bearer ${token}` },
-                params: { search: email, limit: 50 }
+                params: { 
+               $filter: `contains(Email,'${email}')`,
+               $top: 50
+}
             }
         );
 
@@ -349,12 +352,15 @@ async function findCustomerByName(ime, priimek) {
     const token = await getMinimaxToken();
     try {
         const response = await axios.get(
-            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
-            {
-                headers: { 'Authorization': `Bearer ${token}` },
-                params: { search: priimek, limit: 100 }
-            }
-        );
+    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
+    {
+        headers: { 'Authorization': `Bearer ${token}` },
+        params: { 
+            $filter: `contains(Name,'${priimek}')`,
+            $top: 50
+        }
+    }
+);
         const customers = response.data?.Rows || [];
         const fullName = `${ime} ${priimek}`.toLowerCase().replace(/\s+/g, ' ').trim();
         const found = customers.find(c => {
