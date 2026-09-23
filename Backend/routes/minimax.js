@@ -105,15 +105,15 @@ async function createCustomer({ ime, priimek, email }) {
         const response = await axios.post(
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
             {
-                Name: `${ime} ${priimek}`.trim(),
-                Email: email,
-                Address: 'Pot v Toplice 10',
-                PostalCode: '2250',
-                City: 'Ptuj',
-                Country: 'SI',
-                Currency: 'EUR',
-                CustomerType: 'I'
-            },
+    Name: `${ime} ${priimek}`.trim(),
+    Email: email,
+    Address: 'Pot v Toplice 10',
+    PostalCode: '2250',
+    City: 'Ptuj',
+    CountryId: 192,
+    CurrencyId: 888888,
+    CustomerType: 'I'
+},
             {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             }
