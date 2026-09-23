@@ -129,12 +129,16 @@ async function createCustomer({ ime, priimek, email }) {
         console.log(`✓ Ustvarjena nova Minimax stranka: ${customerId} za ${email}`);
         return customerId;
     } catch (err) {
-        console.error('✗ Napaka pri ustvarjanju stranke:');
-console.error('  Status:', err.response?.status);
-console.error('  Headers:', JSON.stringify(err.response?.headers, null, 2));
-console.error('  Data:', String(err.response?.data || err.message).slice(0, 2000));;
-        throw new Error('Napaka pri ustvarjanju stranke v Minimaxu');
-    }
+    console.error('✗ Napaka pri ustvarjanju stranke:');
+    console.error('  Status:', err.response?.status);
+    console.error('  Data:', String(err.response?.data || err.message).slice(0, 2000));
+    
+    // Ohrani response v napaki, da fallback lahko zazna 409
+    const wrapped = new Error('Napaka pri ustvarjanju stranke v Minimaxu');
+    wrapped.response = err.response;
+    wrapped.status = err.response?.status;
+    throw wrapped;
+}
 }
 
 /**
@@ -276,32 +280,37 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
             console.warn('Napaka pri branju minimax_stranke:', dbErr.message);
         }
 
-        // 1. Če ni v bazi, išči v Minimaxu
-        if (!customerId) {
-            customerId = await findCustomerByEmail(user.email);
-        }
+        // 1. Če ni v bazi, poskusi najti po IMENU (ker API ne vrača emaila)
+if (!customerId) {
+    customerId = await findCustomerByName(user.ime, user.priimek);
+}
 
-        // 2. Če ne obstaja, ustvari novo
-        if (!customerId) {
-            try {
-                customerId = await createCustomer({
-                    ime: user.ime,
-                    priimek: user.priimek,
-                    email: user.email
-                });
-            } catch (createErr) {
-                // Če vrne 409, stranka že obstaja → poskusi najti po imenu
-                if (createErr.response?.status === 409 || String(createErr.message).includes('409')) {
-                    console.log('Stranka že obstaja (409), iščem po imenu...');
-                    customerId = await findCustomerByName(user.ime, user.priimek);
-                    if (!customerId) {
-                        throw new Error('Stranka že obstaja v Minimaxu, ampak je ne najdem');
-                    }
-                } else {
-                    throw createErr;
-                }
+// 2. Če še vedno ni, poskusi po emailu (za primer, če API kdaj vrne email)
+if (!customerId) {
+    customerId = await findCustomerByEmail(user.email);
+}
+
+// 3. Če še vedno ni, ustvari novo stranko
+if (!customerId) {
+    try {
+        customerId = await createCustomer({
+            ime: user.ime,
+            priimek: user.priimek,
+            email: user.email
+        });
+    } catch (createErr) {
+        // Če 409 (že obstaja) → še enkrat poskusi po imenu
+        if (createErr.response?.status === 409 || createErr.status === 409) {
+            console.log('Stranka že obstaja (409), še enkrat iščem po imenu...');
+            customerId = await findCustomerByName(user.ime, user.priimek);
+            if (!customerId) {
+                throw new Error('Stranka že obstaja v Minimaxu, ampak je ne najdem. Preverite ročno v Minimax portalu.');
             }
+        } else {
+            throw createErr;
         }
+    }
+}
 
         // 3. Shrani v bazo (da naslednjič ne kličemo API)
         if (customerId) {
