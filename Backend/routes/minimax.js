@@ -263,7 +263,6 @@ async function createDraftInvoice({ customerId, znesek, opis, user }) {
 
 const payload = {
     InvoiceType: 'R',
-    DocumentNumbering: { ID: numberingId },
     InvoiceNumber: invoiceNumber,
     Customer: { ID: Number(customerId) },
     DateIssued: today,
@@ -348,10 +347,10 @@ async function issueInvoiceAndGeneratePdf(invoiceId, rowVersion, invoiceNumber) 
     try {
         const encodedRowVersion = encodeURIComponent(rowVersion);
         await axios.put(
-            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/issueAndGeneratepdf?rowVersion=${encodedRowVersion}`,
-            { InvoiceNumber: invoiceNumber },   // ← POŠLJI V BODY-JU
-            { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
-        );
+    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/issueAndGeneratepdf?rowVersion=${encodedRowVersion}`,
+    {},   // ← prazno body
+    { headers: { 'Authorization': `Bearer ${token}` } }
+);
         console.log(`✓ Račun ${invoiceId} izdan in PDF generiran`);
     } catch (err) {
         console.error('✗ Napaka pri izdaji računa:', err.response?.data || err.message);
@@ -364,10 +363,10 @@ async function sendEInvoice(invoiceId, rowVersion, invoiceNumber) {
     try {
         const encodedRowVersion = encodeURIComponent(rowVersion);
         await axios.put(
-            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice?rowVersion=${encodedRowVersion}`,
-            { InvoiceNumber: invoiceNumber },
-            { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
-        );
+    `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/actions/sendEInvoice?rowVersion=${encodedRowVersion}`,
+    {},   // ← prazno body
+    { headers: { 'Authorization': `Bearer ${token}` } }
+);
         
            
         console.log(`✓ E-račun ${invoiceId} poslan stranki`);
