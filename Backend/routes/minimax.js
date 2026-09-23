@@ -110,9 +110,9 @@ async function createCustomer({ ime, priimek, email }) {
     Address: 'Pot v Toplice 10',
     PostalCode: '2250',
     City: 'Ptuj',
-    Country: 192,        
-    Currency: 888888,    
-    CustomerType: 'I'
+    Country: 192,          // ← ID države SI (192)
+    Currency: 7,           // ← ID valute EUR (7)
+    SubjectToVAT: 'N'      // 'N' = Končni potrošnik (fizična oseba)
 },
             {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }

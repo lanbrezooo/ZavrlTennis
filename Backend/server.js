@@ -1456,17 +1456,6 @@ app.use(express.static(frontendPath,{ index:false, maxAge:'1h' }));
 app.get('*', (_req,res)=>res.sendFile(path.join(frontendPath,'landing.html')));
 app.use((err,req,res,_next)=>{ if(err.message==='Origin ni dovoljen') return res.status(403).json({message:'Origin ni dovoljen'}); console.error(err); res.status(500).json({message:'Nepričakovana napaka'}); });
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-    console.log(`Zavrl Tennis Team teče na portu ${PORT}`);
-    // Debug: izpiši države in valute
-    try {
-        console.log('=== ZAČETEK DEBUG ===');
-        await debugCountries();
-        await debugCurrencies();
-        console.log('=== KONEC DEBUG ===');
-    } catch (e) {
-        console.error('Debug napaka:', e.message);
-    }
-});
+app.listen(PORT, () => console.log(`Zavrl Tennis Team teče na portu ${PORT}`));
 
 
