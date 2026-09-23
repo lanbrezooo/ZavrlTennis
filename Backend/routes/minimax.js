@@ -264,7 +264,7 @@ async function createDraftInvoice({ customerId, znesek, opis, user }) {
     const payload = {
         InvoiceType: 'R',                           // R = izdan račun
         DocumentNumbering: { ID: numberingId },
-        InvoiceNumber: `IR-${Date.now()}`, 
+        InvoiceNumber: Date.now(),
         Customer: { ID: Number(customerId) },
         DateIssued: today,
         DateTransaction: today,
