@@ -239,33 +239,70 @@ return cachedNumberingId;
     }
 }
 
-/**
- * Ustvari osnutek izdanega računa v Minimaxu.
- * Vrne { invoiceId, rowVersion }.
- */
-async function createDraftInvoice({ customerId, znesek, opis }) {
+async function createDraftInvoice({ customerId, znesek, opis, user }) {
     const token = await getMinimaxToken();
     const numberingId = await getNumberingId();
     const today = new Date().toISOString().slice(0, 10);
     const dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
+    // Pridobi podatke o stranki iz Minimaxa (za Addressee polja)
+    let customerData = null;
+    try {
+        const custRes = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers/${customerId}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        customerData = custRes.data;
+        console.log('=== PODATKI O STRANKI ===');
+        console.log(JSON.stringify(customerData, null, 2).slice(0, 1000));
+        console.log('=========================');
+    } catch (e) {
+        console.warn('Napaka pri branju stranke:', e.message);
+    }
+
+    // Sestavi payload z vsemi obveznimi polji
+    const payload = {
+        InvoiceType: 'R',                           // R = izdan račun
+        DocumentNumbering: { ID: numberingId },
+        Customer: { ID: Number(customerId) },
+        DateIssued: today,
+        DateTransaction: today,
+        DateDue: dueDate,
+
+        // Naslovnik (obvezno)
+        AddresseeName: customerData?.Name?.trim() || `${user.ime} ${user.priimek}`.trim(),
+        AddresseeAddress: customerData?.Address || 'Pot v Toplice 10',
+        AddresseePostalCode: customerData?.PostalCode || '2250',
+        AddresseeCity: customerData?.City || 'Ptuj',
+        AddresseeCountry: { ID: 192 },
+
+        // Denarna enota (obvezno)
+        Currency: { ID: 7 },
+
+        // Besedilo na računu (obvezno)
+        InvoiceText: opis,
+
+        // Vrsta izpisa za dobavnico (obvezno - uporabimo isti numbering ID)
+        IssuedInvoiceReportTemplate: { ID: numberingId },
+
+        // Vrstice računa
+        Rows: [{
+            Description: opis,
+            Quantity: 1,
+            Price: znesek,
+            VAT: 22,
+            VATRatePercentage: 22
+        }]
+    };
+
+    console.log('=== PAYLOAD ZA RAČUN ===');
+    console.log(JSON.stringify(payload, null, 2));
+    console.log('========================');
+
     try {
         const response = await axios.post(
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices`,
-            {
-                InvoiceType: 'R', // R = izdan račun
-                Customer: customerId,
-                InvoiceNumber: numberingId,
-                DateIssued: today,
-                DateTransaction: today,
-                DateDue: dueDate,
-                Rows: [{
-                    Description: opis,
-                    Quantity: 1,
-                    Price: znesek,
-                    VAT: 22 // 22% DDV
-                }]
-            },
+            payload,
             {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             }
@@ -275,13 +312,16 @@ async function createDraftInvoice({ customerId, znesek, opis }) {
         if (!location) {
             throw new Error('Minimax ni vrnil lokacije računa');
         }
-        const invoiceId = location.split('/').pop();
-        const rowVersion = response.data.RowVersion;
+        const cleanLocation = location.split('?')[0];
+        const invoiceId = cleanLocation.split('/').pop();
+        const rowVersion = response.data?.RowVersion || response.data?.rowVersion;
 
-        console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}`);
+        console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}, RowVersion: ${rowVersion}`);
         return { invoiceId, rowVersion };
     } catch (err) {
-        console.error('✗ Napaka pri ustvarjanju računa:', err.response?.data || err.message);
+        console.error('✗ Napaka pri ustvarjanju računa:');
+        console.error('  Status:', err.response?.status);
+        console.error('  Data:', JSON.stringify(err.response?.data, null, 2).slice(0, 3000));
         throw new Error('Napaka pri ustvarjanju računa v Minimaxu');
     }
 }
@@ -355,7 +395,16 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
 // 1. Če ni v bazi, poskusi ustvariti stranko (409 vrne CustomerId)
 // (preskočimo findCustomerByEmail, ker API ne vrača emaila)
 
-// 2. Če ni, poskusi ustvariti (409 vrne CustomerId)
+// 2. Če ni v bazi, poskusi najti po imenu
+if (!customerId) {
+    try {
+        customerId = await findCustomerByName(user.ime, user.priimek);
+    } catch (e) {
+        console.warn('Iskanje po imenu ni uspelo:', e.message);
+    }
+}
+
+// 3. Če še vedno ni, ustvari novo stranko
 if (!customerId) {
     customerId = await createCustomer({
         ime: user.ime,
@@ -382,7 +431,8 @@ if (!customerId) {
         const { invoiceId, rowVersion } = await createDraftInvoice({
             customerId,
             znesek,
-            opis
+            opis,
+            user
         });
 
         // 3. Izda račun in generiraj PDF
