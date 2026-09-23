@@ -47,10 +47,6 @@ async function getMinimaxToken() {
     }
 }
 
-/**
- * Preveri, ali stranka s tem emailom že obstaja v Minimaxu.
- * Vrne CustomerId, če obstaja, sicer null.
- */
 async function findCustomerByEmail(email) {
     const token = await getMinimaxToken();
     try {
@@ -58,15 +54,44 @@ async function findCustomerByEmail(email) {
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
             {
                 headers: { 'Authorization': `Bearer ${token}` },
-                params: { search: email, limit: 5 }
+                params: { search: email, limit: 50 }
             }
         );
-        const customers = response.data.Rows || response.data || [];
-        const found = customers.find(c => c.Email?.toLowerCase() === email.toLowerCase());
-        return found ? found.CustomerId : null;
+
+        // Debug: izpiši strukturo odgovora
+        console.log('Minimax customers response:', JSON.stringify(response.data).slice(0, 500));
+
+        // Poskusi različne strukture odgovora
+        let customers = [];
+        if (Array.isArray(response.data)) customers = response.data;
+        else if (response.data?.Rows) customers = response.data.Rows;
+        else if (response.data?.rows) customers = response.data.rows;
+        else if (response.data?.items) customers = response.data.items;
+        else if (response.data?.data) customers = response.data.data;
+        else if (response.data?.Customers) customers = response.data.Customers;
+        else if (response.data?.Result) customers = response.data.Result;
+
+        console.log(`Najdenih strank: ${customers.length}`);
+        if (customers.length > 0) {
+            console.log('Prva stranka (struktura):', JSON.stringify(customers[0]).slice(0, 500));
+        }
+
+        const found = customers.find(c =>
+            (c.Email || c.email || c.EMail || '').toLowerCase() === email.toLowerCase()
+        );
+
+        if (found) {
+            const id = found.CustomerId || found.customerId || found.id || found.ID;
+            console.log(`✓ Stranka najdena: ${id}`);
+            return id;
+        }
+
+        console.log('Stranka ni najdena v seznamu');
+        return null;
     } catch (err) {
-        // Če iskanje ne uspe, vrni null (bomo poskusili ustvariti novo stranko)
-        console.warn('Iskanje stranke ni uspelo:', err.message);
+        console.error('Iskanje stranke ni uspelo:');
+        console.error('  Status:', err.response?.status);
+        console.error('  Data:', JSON.stringify(err.response?.data).slice(0, 500));
         return null;
     }
 }
