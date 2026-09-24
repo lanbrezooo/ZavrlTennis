@@ -271,20 +271,24 @@ async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessio
     Currency: { ID: 7 },
     InvoiceText: opis,
     ExternalReference: stripeSessionId || null,
-    
-    
+
+    // Predlogi izpisa (obvezno po dokumentaciji)
+    IssuedInvoiceReportTemplate: { ID: 2077676 },   // Izdani račun 1 (privzeto)
+    DeliveryNoteReportTemplate: { ID: 1882233 },     // Standardno - Dobavnica
+    PricesOnInvoice: 'N',                            // DDV se prišteva cenam
+    RecurringInvoice: 'N',                           // Ni ponavljajoči
+
     IssuedInvoiceRows: [{
         RowNumber: 1,
         Item: { ID: 10739145 },
         Description: opis,
         Quantity: 1,
         UnitOfMeasurement: 'kom',
-        Price: Number((znesek / 1.095).toFixed(6)),   // cena BREZ DDV
-        PriceWithVAT: znesek,                          // cena Z DDV
+        Price: Number((znesek / 1.095).toFixed(6)),
+        PriceWithVAT: znesek,
         VatRate: { ID: 28 },
-        VATPercent: 9.5                                
-    }],
-    
+        VATPercent: 9.5
+    }]
 };
 
     try {
@@ -447,7 +451,7 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
         }
 
         // 5. Ustvari osnutek računa
-        const { invoiceId, rowVersion, invoiceNumber } = await createDraftInvoice({
+        const { invoiceId, rowVersion } = await createDraftInvoice({
             customerId,
             znesek,
             opis,
@@ -456,7 +460,7 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
         });
 
         // 6. Izda račun in generiraj PDF
-        await issueInvoiceAndGeneratePdf(invoiceId, rowVersion, invoiceNumber);
+        await issueInvoiceAndGeneratePdf(invoiceId, rowVersion);
 
         // 7. Pošlji e-račun (funkcija sama prebere svež RowVersion)
         await sendEInvoice(invoiceId);
