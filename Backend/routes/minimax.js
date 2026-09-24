@@ -113,7 +113,8 @@ async function createCustomer({ ime, priimek, email }) {
             City: 'Ptuj',
             Country: { ID: 192 },
             Currency: { ID: 7 },
-            SubjectToVAT: 'N'
+            SubjectToVAT: 'N',
+            EInvoiceIssuing: 'EPosta'
         };
 
         console.log('=== PAYLOAD ZA MINIMAX ===');
