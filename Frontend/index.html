@@ -1296,18 +1296,34 @@ body:has(.modal-overlay) {
         </div>
 
         <footer class="site-footer">
-            <div class="footer-inner">
-                <div><strong>Zavrl Tennis Team</strong><div style="opacity:.8;font-size:.82rem;margin-top:.25rem;">Rezervacije teniških igrišč</div></div>
-                <div class="footer-contact">
-                    <a href="tel:+38640233089">📞 +386 40 233 089</a>
-                    <a href="mailto:zavrltennisteam@gmail.com">✉️ zavrltennisteam@gmail.com</a>
-                    <span>📍 Pot v Toplice 10, 2250 Ptuj</span>
-                </div>
+    <div class="footer-inner">
+        <div>
+            <strong>Zavrl Tennis Team</strong>
+            <div style="opacity:.8;font-size:.82rem;margin-top:.25rem;">Rezervacije teniških igrišč</div>
+            <div style="margin-top:.75rem;font-size:.75rem;display:flex;gap:1rem;flex-wrap:wrap;">
+                <a href="#" onclick="event.preventDefault();showLegal('pogoji')" style="color:#fff;text-decoration:underline;opacity:.85;">Pogoji poslovanja</a>
+                <a href="#" onclick="event.preventDefault();showLegal('zasebnost')" style="color:#fff;text-decoration:underline;opacity:.85;">Zasebnost</a>
+                <a href="#" onclick="event.preventDefault();showLegal('piskotki')" style="color:#fff;text-decoration:underline;opacity:.85;">Piškotki</a>
+                <a href="#" onclick="event.preventDefault();showLegal('vracila')" style="color:#fff;text-decoration:underline;opacity:.85;">Vračila</a>
             </div>
-        </footer>
+        </div>
+        <div class="footer-contact">
+            <a href="tel:+38640233089">📞 +386 40 233 089</a>
+            <a href="mailto:zavrltennisteam@gmail.com">✉️ zavrltennisteam@gmail.com</a>
+            <span>📍 Pot v Toplice 10, 2250 Ptuj</span>
+        </div>
+    </div>
+</footer>
     </main>
 
     <div class="toast-container" id="toastContainer"></div>
+    <!-- Pravni modal -->
+<div class="modal-overlay" id="legalModal" style="display:none;" onclick="if(event.target===this)closeLegalModal()">
+    <div class="modal" style="max-width:800px;">
+        <button class="modal-close" onclick="closeLegalModal()">✕</button>
+        <div id="legalContent"></div>
+    </div>
+</div>
     <div id="modalRoot"></div>
 
     <script>
@@ -2235,6 +2251,17 @@ function goToAdminReservationsPage(page) {
                                         <input type="checkbox" name="prikazi_telefon" value="1" style="width:auto;margin:0;"> Dovoli prikaz telefona drugim
                                     </label>
                                 </div>
+                                <div class="form-group">
+    <label style="display:flex;align-items:flex-start;gap:0.5rem;font-weight:400;">
+        <input type="checkbox" name="strinjam_se" value="1" required style="width:auto;margin-top:4px;">
+        <span style="font-size:0.8rem;color:var(--text-light);">
+            Strinjam se s 
+            <a href="#" onclick="event.preventDefault();showLegal('pogoji')" style="color:var(--primary);font-weight:600;">pogoji poslovanja</a>
+            in 
+            <a href="#" onclick="event.preventDefault();showLegal('zasebnost')" style="color:var(--primary);font-weight:600;">politiko zasebnosti</a>.
+        </span>
+    </label>
+</div>
                             `}
                             <div class="form-error" id="formError"></div>
                             <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem;">${submitText}</button>
@@ -2384,7 +2411,15 @@ const durationOptions = availableDurations.map(d =>
                             ${isWinter() ? 'Pozimi velja 2.5 kredita/uro za balon' : ''}
                         </div>
                     </div>
-
+<div class="form-group" id="bookingTermsWrap">
+    <label style="display:flex;align-items:flex-start;gap:0.5rem;font-weight:400;">
+        <input type="checkbox" id="bookingTermsCheck" style="width:auto;margin-top:4px;">
+        <span style="font-size:0.8rem;color:var(--text-light);">
+            Strinjam se, da je rezervacija, plačana s kartico, <strong>nepovratna</strong>. Sprejemam 
+            <a href="#" onclick="event.preventDefault();showLegal('vracila')" style="color:var(--primary);font-weight:600;">politiko vračil</a>.
+        </span>
+    </label>
+</div>
                     <div class="form-error" id="bookingError"></div>
                     <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="bookingSubmitBtn">Potrdi rezervacijo</button>
                 </form>
@@ -2461,6 +2496,11 @@ function formatPrice(n) {
 
     // 1) Plačilo s kartico → Stripe
     if (method === 'card') {
+            const termsCheck = document.getElementById('bookingTermsCheck');
+    if (!termsCheck || !termsCheck.checked) {
+        errorEl.textContent = 'Za nadaljevanje morate sprejeti politiko vračil.';
+        return;
+    }
         const submitBtn = document.getElementById('bookingSubmitBtn');
         submitBtn.disabled = true;
         submitBtn.textContent = '⏳ Preusmerjam na plačilo...';
@@ -4138,6 +4178,15 @@ window.showBuyCreditsModal = function() {
                     <span>Skupaj za plačilo</span>
                     <strong id="totalPrice">80 €</strong>
                 </div>
+                <div class="form-group" style="margin-bottom:0.75rem;">
+    <label style="display:flex;align-items:flex-start;gap:0.5rem;font-weight:400;">
+        <input type="checkbox" id="buyTermsCheck" required style="width:auto;margin-top:4px;">
+        <span style="font-size:0.8rem;color:var(--text-light);">
+            Strinjam se, da so kupljeni krediti <strong>nepovratni</strong>. Sprejemam 
+            <a href="#" onclick="event.preventDefault();showLegal('pogoji')" style="color:var(--primary);font-weight:600;">pogoje poslovanja</a>.
+        </span>
+    </label>
+</div>
 
                 <div class="form-error" id="buyError"></div>
                 <button type="button" class="btn btn-primary" style="width:100%;justify-content:center;"
@@ -4246,6 +4295,11 @@ window.updateTotalPrice = function() {
 window.startStripeCheckout = async function() {
     const errEl = document.getElementById('buyError');
     errEl.textContent = '';
+        const termsCheck = document.getElementById('buyTermsCheck');
+    if (!termsCheck || !termsCheck.checked) {
+        errEl.textContent = 'Za nadaljevanje morate sprejeti pogoje poslovanja.';
+        return;
+    }
 
     if (!isValidCredits(selectedCredits)) {
         errEl.textContent = `Vnesite veljavno količino (med ${formatCredits(MIN_CREDITS)} in ${MAX_CREDITS} kreditov).`;
@@ -4320,6 +4374,229 @@ window.checkPaymentReturn = async function() {
     window.addEventListener('resize', updateViewport);
     window.addEventListener('orientationchange', () => setTimeout(updateViewport, 100));
 })();
+
+// ===== PRAVNI DOKUMENTI =====
+const LEGAL_DOCS = {
+  pogoji: {
+    title: 'Splošni pogoji poslovanja',
+    html: `
+      <h2>Splošni pogoji poslovanja</h2>
+      <p style="color:var(--text-light);font-size:0.85rem;">Veljavni od: 1. 1. 2026</p>
+
+      <h3>I. Splošne določbe</h3>
+      <p>Ti splošni pogoji poslovanja (SPP) urejajo pravice in obveznosti med ponudnikom storitev in uporabnikom spletne strani.</p>
+      <p><strong>Ponudnik:</strong><br>
+      Zavrl Tennis Team<br>
+      Pot v Toplice 10, 2250 Ptuj<br>
+      E-pošta: zavrltennisteam@gmail.com<br>
+      Telefon: +386 40 233 089</p>
+
+      <h3>II. Predmet pogodbe</h3>
+      <p>Ponudnik prek spletne strani omogoča:</p>
+      <ul>
+        <li>nakup kreditov za rezervacijo teniških igrišč;</li>
+        <li>rezervacijo teniških igrišč z uporabo kreditov;</li>
+        <li>rezervacijo teniških igrišč z neposrednim plačilom s kartico.</li>
+      </ul>
+      <p>Krediti so vnaprej plačana sredstva, ki jih uporabnik porabi za rezervacijo igrišč. Krediti niso prenosljivi na druge osebe.</p>
+
+      <h3>III. Naročilo in sklenitev pogodbe</h3>
+      <p>Pogodba je sklenjena, ko uporabnik prejme potrditev naročila na e-poštni naslov, ki ga je navedel ob registraciji.</p>
+
+      <h3>IV. Cene in način plačila</h3>
+      <p>Plačilo je možno izključno prek spletnega ponudnika plačilnih storitev Stripe (kartice Visa, Mastercard, American Express).</p>
+      <p>Ponudnik ne hrani podatkov o plačilnih karticah. Vse transakcije potekajo prek certificiranega ponudnika Stripe.</p>
+
+      <h3>V. Pravica do odstopa od pogodbe in vračila</h3>
+      <p>Uporabnik je seznanjen, da so storitve rezervacije igrišč za točno določen datum in uro v skladu s 43. členom Zakona o varstvu potrošnikov (ZVPot) in 16.(l) členom Direktive 2011/83/EU izvzete iz pravice do odstopa od pogodbe v 14 dneh.</p>
+      <p><strong>Kupljeni krediti so nepovratni.</strong> Ob nakupu kreditov uporabnik izrecno soglaša, da:</p>
+      <ul>
+        <li>so krediti namenjeni rezervaciji igrišč;</li>
+        <li>krediti nimajo roka veljavnosti;</li>
+        <li>vračilo denarja za kupljene kredite ni mogoče.</li>
+      </ul>
+      <p><strong>Rezervacija, plačana s kartico, je nepovratna.</strong> Ob potrditvi rezervacije uporabnik izrecno soglaša, da:</p>
+      <ul>
+        <li>je rezervacija vezana na točno določen datum in uro;</li>
+        <li>odpoved rezervacije ni mogoča v zameno za vračilo denarja;</li>
+        <li>preklic rezervacije je mogoč le v skladu s VI. členom.</li>
+      </ul>
+      <p>Uporabnik lahko prekliče rezervacijo, plačano s krediti, do polnoči dan pred rezervacijo. V tem primeru se mu krediti vrnejo v celoti.</p>
+      <p>V primeru izrednih okoliščin (bolezen, višja sila) lahko uporabnik zaprosi za individualno obravnavo prek e-pošte zavrltennisteam@gmail.com. Vračilo denarja ni zagotovljeno.</p>
+      <p>Če ponudnik odpove rezervacijo (vreme, tehnične težave), se uporabniku vrnejo krediti, pri rezervaciji s kartico pa se ponudi nadomestni termin ali vračilo denarja v celoti.</p>
+
+      <h3>VI. Preklic rezervacije</h3>
+      <p>Uporabnik lahko prekliče rezervacijo prek spletne strani do polnoči dan pred rezervacijo. Po tem roku preklic ni mogoč, razen v izjemnih primerih.</p>
+      <p>Rezervacija, plačana s kartico, se ob preklicu ne refundira.</p>
+
+      <h3>VII. Odgovornost</h3>
+      <p>Ponudnik ne odgovarja za škodo zaradi nepravilne uporabe storitve, višje sile ali dejanj tretjih oseb.</p>
+
+      <h3>VIII. Varstvo osebnih podatkov</h3>
+      <p>Ponudnik obdeluje osebne podatke v skladu z Uredbo (EU) 2016/679 (GDPR). Podrobnosti so v <a href="#" onclick="event.preventDefault();showLegal('zasebnost')">Politiki zasebnosti</a>.</p>
+
+      <h3>IX. Reklamacije in pritožbe</h3>
+      <p>Reklamacijo lahko vložite na zavrltennisteam@gmail.com. Ponudnik bo reklamacijo obravnaval v roku 8 delovnih dni.</p>
+      <p>Če niste zadovoljni, lahko vložite pritožbo pri:</p>
+      <ul>
+        <li>Inšpektorat RS za gospodarske dejavnosti (IRSD);</li>
+        <li>Slovenska potrošniška zveza;</li>
+        <li>Evropski potrošniški center Slovenija (EPC).</li>
+      </ul>
+
+      <h3>X. Končne določbe</h3>
+      <p>Za ta razmerja se uporablja pravo Republike Slovenije. Za reševanje sporov je pristojno sodišče v Ptuju.</p>
+    `
+  },
+  zasebnost: {
+    title: 'Politika zasebnosti',
+    html: `
+      <h2>Politika zasebnosti</h2>
+      <p style="color:var(--text-light);font-size:0.85rem;">Veljavna od: 1. 1. 2026</p>
+
+      <h3>I. Upravljavec osebnih podatkov</h3>
+      <p><strong>Zavrl Tennis Team</strong><br>
+      Pot v Toplice 10, 2250 Ptuj<br>
+      E-pošta: zavrltennisteam@gmail.com<br>
+      Telefon: +386 40 233 089</p>
+
+      <h3>II. Katere podatke zbiramo</h3>
+      <ul>
+        <li>ime in priimek (obvezno);</li>
+        <li>e-poštni naslov (obvezno);</li>
+        <li>telefon (neobvezno);</li>
+        <li>leto rojstva (neobvezno);</li>
+        <li>opis profila (neobvezno);</li>
+        <li>nivo igranja tenisa (neobvezno);</li>
+        <li>podatke o rezervacijah (datum, ura, igrišče);</li>
+        <li>zgodovino plačil in kreditov;</li>
+        <li>IP naslov (za varnost).</li>
+      </ul>
+      <p>Podatki o plačilni kartici se ne shranjujejo na naših strežnikih – obdeluje jih Stripe.</p>
+
+      <h3>III. Namen in pravna podlaga obdelave</h3>
+      <ul>
+        <li>izvajanje pogodbe (rezervacije, nakup kreditov) – 6(1)(b) GDPR;</li>
+        <li>izpolnjevanje pravnih obveznosti (računi, davčna evidenca) – 6(1)(c) GDPR;</li>
+        <li>zakoniti interes (preprečevanje zlorab, varnost) – 6(1)(f) GDPR.</li>
+      </ul>
+
+      <h3>IV. Posredovanje podatkov tretjim osebam</h3>
+      <ul>
+        <li>Stripe (plačilne storitve);</li>
+        <li>Minimax (izdajanje računov);</li>
+        <li>Ponudnik gostovanja (Render, Clever Cloud) – strežniki v EU.</li>
+      </ul>
+      <p>Podatkov ne prodajamo tretjim osebam.</p>
+
+      <h3>V. Obdobje hrambe</h3>
+      <ul>
+        <li>podatki o uporabniku – do izbrisa računa;</li>
+        <li>podatki o rezervacijah – 5 let po zaključku poslovnega leta;</li>
+        <li>podatki o plačilih in računih – 10 let (davčni predpisi);</li>
+        <li>IP naslovi in logi – 12 mesecev.</li>
+      </ul>
+
+      <h3>VI. Vaše pravice</h3>
+      <p>Po GDPR imate pravico do dostopa, popravka, izbrisa, omejitve obdelave, prenosljivosti, ugovora in preklica privolitve. Za uveljavljanje pišite na zavrltennisteam@gmail.com. Odgovorili bomo v roku 30 dni.</p>
+      <p>Pritožbo lahko vložite pri Informacijskem pooblaščencu RS (ip-rs.si).</p>
+
+      <h3>VII. Varnost podatkov</h3>
+      <p>Uporabljamo šifriranje gesel z bcrypt, HTTPS, omejen dostop do baze in redne varnostne kopije. V primeru vdora bomo obvestili Informacijskega pooblaščenca v 72 urah.</p>
+
+      <h3>VIII. Piškotki</h3>
+      <p>Uporabljamo nujno potreben piškotek <code>zt_token</code> za prijavo (HttpOnly, Secure). Podrobnosti so v <a href="#" onclick="event.preventDefault();showLegal('piskotki')">Politiki piškotkov</a>.</p>
+    `
+  },
+  piskotki: {
+    title: 'Politika piškotkov',
+    html: `
+      <h2>Politika piškotkov</h2>
+      <p style="color:var(--text-light);font-size:0.85rem;">Veljavna od: 1. 1. 2026</p>
+
+      <h3>I. Kaj so piškotki</h3>
+      <p>Piškotki so majhne besedilne datoteke, ki se shranijo v vaš brskalnik, ko obiščete spletno stran.</p>
+
+      <h3>II. Katere piškotke uporabljamo</h3>
+      <p><strong>Nujno potrebni piškotki</strong></p>
+      <ul>
+        <li><code>zt_token</code> – sejni piškotek za prijavo. Trajanje: 7 dni. Vrsta: HttpOnly, Secure, SameSite=Strict.</li>
+      </ul>
+      <p>Ti piškotki so nujni za delovanje storitve in jih ni mogoče izklopiti.</p>
+      <p><strong>Analitičnih ali marketinških piškotkov ne uporabljamo.</strong></p>
+
+      <h3>III. Upravljanje piškotkov</h3>
+      <p>Piškotke lahko kadar koli izbrišete ali blokirate v nastavitvah brskalnika. Če onemogočite nujno potrebne piškotke, prijava ne bo mogoča.</p>
+
+      <h3>IV. Privolitev</h3>
+      <p>Ker uporabljamo izključno nujno potrebne piškotke, privolitvena pasica ni potrebna v skladu z 121. členom ZEKom-1.</p>
+    `
+  },
+  vracila: {
+    title: 'Politika vračil in preklica',
+    html: `
+      <h2>Politika vračil in preklica</h2>
+      <p style="color:var(--text-light);font-size:0.85rem;">Veljavna od: 1. 1. 2026</p>
+
+      <h3>I. Splošno</h3>
+      <p>Ta politika ureja pravice uporabnikov v zvezi z vračili in preklici nakupov, opravljenih prek spletne strani.</p>
+
+      <h3>II. Kupljeni krediti – brez vračila</h3>
+      <p><strong>Kupljeni krediti so NEPOVRATNI.</strong> Ob nakupu uporabnik izrecno soglaša, da:</p>
+      <ul>
+        <li>so krediti namenjeni izključno rezervaciji teniških igrišč;</li>
+        <li>vračilo denarja za kupljene kredite ni mogoče;</li>
+        <li>krediti nimajo roka veljavnosti;</li>
+        <li>krediti niso prenosljivi na druge osebe.</li>
+      </ul>
+
+      <h3>III. Rezervacije, plačane s kartico – brez vračila</h3>
+      <p><strong>Rezervacije, plačane z neposrednim plačilom s kartico, so NEPOVRATNE.</strong> Ob potrditvi rezervacije uporabnik izrecno soglaša, da:</p>
+      <ul>
+        <li>je rezervacija vezana na točno določen datum in uro;</li>
+        <li>odpoved rezervacije ni mogoča v zameno za vračilo denarja;</li>
+        <li>lahko v primeru izjemnih okoliščin zaprosi za individualno obravnavo, vendar vračilo denarja ni zagotovljeno.</li>
+      </ul>
+      <p>Razlog: storitve rezervacije igrišč za točno določen datum in uro so v skladu s 43. členom ZVPot in 16.(l) členom Direktive 2011/83/EU izvzete iz pravice do odstopa od pogodbe v 14 dneh.</p>
+
+      <h3>IV. Rezervacije, plačane s krediti – možnost preklica</h3>
+      <p>Uporabnik lahko prekliče rezervacijo, plačano s krediti, do polnoči dan pred rezervacijo. Ob preklicu se mu vrnejo krediti v celoti.</p>
+      <p>Po tem roku preklic ni mogoč, razen v izjemnih primerih (višja sila, bolezen).</p>
+
+      <h3>V. Odpoved s strani ponudnika</h3>
+      <p>Če ponudnik odpove rezervacijo (vreme, tehnične težave), se uporabniku:</p>
+      <ul>
+        <li>pri rezervaciji s krediti vrnejo krediti;</li>
+        <li>pri rezervaciji s kartico ponudi nadomestni termin ali vračilo denarja v celoti.</li>
+      </ul>
+
+      <h3>VI. Postopek za zahtevo za vračilo</h3>
+      <p>Zahtevo pošljite na zavrltennisteam@gmail.com z imenom, e-pošto, datumom in zneskom nakupa ter razlogom. Ponudnik bo zahtevo obravnaval v roku 8 delovnih dni.</p>
+
+      <h3>VII. Posebne okoliščine</h3>
+      <p>V primeru bolezni, poškodbe ali drugih izjemnih okoliščin lahko uporabnik zaprosi za individualno obravnavo. Zahteve zaradi bolezni morajo biti podprte z zdravniškim potrdilom.</p>
+
+      <h3>VIII. Končne določbe</h3>
+      <p>Ta politika je sestavni del Splošnih pogojev poslovanja. Za reševanje sporov je pristojno sodišče v Ptuju.</p>
+      <p>Pritožbo lahko vložite pri IRSD, Slovenski potrošniški zvezi ali Evropskem potrošniškem centru Slovenija.</p>
+    `
+  }
+};
+
+window.showLegal = function(key) {
+  const doc = LEGAL_DOCS[key];
+  if (!doc) return;
+  const content = document.getElementById('legalContent');
+  const modal = document.getElementById('legalModal');
+  content.innerHTML = doc.html;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+};
+
+window.closeLegalModal = function() {
+  document.getElementById('legalModal').style.display = 'none';
+  document.body.style.overflow = '';
+};
     
     </script>
 </body>
