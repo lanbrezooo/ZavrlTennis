@@ -262,6 +262,7 @@ async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessio
     Customer: { ID: Number(customerId) },
     DateIssued: today,
     DateTransaction: today,
+    DateTransactionFrom: today,
     DateDue: dueDate,
     AddresseeName: customerData?.Name?.trim() || `${user.ime} ${user.priimek}`.trim(),
     AddresseeAddress: customerData?.Address || 'Pot v Toplice 10',
