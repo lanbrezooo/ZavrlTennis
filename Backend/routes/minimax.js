@@ -255,7 +255,7 @@ async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessio
         console.warn('Napaka pri branju stranke:', e.message);
     }
 
-    const invoiceNumber = await getLastInvoiceNumberFromMinimax();
+    
 
     const payload = {
     InvoiceType: 'R',
@@ -285,12 +285,6 @@ async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessio
         VATPercent: 9.5                                
     }],
     
-    
-    IssuedInvoicePaymentMethods: [{
-        PaymentMethod: { ID: 456712 },
-        Amount: znesek,
-        AlreadyPaid: 'D'
-    }]
 };
 
     try {
@@ -324,8 +318,8 @@ async function createDraftInvoice({ customerId, znesek, opis, user, stripeSessio
         const rowVersion = getResponse.data?.RowVersion || getResponse.data?.rowVersion;
         if (!rowVersion) throw new Error('RowVersion ni najden v GET odgovoru');
 
-        console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}, RowVersion: ${rowVersion}, InvoiceNumber: ${invoiceNumber}`);
-        return { invoiceId, rowVersion, invoiceNumber };
+        console.log(`✓ Ustvarjen osnutek računa: ${invoiceId}, RowVersion: ${rowVersion}`);
+        return { invoiceId, rowVersion };
     } catch (err) {
         console.error('✗ Napaka pri ustvarjanju računa:');
         console.error('  Status:', err.response?.status);
