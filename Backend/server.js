@@ -357,6 +357,13 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(rateLimit({ windowMs: 15*60*1000, max: 500, standardHeaders: true, legacyHeaders: false, message: { message: 'Preveč zahtevkov. Poskusite kasneje.' } }));
 app.use('/api/auth/login', rateLimit({ windowMs: 15*60*1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { message: 'Preveč poskusov prijave. Poskusite čez nekaj minut.' } }));
 app.use('/api/auth/register', rateLimit({ windowMs: 60*60*1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { message: 'Preveč registracij. Poskusite kasneje.' } }));
+app.use('/api/auth/forgot-password', rateLimit({ 
+  windowMs: 60 * 60 * 1000, 
+  max: 10, 
+  standardHeaders: true, 
+  legacyHeaders: false, 
+  message: { message: 'Preveč zahtev za ponastavitev. Poskusite kasneje.' } 
+}));
 // Rate limit za plačilne poti
 app.use('/api/payments', rateLimit({ 
   windowMs: 15 * 60 * 1000, 
