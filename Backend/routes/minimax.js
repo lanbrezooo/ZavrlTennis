@@ -50,15 +50,16 @@ async function getMinimaxToken() {
 async function findCustomerByEmail(email) {
     const token = await getMinimaxToken();
     try {
-        const safeEmail = String(email || '').replace(/'/g, "''");
+        
 
         const response = await axios.get(
             `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
             {
                 headers: { 'Authorization': `Bearer ${token}` },
-                params: { 
-               $filter: `contains(Email,'${safeEmail}')`,
-               $top: 50
+                params: {
+            SearchString: email,
+            PageSize: 50
+
 }
             }
         );
@@ -135,8 +136,31 @@ async function createCustomer({ ime, priimek, email }) {
         // Odstrani query string (?id=...) in vzemi zadnji del URL-ja
 const cleanLocation = location.split('?')[0];
 const customerId = cleanLocation.split('/').pop();
-        console.log(`✓ Ustvarjena nova Minimax stranka: ${customerId} za ${email}`);
-        return customerId;
+console.log(`✓ Ustvarjena nova Minimax stranka: ${customerId} za ${email}`);
+
+// Dodaj kontakt z emailom (za pošiljanje računov)
+try {
+    await axios.post(
+        `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers/${customerId}/contacts`,
+        {
+            FullName: `${ime} ${priimek}`.trim(),
+            Email: email,
+            Default: 'D'
+        },
+        {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        }
+    );
+    console.log(`✓ Kontakt dodan stranki ${customerId}`);
+} catch (contactErr) {
+    console.warn('⚠ Napaka pri dodajanju kontakta:', contactErr.response?.data || contactErr.message);
+    // Ne prekini – stranka je že ustvarjena
+}
+
+return customerId;
 
     } catch (err) {
         const status = err.response?.status;
@@ -421,14 +445,23 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
                 console.warn('Napaka pri branju minimax_stranke:', dbErr.message);
             }
 
-            // 2. Če ni v bazi, poskusi najti po emailu
-            if (!customerId) {
-                try {
-                    customerId = await findCustomerByEmail(user.email);
-                } catch (e) {
-                    console.warn('Iskanje po emailu ni uspelo:', e.message);
-                }
-            }
+           if (!customerId) {
+    try {
+        // 1. Poskusi najprej po emailu (unikaten)
+        customerId = await findCustomerByEmail(user.email);
+    } catch (e) {
+        console.warn('Iskanje po emailu ni uspelo:', e.message);
+    }
+}
+
+if (!customerId) {
+    try {
+        // 2. Če ni po emailu, poskusi po imenu in priimku
+        customerId = await findCustomerByName(user.ime, user.priimek);
+    } catch (e) {
+        console.warn('Iskanje po imenu ni uspelo:', e.message);
+    }
+}
 
             // 3. Če še vedno ni, ustvari novo stranko
             if (!customerId) {
@@ -478,60 +511,34 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
 }
 async function findCustomerByName(ime, priimek) {
     const token = await getMinimaxToken();
-    const pageSize = 100;
-    let skip = 0;
-    let allCustomers = [];
-    let hasMore = true;
-
-    console.log(`Iskanje stranke: ${ime} ${priimek}...`);
-
     try {
-        // Zanka za pridobivanje vseh strani
-        while (hasMore && skip < 2000) { // Varnostna omejitev (max 2000 strank)
-            const response = await axios.get(
-                `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
-                {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    params: {
-                        $top: pageSize,
-                        $skip: skip
-                    }
+        const response = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` },
+                params: {
+                    SearchString: `${ime} ${priimek}`,
+                    PageSize: 50
                 }
-            );
-
-            const customers = response.data?.Rows || [];
-            
-            if (customers.length === 0) {
-                hasMore = false;
-                break;
             }
+        );
 
-            allCustomers = allCustomers.concat(customers);
-            console.log(`Naloženih ${allCustomers.length} strank...`);
+        const customers = response.data?.Rows || [];
+        console.log(`Iskanje po imenu: ${customers.length} strank`);
 
-            if (customers.length < pageSize) {
-                hasMore = false;
-            } else {
-                skip += pageSize;
-            }
-        }
-
-        console.log(`Skupaj naloženih strank: ${allCustomers.length}`);
-
-        // Iskanje po imenu in priimku
-        const found = allCustomers.find(c => {
+        const found = customers.find(c => {
             const cName = (c.Name || '').toLowerCase().replace(/\s+/g, ' ').trim();
             return cName.includes(ime.toLowerCase()) && cName.includes(priimek.toLowerCase());
         });
 
         if (found) {
-            console.log(`✓ Stranka najdena po imenu: ${found.CustomerId}`);
-            return found.CustomerId;
+            const id = found.CustomerId || found.customerId || found.id || found.ID;
+            console.log(`✓ Stranka najdena po imenu: ${id}`);
+            return id;
         }
 
-        console.log(`Stranka ${ime} ${priimek} ni najdena v vseh ${allCustomers.length} strankah.`);
+        console.log(`Stranka ${ime} ${priimek} ni najdena.`);
         return null;
-
     } catch (err) {
         console.error('Napaka pri iskanju po imenu:', err.message);
         return null;
