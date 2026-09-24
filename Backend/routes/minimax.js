@@ -387,85 +387,89 @@ async function sendEInvoice(invoiceId) {
  */
 async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
     const pool = require('../db');
+    const { withInvoiceLock } = require('./invoiceLock');
+
     try {
-        // 0. IDEMPOTENTNOST: preveri, ali je račun že izdan
-        try {
-            const [existing] = await pool.query(
-                'SELECT minimax_invoice_id, status FROM minimax_racuni WHERE stripe_session_id = ? LIMIT 1',
-                [stripeSessionId]
-            );
-            if (existing.length && existing[0].status === 'izdan' && existing[0].minimax_invoice_id) {
-                console.log(`✓ Račun za ${stripeSessionId} že izdan: ${existing[0].minimax_invoice_id}`);
-                return { uspeh: true, invoiceId: existing[0].minimax_invoice_id };
-            }
-        } catch (dbErr) {
-            console.warn('Napaka pri preverjanju obstoječega računa:', dbErr.message);
-        }
-
-        // 1. Preveri, ali imamo customerId v bazi
-        let customerId = null;
-        try {
-            const [dbRows] = await pool.query(
-                'SELECT minimax_customer_id FROM minimax_stranke WHERE user_id = ?',
-                [user.id]
-            );
-            if (dbRows.length && dbRows[0].minimax_customer_id) {
-                customerId = dbRows[0].minimax_customer_id;
-                console.log(`✓ Stranka iz baze: ${customerId}`);
-            }
-        } catch (dbErr) {
-            console.warn('Napaka pri branju minimax_stranke:', dbErr.message);
-        }
-
-        // 2. Če ni v bazi, poskusi najti po emailu
-        if (!customerId) {
+        return await withInvoiceLock(stripeSessionId, async () => {
+            // 0. IDEMPOTENTNOST: preveri, ali je račun že izdan
             try {
-                customerId = await findCustomerByEmail(user.email);
-            } catch (e) {
-                console.warn('Iskanje po emailu ni uspelo:', e.message);
-            }
-        }
-
-        // 3. Če še vedno ni, ustvari novo stranko
-        if (!customerId) {
-            customerId = await createCustomer({
-                ime: user.ime,
-                priimek: user.priimek,
-                email: user.email
-            });
-        }
-
-        // 4. Shrani v bazo
-        if (customerId) {
-            try {
-                await pool.query(
-                    `INSERT INTO minimax_stranke (user_id, minimax_customer_id, email) 
-                     VALUES (?, ?, ?) 
-                     ON DUPLICATE KEY UPDATE minimax_customer_id = VALUES(minimax_customer_id)`,
-                    [user.id, customerId, user.email]
+                const [existing] = await pool.query(
+                    'SELECT minimax_invoice_id, status FROM minimax_racuni WHERE stripe_session_id = ? LIMIT 1',
+                    [stripeSessionId]
                 );
-                console.log(`✓ Stranka shranjena v bazo: ${customerId}`);
+                if (existing.length && existing[0].status === 'izdan' && existing[0].minimax_invoice_id) {
+                    console.log(`✓ Račun za ${stripeSessionId} že izdan: ${existing[0].minimax_invoice_id}`);
+                    return { uspeh: true, invoiceId: existing[0].minimax_invoice_id };
+                }
             } catch (dbErr) {
-                console.warn('Napaka pri shranjevanju v minimax_stranke:', dbErr.message);
+                console.warn('Napaka pri preverjanju obstoječega računa:', dbErr.message);
             }
-        }
 
-        // 5. Ustvari osnutek računa
-        const { invoiceId, rowVersion } = await createDraftInvoice({
-            customerId,
-            znesek,
-            opis,
-            user,
-            stripeSessionId
+            // 1. Preveri, ali imamo customerId v bazi
+            let customerId = null;
+            try {
+                const [dbRows] = await pool.query(
+                    'SELECT minimax_customer_id FROM minimax_stranke WHERE user_id = ?',
+                    [user.id]
+                );
+                if (dbRows.length && dbRows[0].minimax_customer_id) {
+                    customerId = dbRows[0].minimax_customer_id;
+                    console.log(`✓ Stranka iz baze: ${customerId}`);
+                }
+            } catch (dbErr) {
+                console.warn('Napaka pri branju minimax_stranke:', dbErr.message);
+            }
+
+            // 2. Če ni v bazi, poskusi najti po emailu
+            if (!customerId) {
+                try {
+                    customerId = await findCustomerByEmail(user.email);
+                } catch (e) {
+                    console.warn('Iskanje po emailu ni uspelo:', e.message);
+                }
+            }
+
+            // 3. Če še vedno ni, ustvari novo stranko
+            if (!customerId) {
+                customerId = await createCustomer({
+                    ime: user.ime,
+                    priimek: user.priimek,
+                    email: user.email
+                });
+            }
+
+            // 4. Shrani v bazo
+            if (customerId) {
+                try {
+                    await pool.query(
+                        `INSERT INTO minimax_stranke (user_id, minimax_customer_id, email) 
+                         VALUES (?, ?, ?) 
+                         ON DUPLICATE KEY UPDATE minimax_customer_id = VALUES(minimax_customer_id)`,
+                        [user.id, customerId, user.email]
+                    );
+                    console.log(`✓ Stranka shranjena v bazo: ${customerId}`);
+                } catch (dbErr) {
+                    console.warn('Napaka pri shranjevanju v minimax_stranke:', dbErr.message);
+                }
+            }
+
+            // 5. Ustvari osnutek računa
+            const { invoiceId, rowVersion } = await createDraftInvoice({
+                customerId,
+                znesek,
+                opis,
+                user,
+                stripeSessionId
+            });
+
+            // 6. Izda račun in generiraj PDF
+            await issueInvoiceAndGeneratePdf(invoiceId, rowVersion);
+
+            // 7. Pošlji e-račun
+            await sendEInvoice(invoiceId);
+
+            return { uspeh: true, invoiceId, customerId };
         });
-
-        // 6. Izda račun in generiraj PDF
-        await issueInvoiceAndGeneratePdf(invoiceId, rowVersion);
-
-        // 7. Pošlji e-račun (funkcija sama prebere svež RowVersion)
-        await sendEInvoice(invoiceId);
-
-        return { uspeh: true, invoiceId, customerId };
     } catch (err) {
         console.error('✗ Napaka pri izdaji Minimax računa:', err.message);
         return { uspeh: false, napaka: err.message };
