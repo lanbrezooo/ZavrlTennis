@@ -1,6 +1,8 @@
 // routes/minimax.js
 const axios = require('axios');
 require('dotenv').config();
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ===== KONFIGURACIJA =====
 const MINIMAX_API_URL = 'https://moj.minimax.si/SI/API/api';
@@ -44,6 +46,43 @@ async function getMinimaxToken() {
     } catch (err) {
         console.error('✗ Napaka pri pridobivanju Minimax žetona:', err.response?.data || err.message);
         throw new Error('Minimax avtentikacija ni uspela');
+    }
+}
+async function sendInvoiceByEmail({ to, ime, priimek, znesek, opis, pdfBuffer, invoiceId }) {
+    try {
+        const response = await resend.emails.send({
+            from: process.env.EMAIL_FROM,
+            to: [to],
+            subject: `Račun – ${opis}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #1a5632;">Zavrl Tennis Team</h2>
+                    <p>Pozdravljeni ${ime || ''},</p>
+                    <p>v priponki vam pošiljamo račun za storitev:</p>
+                    <p style="background:#f0f4f0;padding:1rem;border-radius:8px;">
+                        <strong>${opis}</strong><br>
+                        Znesek: <strong>${znesek.toFixed(2)} €</strong>
+                    </p>
+                    <p>Račun je priložen kot PDF datoteka.</p>
+                    <p style="font-size: 12px; color: #666; margin-top: 30px;">
+                        Zavrl Tennis Team<br>
+                        Pot v Toplice 10, 2250 Ptuj
+                    </p>
+                </div>
+            `,
+            attachments: [
+                {
+                    filename: `racun-${invoiceId}.pdf`,
+                    content: pdfBuffer.toString('base64')
+                }
+            ]
+        });
+
+        console.log(`✓ Račun ${invoiceId} poslan po emailu na ${to} (Resend ID: ${response?.data?.id || 'neznan'})`);
+        return { uspeh: true, resendId: response?.data?.id || null };
+    } catch (err) {
+        console.error('✗ Napaka pri pošiljanju emaila z računom:', err.message);
+        return { uspeh: false, napaka: err.message };
     }
 }
 
@@ -451,6 +490,7 @@ async function issueInvoiceAndGeneratePdf(invoiceId, rowVersion, invoiceNumber) 
     }
 }
 
+
 async function sendEInvoice(invoiceId) {
     const token = await getMinimaxToken();
     try {
@@ -476,6 +516,50 @@ async function sendEInvoice(invoiceId) {
         console.warn('⚠ Napaka pri pošiljanju e-računa:', err.response?.data || err.message);
     }
 }
+/**
+ * Prenese PDF izdanega računa iz Minimaxa.
+ * Vrne Buffer s PDF vsebino ali null, če PDF ne obstaja.
+ */
+async function downloadInvoicePdf(invoiceId) {
+    const token = await getMinimaxToken();
+    try {
+        const res = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/attachments`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+
+        const rows = res.data?.Rows || res.data?.rows || [];
+        // Poišči prilogo tipa PDF (InvoiceAttachment)
+        const pdfAttachment = rows.find(a =>
+            (a.MimeType || a.mimeType || '').toLowerCase().includes('pdf') ||
+            (a.FileName || a.filename || '').toLowerCase().endsWith('.pdf')
+        );
+
+        if (!pdfAttachment) {
+            console.warn('⚠ PDF priloga ni najdena med prilogami računa');
+            return null;
+        }
+
+        // Prenesi samo datoteko (običajno prek DownloadUrl ali FileId)
+        const fileUrl = pdfAttachment.DownloadUrl || pdfAttachment.downloadUrl ||
+                        pdfAttachment.Url || pdfAttachment.url;
+
+        if (!fileUrl) {
+            console.warn('⚠ DownloadUrl za PDF ni na voljo');
+            return null;
+        }
+
+        const fileRes = await axios.get(fileUrl, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            responseType: 'arraybuffer'
+        });
+
+        return Buffer.from(fileRes.data);
+    } catch (err) {
+        console.warn('Napaka pri prenosu PDF-ja:', err.response?.data || err.message);
+        return null;
+    }
+}
 
 // ===== GLAVNA FUNKCIJA =====
 
@@ -495,21 +579,43 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
 
     try {
         return await withInvoiceLock(stripeSessionId, async () => {
-            // 0. IDEMPOTENTNOST: preveri, ali je račun že izdan
+
+            // 0. IDEMPOTENTNOST
             try {
                 const [existing] = await pool.query(
-                    'SELECT minimax_invoice_id, status FROM minimax_racuni WHERE stripe_session_id = ? LIMIT 1',
+                    'SELECT minimax_invoice_id, status, email_poslan FROM minimax_racuni WHERE stripe_session_id = ? LIMIT 1',
                     [stripeSessionId]
                 );
                 if (existing.length && existing[0].status === 'izdan' && existing[0].minimax_invoice_id) {
                     console.log(`✓ Račun za ${stripeSessionId} že izdan: ${existing[0].minimax_invoice_id}`);
-                    return { uspeh: true, invoiceId: existing[0].minimax_invoice_id };
+                    return {
+                        uspeh: true,
+                        invoiceId: existing[0].minimax_invoice_id,
+                        emailPoslan: !!existing[0].email_poslan,
+                        zeObstaja: true
+                    };
                 }
             } catch (dbErr) {
                 console.warn('Napaka pri preverjanju obstoječega računa:', dbErr.message);
             }
 
-            // 1. Preveri, ali imamo customerId v bazi
+            // 0b. Zabeleži začetek (če še ni zapisa)
+            try {
+                await pool.query(
+                    `INSERT INTO minimax_racuni 
+                        (stripe_session_id, user_id, znesek, opis, status)
+                     VALUES (?, ?, ?, ?, 'v_obdelavi')
+                     ON DUPLICATE KEY UPDATE
+                        status = 'v_obdelavi',
+                        znesek = VALUES(znesek),
+                        opis = VALUES(opis)`,
+                    [stripeSessionId, user.id, znesek, opis]
+                );
+            } catch (dbErr) {
+                console.warn('Napaka pri zapisu v minimax_racuni (začetek):', dbErr.message);
+            }
+
+            // 1. Poišči customerId v bazi
             let customerId = null;
             try {
                 const [dbRows] = await pool.query(
@@ -524,25 +630,24 @@ async function izdajMinimaxRacun({ user, znesek, opis, stripeSessionId, tip }) {
                 console.warn('Napaka pri branju minimax_stranke:', dbErr.message);
             }
 
-           if (!customerId) {
-    try {
-        // 1. Poskusi najprej po emailu (unikaten)
-        customerId = await findCustomerByEmail(user.email);
-    } catch (e) {
-        console.warn('Iskanje po emailu ni uspelo:', e.message);
-    }
-}
+            // 2. Iskanje po emailu / imenu
+            if (!customerId) {
+                try {
+                    customerId = await findCustomerByEmail(user.email);
+                } catch (e) {
+                    console.warn('Iskanje po emailu ni uspelo:', e.message);
+                }
+            }
 
-if (!customerId) {
-    try {
-        // 2. Če ni po emailu, poskusi po imenu in priimku
-        customerId = await findCustomerByName(user.ime, user.priimek);
-    } catch (e) {
-        console.warn('Iskanje po imenu ni uspelo:', e.message);
-    }
-}
+            if (!customerId) {
+                try {
+                    customerId = await findCustomerByName(user.ime, user.priimek);
+                } catch (e) {
+                    console.warn('Iskanje po imenu ni uspelo:', e.message);
+                }
+            }
 
-            // 3. Če še vedno ni, ustvari novo stranko
+            // 3. Ustvari novo stranko
             if (!customerId) {
                 customerId = await createCustomer({
                     ime: user.ime,
@@ -551,7 +656,7 @@ if (!customerId) {
                 });
             }
 
-            // 4. Shrani v bazo
+            // 4. Shrani v minimax_stranke
             if (customerId) {
                 try {
                     await pool.query(
@@ -578,13 +683,88 @@ if (!customerId) {
             // 6. Izda račun in generiraj PDF
             await issueInvoiceAndGeneratePdf(invoiceId, rowVersion);
 
-            // 7. Pošlji e-račun
-            await sendEInvoice(invoiceId);
+            // 7. Takoj zabeleži ID izdanega računa (že preden pošljemo e-mail)
+            try {
+                await pool.query(
+                    `UPDATE minimax_racuni
+                     SET minimax_invoice_id = ?, minimax_customer_id = ?, status = 'izdan'
+                     WHERE stripe_session_id = ?`,
+                    [invoiceId, customerId, stripeSessionId]
+                );
+            } catch (dbErr) {
+                console.warn('Napaka pri posodobitvi minimax_racuni (izdan):', dbErr.message);
+            }
 
-            return { uspeh: true, invoiceId, customerId };
+            // 8. Prenesi PDF
+            const pdfBuffer = await downloadInvoicePdf(invoiceId);
+
+            if (!pdfBuffer) {
+                console.warn('⚠ PDF ni bil prenesen – račun je izdan, a email ni poslan');
+                try {
+                    await pool.query(
+                        `UPDATE minimax_racuni
+                         SET email_poslan = 0, email_napaka = ?
+                         WHERE stripe_session_id = ?`,
+                        ['PDF ni bil prenesen', stripeSessionId]
+                    );
+                } catch (dbErr) {
+                    console.warn('Napaka pri zapisu email napake:', dbErr.message);
+                }
+                return { uspeh: true, invoiceId, customerId, emailPoslan: false };
+            }
+
+            // 9. Pošlji e-mail prek Resenda
+            const emailResult = await sendInvoiceByEmail({
+                to: user.email,
+                ime: user.ime,
+                priimek: user.priimek,
+                znesek,
+                opis,
+                pdfBuffer,
+                invoiceId
+            });
+
+            // 10. Zabeleži rezultat e-maila
+            try {
+                await pool.query(
+                    `UPDATE minimax_racuni
+                     SET email_poslan = ?, email_poslan_dt = ?, email_napaka = ?
+                     WHERE stripe_session_id = ?`,
+                    [
+                        emailResult.uspeh ? 1 : 0,
+                        emailResult.uspeh ? new Date() : null,
+                        emailResult.uspeh ? null : (emailResult.napaka || 'neznana napaka'),
+                        stripeSessionId
+                    ]
+                );
+            } catch (dbErr) {
+                console.warn('Napaka pri zapisu email statusa:', dbErr.message);
+            }
+
+            return {
+                uspeh: true,
+                invoiceId,
+                customerId,
+                emailPoslan: emailResult.uspeh,
+                emailNapaka: emailResult.uspeh ? null : emailResult.napaka
+            };
         });
     } catch (err) {
         console.error('✗ Napaka pri izdaji Minimax računa:', err.message);
+
+        // Zabeleži napako v bazo
+        try {
+            const pool = require('../db');
+            await pool.query(
+                `UPDATE minimax_racuni
+                 SET status = 'napaka', napaka = ?
+                 WHERE stripe_session_id = ?`,
+                [err.message, stripeSessionId]
+            );
+        } catch (dbErr) {
+            console.warn('Napaka pri zapisu napake v bazo:', dbErr.message);
+        }
+
         return { uspeh: false, napaka: err.message };
     }
 }
@@ -695,6 +875,7 @@ module.exports = {
     getMinimaxToken,
     findCustomerByEmail,
     findCustomerByName,
+    downloadInvoicePdf,
     createCustomer,
      debugCountries,     
     debugCurrencies,
