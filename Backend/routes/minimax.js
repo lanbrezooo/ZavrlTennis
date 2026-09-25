@@ -516,75 +516,49 @@ async function sendEInvoice(invoiceId) {
         console.warn('⚠ Napaka pri pošiljanju e-računa:', err.response?.data || err.message);
     }
 }
-async function downloadInvoicePdf(invoiceId, maxAttempts = 5, delayMs = 2000) {
+async function downloadInvoicePdf(invoiceId) {
     const token = await getMinimaxToken();
+    try {
+        const res = await axios.get(
+            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/attachments`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-            const res = await axios.get(
-                `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/attachments`,
-                { headers: { 'Authorization': `Bearer ${token}` } }
-            );
+        // Normaliziraj v array
+        let rows = [];
+        if (Array.isArray(res.data)) rows = res.data;
+        else if (res.data?.Rows) rows = res.data.Rows;
+        else if (res.data?.rows) rows = res.data.rows;
+        else if (res.data?.value) rows = res.data.value;
 
-            // Debug: izpiši strukturo odgovora
-            console.log(`=== PRILOGE (poskus ${attempt}) ===`);
-            console.log(JSON.stringify(res.data).slice(0, 1500));
-            console.log('==================================');
+        console.log(`Najdenih prilog: ${rows.length}`);
 
-            // Podpri različne strukture
-            let rows = [];
-            if (Array.isArray(res.data)) rows = res.data;
-            else if (res.data?.Rows) rows = res.data.Rows;
-            else if (res.data?.rows) rows = res.data.rows;
-            else if (res.data?.Items) rows = res.data.Items;
-            else if (res.data?.items) rows = res.data.items;
-            else if (res.data?.value) rows = res.data.value;
-            else if (res.data?.Result) rows = res.data.Result;
+        // Poišči PDF: AttachmentData se začne z "JVBER" (base64 za %PDF)
+        const pdfAttachment = rows.find(a => {
+            const data = a.AttachmentData || a.attachmentData || '';
+            return typeof data === 'string' && data.startsWith('JVBER');
+        });
 
-            const pdfAttachment = rows.find(a =>
-                (a.MimeType || a.mimeType || '').toLowerCase().includes('pdf') ||
-                (a.FileName || a.filename || '').toLowerCase().endsWith('.pdf')
-            );
-
-            if (!pdfAttachment) {
-                console.warn(`⚠ Poskus ${attempt}: PDF priloga še ni pripravljena (najdenih ${rows.length} prilog)`);
-                if (attempt < maxAttempts) {
-                    await new Promise(r => setTimeout(r, delayMs));
-                    continue;
-                }
-                return null;
-            }
-
-            const fileUrl = pdfAttachment.DownloadUrl || pdfAttachment.downloadUrl ||
-                            pdfAttachment.Url || pdfAttachment.url;
-
-            if (!fileUrl) {
-                console.warn(`⚠ Poskus ${attempt}: DownloadUrl ni na voljo`);
-                if (attempt < maxAttempts) {
-                    await new Promise(r => setTimeout(r, delayMs));
-                    continue;
-                }
-                return null;
-            }
-
-            const fileRes = await axios.get(fileUrl, {
-                headers: { 'Authorization': `Bearer ${token}` },
-                responseType: 'arraybuffer'
+        if (!pdfAttachment) {
+            console.warn('⚠ PDF priloga ni najdena v odgovoru');
+            // Debug: izpiši strukturo vseh prilog (brez velikih base64 polj)
+            rows.forEach((a, i) => {
+                const dataPreview = (a.AttachmentData || '').slice(0, 20);
+                console.warn(`  Priloga ${i}: AttachmentId=${a.AttachmentId}, AttachmentData začetek: ${dataPreview}`);
             });
-
-            console.log(`✓ PDF prenesen v poskusu ${attempt} (${fileRes.data.length} bajtov)`);
-            return Buffer.from(fileRes.data);
-
-        } catch (err) {
-            console.warn(`Napaka pri prenosu PDF (poskus ${attempt}):`, err.response?.data || err.message);
-            if (attempt < maxAttempts) {
-                await new Promise(r => setTimeout(r, delayMs));
-            }
+            return null;
         }
-    }
 
-    console.warn(`⚠ PDF ni bil prenesen po ${maxAttempts} poskusih`);
-    return null;
+        const base64Data = pdfAttachment.AttachmentData || pdfAttachment.attachmentData;
+        const pdfBuffer = Buffer.from(base64Data, 'base64');
+
+        console.log(`✓ PDF prenesen iz AttachmentData (${pdfBuffer.length} bajtov, AttachmentId: ${pdfAttachment.AttachmentId})`);
+        return pdfBuffer;
+
+    } catch (err) {
+        console.warn('Napaka pri prenosu PDF-ja:', err.response?.data || err.message);
+        return null;
+    }
 }
 
 // ===== GLAVNA FUNKCIJA =====
