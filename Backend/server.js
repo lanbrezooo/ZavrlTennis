@@ -248,14 +248,34 @@ async function handleReservationPaid(session) {
     const znesek = session.amount_total / 100;
 
     let dateLabel = 'Neznan datum';
-    try {
-      const d = new Date(reservation.datum + 'T00:00:00');
-      if (!isNaN(d.getTime())) {
-        dateLabel = d.toLocaleDateString('sl-SI');
-      }
-    } catch (e) {
-      console.warn('Napaka pri formatu datuma:', reservation.datum);
-    }
+try {
+  let d;
+  if (reservation.datum instanceof Date) {
+    // mysql2 vrne Date objekt
+    d = reservation.datum;
+  } else if (typeof reservation.datum === 'string') {
+    // če je string "2026-09-25" ali "2026-09-25T00:00:00"
+    d = new Date(reservation.datum.includes('T') 
+      ? reservation.datum 
+      : reservation.datum + 'T00:00:00');
+  } else {
+    // če je undefined/null, poskusi iz session metadata
+    const raw = session.metadata?.datum;
+    if (raw) d = new Date(raw + 'T00:00:00');
+  }
+
+  if (d && !isNaN(d.getTime())) {
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    dateLabel = `${day}.${month}.${year}`;
+    console.log('✓ Datum za račun:', dateLabel, '(iz:', reservation.datum, ')');
+  } else {
+    console.warn('⚠ Ne morem formatirati datuma. reservation.datum =', reservation.datum);
+  }
+} catch (e) {
+  console.warn('Napaka pri formatu datuma:', reservation.datum, e.message);
+}
 
     const opis = `Rezervacija igrišča ${reservation.igrisce} – ${dateLabel}, ${reservation.ura_zacetka}:00 (${reservation.trajanje}h) – Zavrl Tennis Team`;
 
