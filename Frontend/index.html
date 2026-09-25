@@ -141,19 +141,19 @@
     flex-shrink: 0;
 }
 
-/* Besedilo je privzeto skrito (desktop) */
 .header-whatsapp-mobile-label {
     display: none;
-    font-size: 0.45rem;
+    font-size: 0.5rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.95);
     letter-spacing: 0.1px;
     text-align: center;
     line-height: 1.15;
-    max-width: 78px;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     pointer-events: none;
     user-select: none;
+    white-space: nowrap;
+    max-width: 90px;
 }
         .user-badge {
             display: flex; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.15);
@@ -1041,10 +1041,11 @@ body:has(.modal-overlay) {
 }
 .header-whatsapp-mobile-label {
     display: block;
+    font-size: 0.48rem;
     font-weight: 700;
-    font-size: 0.45rem;
     color: rgba(255, 255, 255, 0.95);
-    max-width: 78px;
+    white-space: nowrap;
+    max-width: 88px;
 }
 .header-actions.admin-mode .header-whatsapp-mobile-label {
     display: none !important;
@@ -1319,11 +1320,11 @@ body:has(.modal-overlay) {
         display: none;
     }
     .header-whatsapp-mobile-label {
-    font-size: 0.45rem;
+    font-size: 0.43rem;
     font-weight: 700;
     opacity: 1;
     white-space: nowrap;
-
+    max-width: 80px;
 }
 }
     </style>
@@ -1705,7 +1706,7 @@ function formatCreditsNum(n) {
                 </svg>
                 <span class="header-whatsapp-text">Pridruži se skupini</span>
             </a>
-            ${withMobileLabel ? '<span class="header-whatsapp-mobile-label">Pridruži se skupini tenisačev</span>' : ''}
+            ${withMobileLabel ? '<span class="header-whatsapp-mobile-label">Pridruži se skupini<br>tenisačev</span>' : ''}
         </div>
     `;
 
