@@ -516,49 +516,75 @@ async function sendEInvoice(invoiceId) {
         console.warn('⚠ Napaka pri pošiljanju e-računa:', err.response?.data || err.message);
     }
 }
-/**
- * Prenese PDF izdanega računa iz Minimaxa.
- * Vrne Buffer s PDF vsebino ali null, če PDF ne obstaja.
- */
-async function downloadInvoicePdf(invoiceId) {
+async function downloadInvoicePdf(invoiceId, maxAttempts = 5, delayMs = 2000) {
     const token = await getMinimaxToken();
-    try {
-        const res = await axios.get(
-            `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/attachments`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
 
-        const rows = res.data?.Rows || res.data?.rows || [];
-        // Poišči prilogo tipa PDF (InvoiceAttachment)
-        const pdfAttachment = rows.find(a =>
-            (a.MimeType || a.mimeType || '').toLowerCase().includes('pdf') ||
-            (a.FileName || a.filename || '').toLowerCase().endsWith('.pdf')
-        );
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const res = await axios.get(
+                `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/issuedinvoices/${invoiceId}/attachments`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+            );
 
-        if (!pdfAttachment) {
-            console.warn('⚠ PDF priloga ni najdena med prilogami računa');
-            return null;
+            // Debug: izpiši strukturo odgovora
+            console.log(`=== PRILOGE (poskus ${attempt}) ===`);
+            console.log(JSON.stringify(res.data).slice(0, 1500));
+            console.log('==================================');
+
+            // Podpri različne strukture
+            let rows = [];
+            if (Array.isArray(res.data)) rows = res.data;
+            else if (res.data?.Rows) rows = res.data.Rows;
+            else if (res.data?.rows) rows = res.data.rows;
+            else if (res.data?.Items) rows = res.data.Items;
+            else if (res.data?.items) rows = res.data.items;
+            else if (res.data?.value) rows = res.data.value;
+            else if (res.data?.Result) rows = res.data.Result;
+
+            const pdfAttachment = rows.find(a =>
+                (a.MimeType || a.mimeType || '').toLowerCase().includes('pdf') ||
+                (a.FileName || a.filename || '').toLowerCase().endsWith('.pdf')
+            );
+
+            if (!pdfAttachment) {
+                console.warn(`⚠ Poskus ${attempt}: PDF priloga še ni pripravljena (najdenih ${rows.length} prilog)`);
+                if (attempt < maxAttempts) {
+                    await new Promise(r => setTimeout(r, delayMs));
+                    continue;
+                }
+                return null;
+            }
+
+            const fileUrl = pdfAttachment.DownloadUrl || pdfAttachment.downloadUrl ||
+                            pdfAttachment.Url || pdfAttachment.url;
+
+            if (!fileUrl) {
+                console.warn(`⚠ Poskus ${attempt}: DownloadUrl ni na voljo`);
+                if (attempt < maxAttempts) {
+                    await new Promise(r => setTimeout(r, delayMs));
+                    continue;
+                }
+                return null;
+            }
+
+            const fileRes = await axios.get(fileUrl, {
+                headers: { 'Authorization': `Bearer ${token}` },
+                responseType: 'arraybuffer'
+            });
+
+            console.log(`✓ PDF prenesen v poskusu ${attempt} (${fileRes.data.length} bajtov)`);
+            return Buffer.from(fileRes.data);
+
+        } catch (err) {
+            console.warn(`Napaka pri prenosu PDF (poskus ${attempt}):`, err.response?.data || err.message);
+            if (attempt < maxAttempts) {
+                await new Promise(r => setTimeout(r, delayMs));
+            }
         }
-
-        // Prenesi samo datoteko (običajno prek DownloadUrl ali FileId)
-        const fileUrl = pdfAttachment.DownloadUrl || pdfAttachment.downloadUrl ||
-                        pdfAttachment.Url || pdfAttachment.url;
-
-        if (!fileUrl) {
-            console.warn('⚠ DownloadUrl za PDF ni na voljo');
-            return null;
-        }
-
-        const fileRes = await axios.get(fileUrl, {
-            headers: { 'Authorization': `Bearer ${token}` },
-            responseType: 'arraybuffer'
-        });
-
-        return Buffer.from(fileRes.data);
-    } catch (err) {
-        console.warn('Napaka pri prenosu PDF-ja:', err.response?.data || err.message);
-        return null;
     }
+
+    console.warn(`⚠ PDF ni bil prenesen po ${maxAttempts} poskusih`);
+    return null;
 }
 
 // ===== GLAVNA FUNKCIJA =====
