@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <!-- Favicon (emoji) -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎾</text></svg>">
+    <link rel="icon" type="image/png" href="Slike/logo.png"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>Zavrl Tennis Team - Rezervacije</title>
     <style>
@@ -48,43 +48,69 @@
             -webkit-font-smoothing: antialiased;
         }
         .header {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--primary-light) 100%);
-            color: white;
-            padding: 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        }
+    position: relative;
+    background-color: var(--primary-dark);
+    background-image: 
+    linear-gradient(135deg, rgba(14, 58, 32, 0.82) 0%, rgba(26, 86, 50, 0.72) 50%, rgba(46, 125, 50, 0.65) 100%),
+    url('Slike/header.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+    color: white;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
         .header-inner {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 1rem 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        .logo-section { display: flex; align-items: center; gap: 1rem; }
-        .logo-icon {
-            width: 48px; height: 48px; background: var(--accent); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 24px;
-            font-weight: 800; color: var(--primary-dark); box-shadow: 0 4px 12px rgba(253,216,53,0.4);
-            flex-shrink: 0; letter-spacing: -1px;
-        }
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.75rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    min-height: 130px;
+    position: relative;
+    z-index: 2;
+}
+  .logo-section { display: flex; align-items: center; gap: 1.25rem; }
+.logo-icon {
+    width: 72px;
+    height: 72px;
+    background: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+    padding: 3px;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+}
+.logo-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    border-radius: 50%;
+}
+.logo-text h1 { font-size: 1.65rem; font-weight: 700; letter-spacing: -0.5px; line-height: 1.15; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+.logo-text p { font-size: 0.85rem; opacity: 0.95; font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
         .logo-text h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; line-height: 1.2; }
         .logo-text p { font-size: 0.8rem; opacity: 0.85; font-weight: 400; letter-spacing: 0.5px; text-transform: uppercase; }
         .header-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
         .header-whatsapp {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem 0.5rem 0.6rem;
     background: #25D366;
     color: white;
-    border-radius: 50%;
+    border-radius: 50px;
     text-decoration: none;
     transition: var(--transition);
     flex-shrink: 0;
@@ -92,12 +118,19 @@
 }
 .header-whatsapp:hover {
     background: #1da851;
-    transform: scale(1.08);
+    transform: translateY(-1px);
     box-shadow: 0 4px 16px rgba(37, 211, 102, 0.5);
 }
 .header-whatsapp svg {
     width: 22px;
     height: 22px;
+    flex-shrink: 0;
+}
+.header-whatsapp-text {
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
 }
         .user-badge {
             display: flex; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.15);
@@ -351,7 +384,7 @@
         .res-duration { font-size: 0.65rem; opacity: 0.7; font-weight: 500; }
 
         .legend { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; padding:.75rem 1.25rem; background:#fafafa; border-top:1px solid var(--border); font-size:.8rem; color:var(--text-light); }
-        .credits-legend { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; position:sticky; top:92px; }
+        .credits-legend { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; position:sticky; top:145px; }
         .credits-legend h3 { padding:1rem 1.1rem; color:var(--primary); font-size:1rem; border-bottom:1px solid var(--border); }
         .credit-balance { margin:1rem; padding:1rem; border-radius:12px; background:linear-gradient(135deg,var(--primary-dark),var(--primary)); color:white; }
         
@@ -847,6 +880,65 @@ body:has(.modal-overlay) {
 }
 .btn-primary.btn-sm { padding: 0.4rem 1rem; font-size: 0.8rem; }
 .admin-section h4 { margin-bottom: 0.5rem; }
+/* Sezonska karta – info kartica v modalu za nakup kreditov */
+.season-pass-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+    margin-top: 1rem;
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    border: 2px solid var(--accent-dark);
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+}
+.season-pass-info::before {
+    content: '';
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(253,216,53,0.5) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.season-pass-icon {
+    font-size: 2.4rem;
+    line-height: 1;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(249,168,37,0.4));
+}
+.season-pass-content {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+.season-pass-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--primary-dark);
+    line-height: 1.25;
+    margin-bottom: 0.25rem;
+}
+.season-pass-price {
+    font-weight: 800;
+    font-size: 1.35rem;
+    color: var(--primary);
+    line-height: 1;
+    margin-bottom: 0.3rem;
+    letter-spacing: -0.5px;
+}
+.season-pass-desc {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    line-height: 1.35;
+}
+.season-pass-desc a:hover {
+    color: var(--primary-dark) !important;
+}
        @media (max-width: 768px) {
     
     
@@ -869,11 +961,12 @@ body:has(.modal-overlay) {
         /* Header v dveh vrsticah */
     .header-inner {
         flex-direction: column;
-        padding: 0.6rem 0.6rem 0.75rem 0.6rem;
-        gap: 0.5rem;
+        padding: 1.1rem 0.75rem 1.25rem 0.75rem;
+        gap: 0.75rem;
         align-items: center;
         justify-content: center;
         flex-wrap: nowrap;
+        min-height: 165px;
     }
 
     
@@ -884,16 +977,14 @@ body:has(.modal-overlay) {
         width: 100%;
     }
     .logo-icon {
-        width: 38px;
-        height: 38px;
-        font-size: 1rem;
+        width: 58px;
+        height: 58px;
     }
     .logo-text h1 {
-        font-size: 1.05rem;
-        line-height: 1.1;
+        font-size: 1.25rem;
     }
     .logo-text p {
-        font-size: 0.6rem;
+        font-size: 0.65rem;
     }
 
     
@@ -914,15 +1005,17 @@ body:has(.modal-overlay) {
     }        
 
     /* WhatsApp ikona */
-    .header-whatsapp {
-        width: 32px;
-        height: 32px;
-        flex-shrink: 0;
-    }
-    .header-whatsapp svg {
-        width: 18px;
-        height: 18px;
-    }
+   .header-whatsapp {
+    padding: 0.35rem 0.7rem 0.35rem 0.5rem;
+    gap: 0.35rem;
+}
+.header-whatsapp svg {
+    width: 18px;
+    height: 18px;
+}
+.header-whatsapp-text {
+    font-size: 0.7rem;
+}
 
     /* Značka uporabnika */
     .user-badge {
@@ -1176,6 +1269,20 @@ body:has(.modal-overlay) {
         padding: 0.75rem 1rem;
     }
 }
+
+/* Na zelo majhnih zaslonih skrijemo besedilo, gumb spet postane okrogel */
+@media (max-width: 420px) {
+    .header-whatsapp {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        justify-content: center;
+        gap: 0;
+    }
+    .header-whatsapp-text {
+        display: none;
+    }
+}
     </style>
 </head>
 <body>
@@ -1183,10 +1290,12 @@ body:has(.modal-overlay) {
     <div class="header-inner">
         <a href="/" style="text-decoration: none; color: inherit;">
             <div class="logo-section">
-                <div class="logo-icon">ZT</div>
+                <div class="logo-icon">
+    <img src="Slike/logo.png" alt="Zavrl Tennis Team"/>
+</div>
                 <div class="logo-text">
                     <h1>Zavrl Tennis Team</h1>
-                    <p>Ptuj · Teniški klub</p>
+                    <p>Teniški klub Terme Ptuj</p>
                 </div>
             </div>
         </a>
@@ -1547,6 +1656,7 @@ function formatCreditsNum(n) {
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
+                <span class="header-whatsapp-text">Pridruži se skupini</span>
         </a>
     `;
 
@@ -2240,7 +2350,7 @@ function goToAdminReservationsPage(page) {
                                     <div class="form-group"><label>Priimek *</label><input type="text" name="priimek" required placeholder="Priimek"></div>
                                 </div>
                                 <div class="form-group"><label>Email *</label><input type="email" name="email" required placeholder="vase@email.si"></div>
-                                <div class="form-group"><label>Telefon</label><input type="tel" name="telefon" placeholder="npr. 041 123 456"></div>
+                                <div class="form-group"><label>Telefon *</label><input type="tel" name="telefon" required placeholder="npr. 041 123 456"></div>
                                 <div class="form-group"><label>Geslo *</label><input type="password" name="geslo" required placeholder="Min. 8 znakov" minlength="8"></div>
                                 <div class="form-row">
                                     <div class="form-group"><label>Leto rojstva</label><input type="number" name="leto_rojstva" min="1920" max="2025" placeholder="npr. 1990"></div>
@@ -2298,7 +2408,7 @@ function goToAdminReservationsPage(page) {
                 } else {
                     const userData = {
                         ime: formData.get('ime'), priimek: formData.get('priimek'), email: formData.get('email'),
-                        geslo: formData.get('geslo'), telefon: formData.get('telefon') || null,
+                        geslo: formData.get('geslo'), telefon: formData.get('telefon')?.trim() || '',
                         leto_rojstva: formData.get('leto_rojstva') ? parseInt(formData.get('leto_rojstva')) : null,
                         opis: formData.get('opis') || null, nivo: formData.get('nivo') || 'Rekreativec',
                         prikazi_telefon: formData.get('prikazi_telefon') ? 1 : 0
@@ -3384,7 +3494,19 @@ if (blokada) {
             <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
                 <div class="modal" style="max-width:520px;">
                     <button class="modal-close" onclick="closeModal()">✕</button>
-                    <h2>${escapeHtml(r.ime)} ${escapeHtml(r.priimek)}</h2>
+                    <h2
+    style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:0.5rem; width:100%; transition:var(--transition);"
+    onclick="showUserReservations(${r.user_id})"
+    onmouseover="this.style.color='var(--primary-light)'"
+    onmouseout="this.style.color='var(--primary)'"
+    title="Prikaži vse rezervacije tega uporabnika"
+>
+    ${escapeHtml(r.ime)} ${escapeHtml(r.priimek)}
+    <span style="font-size:0.75rem; opacity:0.7;">👆</span>
+</h2>
+<p style="text-align:center; font-size:0.72rem; color:var(--text-light); margin-top:-1.2rem; margin-bottom:1rem;">
+    Klikni na ime za vse rezervacije te osebe
+</p>
 
                     <div class="booking-summary" style="margin-bottom:1rem;">
                         <div class="court-num">Igrišče ${r.igrisce}</div>
@@ -3415,6 +3537,147 @@ if (blokada) {
         showToast(err.message, 'error');
     }
 }
+// ===== ADMIN: Vse rezervacije določenega uporabnika =====
+window.showUserReservations = async function(userId) {
+    // Prikaži "nalagam"
+    modalRoot.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal" style="max-width:680px;">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <div style="text-align:center; padding:2rem; color:var(--text-light);">
+                    ⏳ Nalagam rezervacije...
+                </div>
+            </div>
+        </div>
+    `;
+
+    try {
+        const data = await apiCall(`/admin/users/${userId}/reservations`);
+        const u = data.user;
+        const reservations = data.reservations || [];
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Razdeli na prihodnje (aktivne) in pretekle/preklicane
+        const future = [];
+        const past = [];
+        reservations.forEach(r => {
+            const d = new Date(r.datum + 'T00:00:00');
+            const isCancelled = Number(r.preklicano) === 1;
+            const isBlock = Number(r.blokada) === 1;
+
+            if (!isCancelled && !isBlock && d >= today) future.push(r);
+            else past.push(r);
+        });
+
+        // Prihodnje sortiraj naraščajoče (najbližja prva)
+        future.sort((a, b) =>
+            (a.datum + String(a.ura_zacetka).padStart(4, '0'))
+                .localeCompare(b.datum + String(b.ura_zacetka).padStart(4, '0'))
+        );
+
+        const renderRes = (r) => {
+            const startH = Number(r.ura_zacetka);
+            const endH = startH + Number(r.trajanje);
+            const timeStr = `${formatHour(startH)} – ${formatHour(endH)}`;
+
+            const isCancelled = Number(r.preklicano) === 1;
+            const isBlock = Number(r.blokada) === 1;
+
+            let badge = '';
+            if (isBlock) {
+                badge = '<span style="background:#ffcdd2;color:#b71c1c;padding:0.2rem 0.5rem;border-radius:6px;font-size:0.7rem;font-weight:600;white-space:nowrap;">🚨 Blokada</span>';
+            } else if (isCancelled) {
+                badge = '<span style="background:#f5f5f5;color:#999;padding:0.2rem 0.5rem;border-radius:6px;font-size:0.7rem;font-weight:600;white-space:nowrap;">✗ Preklicana</span>';
+            } else if (Number(r.letna_karta_uporabljena) === 1) {
+                badge = '<span style="background:#fff8e1;color:#f9a825;padding:0.2rem 0.5rem;border-radius:6px;font-size:0.7rem;font-weight:600;white-space:nowrap;">🎫 Sezonska</span>';
+            } else if (Number(r.placilo_z_kartico) === 1) {
+                badge = '<span style="background:#e3f2fd;color:#1565c0;padding:0.2rem 0.5rem;border-radius:6px;font-size:0.7rem;font-weight:600;white-space:nowrap;">💳 Kartica</span>';
+            } else if (Number(r.krediti_porabili) > 0) {
+                badge = `<span style="background:#edf7ef;color:#1a5632;padding:0.2rem 0.5rem;border-radius:6px;font-size:0.7rem;font-weight:600;white-space:nowrap;">💰 ${r.krediti_porabili} kred.</span>`;
+            }
+
+            return `
+                <div style="display:flex; align-items:center; gap:0.75rem; padding:0.6rem 0.8rem; border:1px solid var(--border); border-radius:10px; background:${isCancelled ? '#f9f9f9' : '#fff'}; ${isCancelled ? 'opacity:0.65;' : ''}">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:700; color:var(--primary); font-size:0.9rem;">Igrišče ${r.igrisce}</div>
+                        <div style="font-size:0.78rem; color:var(--text-light);">
+                            ${formatDateShort(r.datum)} · ${timeStr} · ${r.trajanje}h
+                            ${r.oznaka ? ' · 🏷 ' + escapeHtml(r.oznaka) : ''}
+                        </div>
+                    </div>
+                    ${badge}
+                </div>
+            `;
+        };
+
+        modalRoot.innerHTML = `
+            <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+                <div class="modal" style="max-width:680px;">
+                    <button class="modal-close" onclick="closeModal()">✕</button>
+
+                    <h2>${escapeHtml(u.ime)} ${escapeHtml(u.priimek)}</h2>
+                    <p style="text-align:center; color:var(--text-light); font-size:0.82rem; margin-top:-1rem; margin-bottom:1rem;">
+                        ${escapeHtml(u.email || '')}
+                    </p>
+
+                    <div style="background:#f0f4f0; border-radius:10px; padding:0.6rem 0.9rem; font-size:0.82rem; color:var(--text-light); text-align:center; margin-bottom:1rem;">
+                        Skupaj: <strong style="color:var(--primary);">${reservations.length}</strong>
+                        · <strong style="color:var(--primary);">${future.length}</strong> prihodnjih
+                        · <strong>${past.length}</strong> preteklih / preklicanih
+                    </div>
+
+                    <div style="max-height:55vh; overflow-y:auto; display:flex; flex-direction:column; gap:0.4rem; padding-right:0.25rem;">
+
+                        ${future.length > 0 ? `
+                            <div style="font-size:0.72rem; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; padding:0.3rem 0.1rem;">
+                                📅 Prihodnje rezervacije
+                            </div>
+                            ${future.map(renderRes).join('')}
+                        ` : ''}
+
+                        ${past.length > 0 ? `
+                            <div style="font-size:0.72rem; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; padding:0.3rem 0.1rem; margin-top:${future.length ? '0.6rem' : '0'};">
+                                📜 Pretekle in preklicane
+                            </div>
+                            ${past.map(renderRes).join('')}
+                        ` : ''}
+
+                        ${reservations.length === 0 ? `
+                            <div style="text-align:center; padding:2rem; color:var(--text-light); font-style:italic;">
+                                Ta uporabnik še nima rezervacij.
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <button class="btn btn-outline"
+                            style="width:100%; justify-content:center; margin-top:1rem; color:black; border-color:var(--border);"
+                            onclick="closeModal()">
+                        Zapri
+                    </button>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        modalRoot.innerHTML = `
+            <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+                <div class="modal" style="max-width:420px;">
+                    <button class="modal-close" onclick="closeModal()">✕</button>
+                    <h2>Napaka</h2>
+                    <p style="text-align:center; color:var(--danger); margin-bottom:1rem;">
+                        ${escapeHtml(err.message)}
+                    </p>
+                    <button class="btn btn-primary"
+                            style="width:100%; justify-content:center;"
+                            onclick="closeModal()">
+                        Zapri
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+};
 
 // ===== ADMIN: Prekliči tujo rezervacijo (z izbiro vračila) =====
 async function adminCancelReservation(reservationId, kreditiPorabili, uporabilLetnoKarto) {
@@ -4181,6 +4444,7 @@ const MAX_CREDITS = 10;
 
 let selectedCredits = 10;
 let selectedPrice = 80;
+let selectedPackage = 'summer'; // 'summer' | 'winter' | null (ročni vnos)
 
 function calcPrice(credits) {
     if (credits === PACKAGE_CREDITS) return PACKAGE_PRICE;
@@ -4208,6 +4472,52 @@ window.showBuyCreditsModal = function() {
         return;
     }
 
+    const isWinterSeason = isWinter();
+
+    // Promo kartica – poletje vs zima
+    const promoCardHtml = isWinterSeason ? `
+        <div class="promo-card" onclick="selectPromo('winter')" id="promoCard">
+            <div class="promo-badge">PRIHRANEK 10 €</div>
+            <div class="promo-icon">❄️</div>
+            <div class="promo-content">
+                <div class="promo-title">Paket 10 zimskih ur</div>
+                <div class="promo-desc">Namesto 250 € – samo</div>
+                <div class="promo-price">240 <span>€</span></div>
+                <div style="font-size:0.72rem;color:var(--text-light);margin-top:0.35rem;">
+                    25 univerzalnih kreditov
+                </div>
+            </div>
+        </div>
+    ` : `
+        <div class="promo-card" onclick="selectPromo('summer')" id="promoCard">
+            <div class="promo-badge">PRIHRANEK 20 €</div>
+            <div class="promo-icon">🎾</div>
+            <div class="promo-content">
+                <div class="promo-title">Paket 10 kreditov</div>
+                <div class="promo-desc">Namesto 100 € – samo</div>
+                <div class="promo-price">80 <span>€</span></div>
+            </div>
+        </div>
+    `;
+
+    // Sezonska karta – samo poleti
+    const seasonPassHtml = !isWinterSeason ? `
+        <div class="season-pass-info">
+            <div class="season-pass-icon">🎫</div>
+            <div class="season-pass-content">
+                <div class="season-pass-title">Kupi sezonsko karto in igraj neomejeno</div>
+                <div class="season-pass-price">180 € / sezona</div>
+                <div class="season-pass-desc">
+                    Več informacij na 
+                    <a href="mailto:zavrltennisteam@gmail.com?subject=Sezonska%20karta%20-%20povpra%C5%A1evanje" 
+                       style="color:var(--primary);font-weight:700;text-decoration:underline;">
+                        zavrltennisteam@gmail.com
+                    </a>
+                </div>
+            </div>
+        </div>
+    ` : '';
+
     modalRoot.innerHTML = `
         <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
             <div class="modal" style="max-width:520px;">
@@ -4217,15 +4527,8 @@ window.showBuyCreditsModal = function() {
                     Izberi ugodni paket ali vpiši poljubno število kreditov.
                 </p>
 
-                <div class="promo-card" onclick="selectPromo()" id="promoCard">
-                    <div class="promo-badge">PRIHRANEK 20 €</div>
-                    <div class="promo-icon">🎾</div>
-                    <div class="promo-content">
-                        <div class="promo-title">Paket 10 kreditov</div>
-                        <div class="promo-desc">Namesto 100 € – samo</div>
-                        <div class="promo-price">80 <span>€</span></div>
-                    </div>
-                </div>
+                ${promoCardHtml}
+                ${seasonPassHtml}
 
                 <div class="divider"><span>ali</span></div>
 
@@ -4233,34 +4536,34 @@ window.showBuyCreditsModal = function() {
                     <label>
                         Poljubno število kreditov
                         <span style="font-weight:400; color:var(--text-light); display:block; margin-top:0.2rem; font-size:0.72rem;">
-    Najmanj 0.25 kredita · Največ 10 kreditov · korak 0.25 · 1 KREDIT = 10 EUR
-</span>
+                            Najmanj 0.25 kredita · Največ 10 kreditov · korak 0.25 · 1 KREDIT = 10 EUR
+                        </span>
                     </label>
                     <div class="custom-input-row">
                         <button type="button" class="stepper-btn" onclick="stepCredits(-0.25)" aria-label="Zmanjšaj">−</button>
                         <input type="number" id="customCreditsInput" 
-       min="0.25" max="10" step="0.25" 
-       placeholder="npr. 2.25"
-       inputmode="decimal"
-       oninput="updateCustomPrice()" 
-       onclick="clearPromoSelection()">
+                               min="0.25" max="10" step="0.25" 
+                               placeholder="npr. 2.25"
+                               inputmode="decimal"
+                               oninput="updateCustomPrice()" 
+                               onclick="clearPromoSelection()">
                         <button type="button" class="stepper-btn" onclick="stepCredits(0.25)" aria-label="Povečaj">+</button>
                     </div>
                 </div>
 
                 <div class="booking-cost">
                     <span>Skupaj za plačilo</span>
-                    <strong id="totalPrice">80 €</strong>
+                    <strong id="totalPrice">—</strong>
                 </div>
                 <div class="form-group" style="margin-bottom:0.75rem;">
-    <label style="display:flex;align-items:flex-start;gap:0.5rem;font-weight:400;">
-        <input type="checkbox" id="buyTermsCheck" required style="width:auto;margin-top:4px;">
-        <span style="font-size:0.8rem;color:var(--text-light);">
-            Strinjam se, da so kupljeni krediti <strong>nepovratni</strong>. Sprejemam 
-            <a href="#" onclick="event.preventDefault();showLegal('pogoji')" style="color:var(--primary);font-weight:600;">pogoje poslovanja</a>.
-        </span>
-    </label>
-</div>
+                    <label style="display:flex;align-items:flex-start;gap:0.5rem;font-weight:400;">
+                        <input type="checkbox" id="buyTermsCheck" required style="width:auto;margin-top:4px;">
+                        <span style="font-size:0.8rem;color:var(--text-light);">
+                            Strinjam se, da so kupljeni krediti <strong>nepovratni</strong>. Sprejemam 
+                            <a href="#" onclick="event.preventDefault();showLegal('pogoji')" style="color:var(--primary);font-weight:600;">pogoje poslovanja</a>.
+                        </span>
+                    </label>
+                </div>
 
                 <div class="form-error" id="buyError"></div>
                 <button type="button" class="btn btn-primary" style="width:100%;justify-content:center;"
@@ -4274,22 +4577,39 @@ window.showBuyCreditsModal = function() {
         </div>
     `;
 
-    selectedCredits = PACKAGE_CREDITS;
-    selectedPrice = PACKAGE_PRICE;
+    // Privzeta izbira glede na sezono
+    if (isWinterSeason) {
+        selectedCredits = 25;
+        selectedPrice = 240;
+        selectedPackage = 'winter';
+    } else {
+        selectedCredits = 10;
+        selectedPrice = 80;
+        selectedPackage = 'summer';
+    }
+    const promoEl = document.getElementById('promoCard');
+    if (promoEl) promoEl.classList.add('selected');
     updateTotalPrice();
 };
 
-window.selectPromo = function() {
-    selectedCredits = PACKAGE_CREDITS;
-    selectedPrice = PACKAGE_PRICE;
+window.selectPromo = function(type) {
+    if (type === 'winter') {
+        selectedCredits = 25;
+        selectedPrice = 240;
+        selectedPackage = 'winter';
+    } else {
+        selectedCredits = 10;
+        selectedPrice = 80;
+        selectedPackage = 'summer';
+    }
     document.getElementById('customCreditsInput').value = '';
     document.getElementById('promoCard').classList.add('selected');
     document.getElementById('buyError').textContent = '';
     updateTotalPrice();
 };
-
 window.clearPromoSelection = function() {
     document.getElementById('promoCard').classList.remove('selected');
+    selectedPackage = null;
 };
 
 window.stepCredits = function(delta) {
@@ -4369,21 +4689,26 @@ window.updateTotalPrice = function() {
 window.startStripeCheckout = async function() {
     const errEl = document.getElementById('buyError');
     errEl.textContent = '';
-        const termsCheck = document.getElementById('buyTermsCheck');
+    const termsCheck = document.getElementById('buyTermsCheck');
     if (!termsCheck || !termsCheck.checked) {
         errEl.textContent = 'Za nadaljevanje morate sprejeti pogoje poslovanja.';
         return;
     }
 
-    if (!isValidCredits(selectedCredits)) {
-        errEl.textContent = `Vnesite veljavno količino (med ${formatCredits(MIN_CREDITS)} in ${MAX_CREDITS} kreditov).`;
-        return;
+    // Sestavi payload: paket ali ročni krediti
+    let payload;
+    if (selectedPackage) {
+        payload = { package: selectedPackage };
+    } else {
+        if (!isValidCredits(selectedCredits)) {
+            errEl.textContent = `Vnesite veljavno količino (med ${formatCredits(MIN_CREDITS)} in ${MAX_CREDITS} kreditov).`;
+            return;
+        }
+        payload = { credits: selectedCredits };
     }
 
     try {
-        const data = await apiCall('/payments/create-checkout-session', 'POST', {
-            credits: selectedCredits
-        });
+        const data = await apiCall('/payments/create-checkout-session', 'POST', payload);
         if (data.url) {
             window.location.href = data.url;
         } else {

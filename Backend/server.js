@@ -123,7 +123,9 @@ async function handleCreditsPaid(session) {
   const opis =
     credits === 10
       ? 'Paket 10 kreditov – Zavrl Tennis Team'
-      : `Nakup ${credits} kreditov – Zavrl Tennis Team`;
+      : credits === 25
+        ? 'Paket 10 zimskih ur – Zavrl Tennis Team'
+        : `Nakup ${credits} kreditov – Zavrl Tennis Team`;
 
   const rezultat = await izdajMinimaxRacun({
     user,
@@ -550,6 +552,42 @@ admin.delete('/reservations', async (_req,res)=>{
     await conn.commit();
     res.json({message:'Vse rezervacije preklicane'});
   } catch(e){await conn.rollback();console.error(e.message);res.status(500).json({message:'Napaka pri preklicu rezervacij'});} finally {conn.release();}
+});
+// ===== ADMIN: Vse rezervacije določenega uporabnika =====
+admin.get('/users/:id/reservations', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(400).json({ message: 'Neveljaven ID' });
+  }
+
+  try {
+    const [userRows] = await pool.query(
+      'SELECT id, ime, priimek, email FROM uporabniki WHERE id = ?',
+      [id]
+    );
+    if (!userRows.length) {
+      return res.status(404).json({ message: 'Uporabnik ne obstaja' });
+    }
+
+    const [reservations] = await pool.query(
+      `SELECT
+         id, igrisce,
+         DATE_FORMAT(datum, '%Y-%m-%d') AS datum,
+         ura_zacetka, trajanje, oznaka,
+         blokada, preklicano, datum_preklica,
+         krediti_porabili, letna_karta_uporabljena,
+         placilo_z_kartico, placilo_status
+       FROM rezervacije
+       WHERE user_id = ?
+       ORDER BY datum DESC, ura_zacetka DESC`,
+      [id]
+    );
+
+    res.json({ user: userRows[0], reservations });
+  } catch (err) {
+    console.error('user reservations', err.message);
+    res.status(500).json({ message: 'Napaka pri pridobivanju rezervacij' });
+  }
 });
 // ===== ADMIN: BLOKADA / IZREDNI DOGODEK =====
 app.post('/api/admin/block', requireAuth, requireAdmin, async (req, res) => {
@@ -1453,23 +1491,48 @@ app.post(
 
 // ===== STRIPE – USTVARI CHECKOUT SESSION =====
 app.post('/api/payments/create-checkout-session', requireAuth, async (req, res) => {
-  const credits = Number(req.body.credits);
+  const pkg = req.body.package;
 
-  // Validacija: 0.5 do 10, korak 0.5
-  if (!Number.isFinite(credits) || credits < 0.25 || credits > 10) {
-    return res.status(400).json({ message: 'Neveljavno število kreditov (0,25–10)' });
-}
-const quadrupled = credits * 4;
-if (Math.abs(quadrupled - Math.round(quadrupled)) > 1e-9) {
-    return res.status(400).json({ message: 'Krediti morajo biti v korakih po 0,25' });
-}
+  let finalCredits;
+  let finalPrice;
+  let itemName;
+  let itemDescription;
 
-  // Cena: 10 kreditov = 80 €, drugače 10 € / kredit
-  const computedPrice = credits === 10 ? 80 : credits * 10;
+  if (pkg === 'winter') {
+    // 10 zimskih ur na balonu = 10 × 2,5 kredita = 25 kreditov
+    // Redna cena: 25 × 10 € = 250 €; s popustom 240 € (prihranek 10 €)
+    finalCredits = 25;
+    finalPrice = 240;
+    itemName = 'Paket 10 zimskih ur – Zavrl Tennis Team';
+    itemDescription = 'Prihranek 10 € – zimski termini na balonu (10 zimskih ur = 25 kreditov)';
+  } else if (pkg === 'summer') {
+    // 10 kreditov, redna cena 100 €, s popustom 80 € (prihranek 20 €)
+    finalCredits = 10;
+    finalPrice = 80;
+    itemName = 'Paket 10 kreditov – Zavrl Tennis Team';
+    itemDescription = 'Prihranek 20 € – krediti za rezervacijo teniških igrišč (1 kredit = 10 €)';
+  } else {
+    // Ročni vnos kreditov
+    const credits = Number(req.body.credits);
 
-  const creditsLabel = Number.isInteger(credits) 
-    ? credits.toString() 
-    : (Math.abs(credits * 2 - Math.round(credits * 2)) < 1e-9 ? credits.toFixed(1) : credits.toFixed(2));
+    if (!Number.isFinite(credits) || credits < 0.25 || credits > 10) {
+      return res.status(400).json({ message: 'Neveljavno število kreditov (0,25–10)' });
+    }
+    const quadrupled = credits * 4;
+    if (Math.abs(quadrupled - Math.round(quadrupled)) > 1e-9) {
+      return res.status(400).json({ message: 'Krediti morajo biti v korakih po 0,25' });
+    }
+
+    finalCredits = credits;
+    finalPrice = credits === 10 ? 80 : credits * 10;
+
+    const creditsLabel = Number.isInteger(credits)
+      ? credits.toString()
+      : (Math.abs(credits * 2 - Math.round(credits * 2)) < 1e-9 ? credits.toFixed(1) : credits.toFixed(2));
+
+    itemName = `Nakup ${creditsLabel} ${credits === 0.5 ? 'kredita' : (credits === 1 ? 'kredit' : 'kreditov')} – Zavrl Tennis Team`;
+    itemDescription = 'Krediti za rezervacijo teniških igrišč (1 kredit = 10 €)';
+  }
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -1480,14 +1543,10 @@ if (Math.abs(quadrupled - Math.round(quadrupled)) > 1e-9) {
         price_data: {
           currency: 'eur',
           product_data: {
-    name: credits === 10 
-        ? `Paket 10 kreditov – Zavrl Tennis Team`
-        : `Nakup ${creditsLabel} ${credits === 0.5 ? 'kredita' : (credits === 1 ? 'kredit' : 'kreditov')} – Zavrl Tennis Team`,
-    description: credits === 10
-        ? `Prihranek 20 € – krediti za rezervacijo teniških igrišč (1 kredit = 10 €)`
-        : `Krediti za rezervacijo teniških igrišč (1 kredit = 10 €)`
-},
-          unit_amount: Math.round(computedPrice * 100)
+            name: itemName,
+            description: itemDescription
+          },
+          unit_amount: Math.round(finalPrice * 100)
         },
         quantity: 1
       }],
@@ -1495,7 +1554,7 @@ if (Math.abs(quadrupled - Math.round(quadrupled)) > 1e-9) {
       cancel_url: `${process.env.FRONTEND_URL}/app?payment=cancel`,
       metadata: {
         userId: String(req.user.id),
-        credits: String(credits)
+        credits: String(finalCredits)
       }
     });
     res.json({ url: session.url });
