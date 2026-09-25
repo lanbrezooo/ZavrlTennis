@@ -114,7 +114,7 @@ async function createCustomer({ ime, priimek, email }) {
             Country: { ID: 192 },
             Currency: { ID: 7 },
             SubjectToVAT: 'N',
-            EInvoiceIssuing: 'EPosta'
+            EInvoiceIssuing: 'SeNePripravlja'
         };
 
         console.log('=== PAYLOAD ZA MINIMAX ===');
@@ -139,7 +139,7 @@ const cleanLocation = location.split('?')[0];
 const customerId = cleanLocation.split('/').pop();
 console.log(`✓ Ustvarjena nova Minimax stranka: ${customerId} za ${email}`);
 
-// Dodaj kontakt z emailom (za pošiljanje računov)
+// 2. Dodaj privzeti kontakt z e-mailom
 try {
     await axios.post(
         `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers/${customerId}/contacts`,
@@ -155,10 +155,88 @@ try {
             }
         }
     );
-    console.log(`✓ Kontakt dodan stranki ${customerId}`);
+
+    console.log(`✓ Privzeti kontakt dodan stranki ${customerId}`);
 } catch (contactErr) {
-    console.warn('⚠ Napaka pri dodajanju kontakta:', contactErr.response?.data || contactErr.message);
-    // Ne prekini – stranka je že ustvarjena
+    console.error(
+        '✗ Napaka pri dodajanju kontakta:',
+        contactErr.response?.data || contactErr.message
+    );
+
+    // Zelo pomembno:
+    // brez kontakta ne smemo nastaviti EPosta.
+    throw new Error('Minimax kontakt z e-pošto ni bil ustvarjen');
+}
+
+
+// 3. Zdaj, ko kontakt obstaja, nastavi EInvoiceIssuing = EPosta
+try {
+    const customerResponse = await axios.get(
+        `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers/${customerId}`,
+        {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        }
+    );
+
+    const customer = customerResponse.data;
+
+    const updatePayload = {
+        CustomerId: Number(customer.CustomerId || customerId),
+        Code: customer.Code || null,
+        Name: customer.Name,
+        Address: customer.Address,
+        PostalCode: customer.PostalCode,
+        City: customer.City,
+        Country: customer.Country,
+        CountryName: customer.CountryName || null,
+        TaxNumber: customer.TaxNumber || null,
+        RegistrationNumber: customer.RegistrationNumber || null,
+        VATIdentificationNumber: customer.VATIdentificationNumber || null,
+        SubjectToVAT: customer.SubjectToVAT,
+        ConsiderCountryForBookkeeping:
+            customer.ConsiderCountryForBookkeeping || null,
+        Currency: customer.Currency,
+        ExpirationDays: customer.ExpirationDays || 0,
+        RebatePercent: customer.RebatePercent || 0,
+        WebSiteURL: customer.WebSiteURL || null,
+
+        // Zdaj je kontakt že ustvarjen
+        EInvoiceIssuing: 'EPosta',
+
+        InternalCustomerNumber:
+            customer.InternalCustomerNumber || null,
+
+        GLN: customer.GLN || null,
+        BudgetUserNumber: customer.BudgetUserNumber || null,
+        Usage: customer.Usage || 'D',
+        AssociationType: customer.AssociationType || null,
+
+        RecordDtModified: customer.RecordDtModified,
+        RowVersion: customer.RowVersion
+    };
+
+    await axios.put(
+        `${MINIMAX_API_URL}/orgs/${ORGANISATION_ID}/customers/${customerId}`,
+        updatePayload,
+        {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        }
+    );
+
+    console.log(`✓ EInvoiceIssuing nastavljen na EPosta za stranko ${customerId}`);
+
+} catch (updateErr) {
+    console.error(
+        '✗ Napaka pri nastavljanju EPosta:',
+        updateErr.response?.data || updateErr.message
+    );
+
+    throw new Error('Minimax EPosta nastavitve ni bilo mogoče nastaviti');
 }
 
 return customerId;
