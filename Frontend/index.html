@@ -1045,6 +1045,9 @@ body:has(.modal-overlay) {
     color: rgba(255, 255, 255, 0.85);
     max-width: 78px;
 }
+.header-actions.admin-mode .header-whatsapp-mobile-label {
+    display: none !important;
+}
 
     /* Značka uporabnika */
     .user-badge {
@@ -1707,7 +1710,7 @@ function formatCreditsNum(n) {
     const adminButton = state.user.admin ? `<button class="btn btn-outline btn-sm" onclick="toggleAdminPanel()">Admin</button>` : '';
     headerActions.classList.toggle('admin-mode', !!state.user.admin);
         headerActions.innerHTML = `
-            ${whatsappIcon(true)}
+                        ${whatsappIcon(!state.user.admin)}
             <div class="user-badge">
                 <span class="avatar">${getUserInitials(state.user)}</span>
                 <span>${escapeHtml(getFullName(state.user))}</span>
